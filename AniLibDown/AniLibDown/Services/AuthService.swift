@@ -1,0 +1,59 @@
+import Foundation
+
+@MainActor
+final class AuthService: ObservableObject {
+    static let shared = AuthService()
+
+    @Published private(set) var isAuthenticated = false
+    @Published private(set) var profile: UserProfile?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private init() {}
+
+    func restoreSession() async {
+        guard let token = KeychainHelper.loadToken() else { return }
+        await APIClient.shared.setAccessToken(token)
+        do {
+            profile = try await APIClient.shared.getProfile()
+            isAuthenticated = true
+        } catch {
+            KeychainHelper.deleteToken()
+            await APIClient.shared.setAccessToken(nil)
+            isAuthenticated = false
+            profile = nil
+        }
+    }
+
+    func login(login: String, password: String) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let token = try await APIClient.shared.login(login: login, password: password)
+            KeychainHelper.saveToken(token)
+            profile = try await APIClient.shared.getProfile()
+            isAuthenticated = true
+        } catch {
+            errorMessage = error.localizedDescription
+            isAuthenticated = false
+            profile = nil
+        }
+    }
+
+    func logout() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await APIClient.shared.logout()
+        } catch {
+            // Ignore network errors on logout
+        }
+        KeychainHelper.deleteToken()
+        await APIClient.shared.setAccessToken(nil)
+        isAuthenticated = false
+        profile = nil
+    }
+}
