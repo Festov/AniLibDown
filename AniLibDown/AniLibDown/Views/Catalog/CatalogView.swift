@@ -3,7 +3,7 @@ import SwiftUI
 @MainActor
 final class CatalogViewModel: ObservableObject {
     @Published var releases: [ReleaseSummary] = []
-    @Published var genres: [Genre] = []
+    @Published var genres: [AnimeGenre] = []
     @Published var selectedGenreIds: Set<Int> = []
     @Published var isLoading = false
     @Published var isRefreshing = false
@@ -261,7 +261,7 @@ struct CatalogView: View {
 }
 
 private struct GenreFilterView: View {
-    let genres: [Genre]
+    let genres: [AnimeGenre]
     let selectedGenreIds: Set<Int>
     let onToggle: (Int) -> Void
     let onClear: () -> Void
@@ -279,7 +279,7 @@ private struct GenreFilterView: View {
                     )
                 } else {
                     List {
-                        ForEach(genres) { genre in
+                        ForEach(genres, id: \.id) { genre in
                             Button {
                                 onToggle(genre.id)
                             } label: {
@@ -289,7 +289,7 @@ private struct GenreFilterView: View {
                                     Spacer()
                                     if selectedGenreIds.contains(genre.id) {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.accent)
+                                            .foregroundStyle(Color.accentColor)
                                     }
                                 }
                             }
