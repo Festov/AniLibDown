@@ -2,23 +2,16 @@ import Foundation
 
 // MARK: - Common
 
-struct PaginatedMeta: Codable {
+struct PaginatedMeta: Decodable {
     let pagination: Pagination
 }
 
-struct Pagination: Codable {
+struct Pagination: Decodable {
     let total: Int
     let count: Int
     let perPage: Int
     let currentPage: Int
     let totalPages: Int
-
-    enum CodingKeys: String, CodingKey {
-        case total, count
-        case perPage = "per_page"
-        case currentPage = "current_page"
-        case totalPages = "total_pages"
-    }
 }
 
 struct ImageAsset: Codable, Hashable {
@@ -54,11 +47,6 @@ struct ReleaseAgeRating: Codable, Hashable {
     let label: String
     let isAdult: Bool
     let description: String?
-
-    enum CodingKeys: String, CodingKey {
-        case value, label, description
-        case isAdult = "is_adult"
-    }
 }
 
 struct Genre: Codable, Hashable, Identifiable {
@@ -86,13 +74,6 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
     let description: String?
     let episodesTotal: Int?
     let genres: [Genre]?
-
-    enum CodingKeys: String, CodingKey {
-        case id, type, year, name, alias, season, poster, description, genres
-        case isOngoing = "is_ongoing"
-        case ageRating = "age_rating"
-        case episodesTotal = "episodes_total"
-    }
 }
 
 struct ReleaseLatest: Codable, Identifiable, Hashable {
@@ -109,14 +90,6 @@ struct ReleaseLatest: Codable, Identifiable, Hashable {
     let episodesTotal: Int?
     let genres: [Genre]?
     let latestEpisode: Episode
-
-    enum CodingKeys: String, CodingKey {
-        case id, type, year, name, alias, season, poster, description, genres
-        case isOngoing = "is_ongoing"
-        case ageRating = "age_rating"
-        case episodesTotal = "episodes_total"
-        case latestEpisode = "latest_episode"
-    }
 }
 
 struct ReleaseDetail: Codable, Identifiable {
@@ -147,16 +120,8 @@ struct Episode: Codable, Identifiable, Hashable {
     let hls480: String?
     let hls720: String?
     let hls1080: String?
-    let duration: Int
-    let releaseId: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id, name, ordinal, opening, ending, preview, duration
-        case hls480 = "hls_480"
-        case hls720 = "hls_720"
-        case hls1080 = "hls_1080"
-        case releaseId = "release_id"
-    }
+    let duration: Int?
+    let releaseId: Int?
 
     var bestStreamURL: URL? {
         [hls1080, hls720, hls480]
@@ -218,13 +183,22 @@ struct UserProfile: Codable, Identifiable {
     let avatar: ImageAsset?
     let isBanned: Bool
     let isWithAds: Bool
-    let createdAt: String
+    let createdAt: String?
 
-    enum CodingKeys: String, CodingKey {
-        case id, login, email, nickname, avatar
-        case isBanned = "is_banned"
-        case isWithAds = "is_with_ads"
-        case createdAt = "created_at"
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        login = try container.decodeIfPresent(String.self, forKey: .login)
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+        nickname = try container.decodeIfPresent(String.self, forKey: .nickname) ?? login ?? "Пользователь"
+        avatar = try container.decodeIfPresent(ImageAsset.self, forKey: .avatar)
+        isBanned = try container.decodeIfPresent(Bool.self, forKey: .isBanned) ?? false
+        isWithAds = try container.decodeIfPresent(Bool.self, forKey: .isWithAds) ?? false
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, login, email, nickname, avatar, createdAt, isBanned, isWithAds
     }
 }
 

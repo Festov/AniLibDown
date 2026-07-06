@@ -2,20 +2,10 @@ name: Build IPA
 
 on:
   workflow_dispatch:
-    inputs:
-      signing:
-        description: "Тип сборки"
-        required: true
-        default: "unsigned"
-        type: choice
-        options:
-          - unsigned
-          - signed
 
 jobs:
-  build-unsigned-ipa:
+  build-ipa:
     name: Собрать IPA для Sideloadly
-    if: inputs.signing == 'unsigned'
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -64,64 +54,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AniLibDown-ipa
-          path: dist/AniLibDown.ipa
-          if-no-files-found: error
-          retention-days: 30
-
-  build-signed-ipa:
-    name: Собрать подписанный IPA
-    if: inputs.signing == 'signed'
-    runs-on: macos-15
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Проверить секреты
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-        run: |
-          set -euo pipefail
-          missing=0
-          [ -z "${APPLE_ID}" ] && echo "❌ Не задан секрет APPLE_ID" && missing=1
-          [ -z "${FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD}" ] && echo "❌ Не задан секрет FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD" && missing=1
-          [ -z "${TEAM_ID}" ] && echo "❌ Не задан секрет TEAM_ID" && missing=1
-          if [ "$missing" -eq 1 ]; then
-            echo ""
-            echo "Для подписанной сборки добавьте секреты в Settings → Secrets → Actions"
-            echo "Или выберите тип сборки 'unsigned' — секреты не нужны."
-            exit 1
-          fi
-          echo "✅ Секреты на месте"
-
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-
-      - name: Build signed IPA
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          FASTLANE_USER: ${{ secrets.APPLE_ID }}
-          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-          DEVICE_UDID: ${{ secrets.DEVICE_UDID }}
-          CI: true
-        run: bundle exec fastlane ios build_ipa
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: AniLibDown-ipa-signed
           path: dist/AniLibDown.ipa
           if-no-files-found: error
           retention-days: 30

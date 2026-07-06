@@ -12,20 +12,11 @@
 
 ## Установка на iPhone без Mac
 
-**Артефакт `AniLibDown-simulator` не нужен** — это сборка для симулятора, на телефон не ставится.
-
-### Быстрый способ (без секретов GitHub)
-
 1. **Actions** → **Build IPA** → **Run workflow**
-2. Тип сборки: **`unsigned`** (по умолчанию)
-3. Скачайте артефакт **AniLibDown-ipa** → файл `AniLibDown.ipa`
-4. Установите через **[Sideloadly](https://sideloadly.io)** на Windows (Sideloadly сам подпишет приложение вашим Apple ID)
+2. Скачайте артефакт **AniLibDown-ipa** → файл `AniLibDown.ipa`
+3. Установите через **[Sideloadly](https://sideloadly.io)** на Windows
 
 Подробная инструкция: **[docs/INSTALL_IPA.md](docs/INSTALL_IPA.md)**
-
-## Проверка сборки (для разработчиков)
-
-Workflow **iOS Build** собирает версию для симулятора — это только проверка, что код компилируется. Для установки на телефон используйте **Build IPA**.
 
 ## Запуск (если Mac есть)
 ## Требования
