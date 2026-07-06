@@ -140,7 +140,12 @@ actor APIClient {
         try await request(path: "anime/releases/latest", query: ["limit": String(limit)])
     }
 
-    func getCatalog(page: Int, limit: Int = 20, search: String? = nil) async throws -> CatalogResponse {
+    func getCatalog(
+        page: Int,
+        limit: Int = 20,
+        search: String? = nil,
+        genreIds: [Int] = []
+    ) async throws -> CatalogResponse {
         var query = [
             "page": String(page),
             "limit": String(limit),
@@ -149,7 +154,14 @@ actor APIClient {
         if let search, !search.isEmpty {
             query["f[search]"] = search
         }
+        if !genreIds.isEmpty {
+            query["f[genres]"] = genreIds.map(String.init).joined(separator: ",")
+        }
         return try await request(path: "anime/catalog/releases", query: query)
+    }
+
+    func getCatalogGenres() async throws -> [Genre] {
+        try await request(path: "anime/catalog/references/genres")
     }
 
     func getRelease(idOrAlias: String) async throws -> ReleaseDetail {
