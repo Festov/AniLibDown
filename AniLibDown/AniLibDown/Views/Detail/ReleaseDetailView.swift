@@ -24,9 +24,8 @@ struct ReleaseDetailView: View {
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
     @EnvironmentObject private var downloadManager: DownloadManager
-    @State private var selectedEpisode: Episode?
     @State private var selectedQuality: VideoQuality = .p720
-    @State private var playerContext: PlayerContext?
+    @State private var playerSession: PlayerSession?
 
     var body: some View {
         Group {
@@ -38,6 +37,7 @@ struct ReleaseDetailView: View {
                         header(for: release)
                         descriptionSection(for: release)
                         qualityPicker
+                        downloadAllButton(for: release)
                         episodesSection(for: release)
                     }
                     .padding()
@@ -55,12 +55,8 @@ struct ReleaseDetailView: View {
         .task {
             await viewModel.load(id: releaseId)
         }
-        .fullScreenCover(item: $playerContext) { context in
-            VideoPlayerView(
-                title: context.title,
-                streamURL: context.streamURL,
-                isOffline: context.isOffline
-            )
+        .fullScreenCover(item: $playerSession) { session in
+            VideoPlayerView(session: session)
         }
     }
 
@@ -125,6 +121,25 @@ struct ReleaseDetailView: View {
     }
 
     @ViewBuilder
+    private func downloadAllButton(for release: ReleaseDetail) -> some View {
+        let downloadable = release.episodes.filter { selectedQuality.streamURL(for: $0) != nil }
+        if !downloadable.isEmpty {
+            Button {
+                downloadManager.enqueueAll(
+                    episodes: downloadable,
+                    releaseId: release.id,
+                    releaseTitle: release.name.main,
+                    quality: selectedQuality
+                )
+            } label: {
+                Label("Скачать все серии (\(downloadable.count))", systemImage: "arrow.down.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    @ViewBuilder
     private func episodesSection(for release: ReleaseDetail) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Серии")
@@ -134,35 +149,35 @@ struct ReleaseDetailView: View {
                 EpisodeRow(
                     episode: episode,
                     quality: selectedQuality,
+                    releaseId: release.id,
                     releaseTitle: release.name.main,
-                    onPlay: { play(episode: episode, releaseTitle: release.name.main) },
+                    onPlay: { play(episode: episode, release: release) },
                     onDownload: {
                         downloadManager.enqueue(
                             episode: episode,
+                            releaseId: release.id,
                             releaseTitle: release.name.main,
                             quality: selectedQuality
                         )
+                    },
+                    onDeleteDownload: {
+                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
+                            downloadManager.delete(item: item)
+                        }
                     }
                 )
             }
         }
     }
 
-    private func play(episode: Episode, releaseTitle: String) {
-        if let offlineURL = downloadManager.localPlaybackURL(for: episode.id, quality: selectedQuality) {
-            playerContext = PlayerContext(
-                title: "\(releaseTitle) — \(episode.displayTitle)",
-                streamURL: offlineURL,
-                isOffline: true
-            )
-            return
-        }
-
-        guard let streamURL = selectedQuality.streamURL(for: episode) else { return }
-        playerContext = PlayerContext(
-            title: "\(releaseTitle) — \(episode.displayTitle)",
-            streamURL: streamURL,
-            isOffline: false
+    private func play(episode: Episode, release: ReleaseDetail) {
+        playerSession = PlayerSession(
+            releaseId: release.id,
+            releaseTitle: release.name.main,
+            episodes: release.episodes,
+            startEpisodeId: episode.id,
+            quality: selectedQuality,
+            preferOffline: true
         )
     }
 }
@@ -170,14 +185,20 @@ struct ReleaseDetailView: View {
 private struct EpisodeRow: View {
     let episode: Episode
     let quality: VideoQuality
+    let releaseId: Int
     let releaseTitle: String
     let onPlay: () -> Void
     let onDownload: () -> Void
+    let onDeleteDownload: () -> Void
 
     @EnvironmentObject private var downloadManager: DownloadManager
 
     private var downloadState: DownloadItem.DownloadState? {
         downloadManager.downloadItem(for: episode.id, quality: quality)?.state
+    }
+
+    private var isDownloaded: Bool {
+        downloadManager.isDownloaded(episodeId: episode.id, quality: quality)
     }
 
     var body: some View {
@@ -195,59 +216,64 @@ private struct EpisodeRow: View {
 
             Spacer()
 
-            if downloadManager.isDownloaded(episodeId: episode.id, quality: quality) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else if let state = downloadState {
-                switch state {
-                case .downloading, .queued:
-                    if let item = downloadManager.downloadItem(for: episode.id, quality: quality) {
-                        ProgressView(value: item.progress)
-                            .frame(width: 28)
-                    }
-                case .failed:
-                    Image(systemName: "exclamationmark.circle")
-                        .foregroundStyle(.red)
-                case .completed:
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                }
-            }
+            downloadStatusIcon
 
             Button(action: onPlay) {
                 Image(systemName: "play.circle.fill")
                     .font(.title2)
             }
             .buttonStyle(.plain)
-            .disabled(quality.streamURL(for: episode) == nil && !downloadManager.isDownloaded(episodeId: episode.id, quality: quality))
+            .disabled(quality.streamURL(for: episode) == nil && !isDownloaded)
 
-            Button(action: onDownload) {
-                Image(systemName: "arrow.down.circle")
-                    .font(.title3)
+            if isDownloaded {
+                Button(action: onDeleteDownload) {
+                    Image(systemName: "trash.circle")
+                        .font(.title3)
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button(action: onDownload) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .disabled(
+                    quality.streamURL(for: episode) == nil
+                    || downloadState == .downloading
+                    || downloadState == .queued
+                )
             }
-            .buttonStyle(.plain)
-            .disabled(
-                quality.streamURL(for: episode) == nil
-                || downloadManager.isDownloaded(episodeId: episode.id, quality: quality)
-                || downloadState == .downloading
-                || downloadState == .queued
-            )
         }
         .padding(10)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
+    @ViewBuilder
+    private var downloadStatusIcon: some View {
+        if isDownloaded {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        } else if let state = downloadState {
+            switch state {
+            case .downloading, .queued:
+                if let item = downloadManager.downloadItem(for: episode.id, quality: quality) {
+                    ProgressView(value: item.progress)
+                        .frame(width: 28)
+                }
+            case .failed:
+                Image(systemName: "exclamationmark.circle")
+                    .foregroundStyle(.red)
+            case .completed:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+        }
+    }
+
     private func durationString(_ seconds: Int?) -> String {
         guard let seconds else { return "—" }
-        let minutes = seconds / 60
-        return "\(minutes) мин"
+        return "\(seconds / 60) мин"
     }
-}
-
-struct PlayerContext: Identifiable {
-    let id = UUID()
-    let title: String
-    let streamURL: URL
-    let isOffline: Bool
 }
