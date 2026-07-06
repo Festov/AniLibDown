@@ -1,6 +1,8 @@
 import SwiftUI
 import AVKit
 
+private let controlsAnimation = Animation.easeInOut(duration: 0.35)
+
 // MARK: - Player layer
 
 private final class PlayerContainerView: UIView {
@@ -50,8 +52,11 @@ private final class PlayerGestureView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
+        isUserInteractionEnabled = true
+
         [leftZone, rightZone].forEach {
             $0.backgroundColor = .clear
+            $0.isUserInteractionEnabled = true
             $0.translatesAutoresizingMaskIntoConstraints = false
             addSubview($0)
         }
@@ -75,12 +80,15 @@ private final class PlayerGestureView: UIView {
     required init?(coder: NSCoder) { nil }
 
     private func attachGestures(to view: UIView, doubleAction: Selector) {
-        let single = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap))
         let double = UITapGestureRecognizer(target: self, action: doubleAction)
         double.numberOfTapsRequired = 2
+
+        let single = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap))
+        single.numberOfTapsRequired = 1
         single.require(toFail: double)
-        view.addGestureRecognizer(single)
+
         view.addGestureRecognizer(double)
+        view.addGestureRecognizer(single)
     }
 
     @objc private func handleSingleTap() { onSingleTap?() }
@@ -108,6 +116,51 @@ private struct PlayerGestureOverlay: UIViewRepresentable {
     }
 }
 
+// MARK: - Playback progress
+
+@MainActor
+final class PlaybackProgress: ObservableObject {
+    @Published var currentTime: Double = 0
+    @Published var duration: Double = 0
+    @Published var isPlaying = false
+
+    private var observer: Any?
+
+    func observe(player: AVPlayer, isScrubbing: @escaping () -> Bool) {
+        detach(from: player)
+        currentTime = 0
+        duration = 0
+
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        observer = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            guard let self, !isScrubbing() else { return }
+            let seconds = CMTimeGetSeconds(time)
+            if seconds.isFinite {
+                self.currentTime = seconds
+            }
+            if let item = player.currentItem {
+                let total = CMTimeGetSeconds(item.duration)
+                if total.isFinite, total > 0 {
+                    self.duration = total
+                }
+            }
+            self.isPlaying = player.rate > 0
+        }
+    }
+
+    func detach(from player: AVPlayer) {
+        guard let observer else { return }
+        player.removeTimeObserver(observer)
+        self.observer = nil
+    }
+
+    func reset() {
+        currentTime = 0
+        duration = 0
+        isPlaying = false
+    }
+}
+
 // MARK: - Video player
 
 struct VideoPlayerView: View {
@@ -116,13 +169,15 @@ struct VideoPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var downloadManager: DownloadManager
 
+    @StateObject private var progress = PlaybackProgress()
     @State private var currentIndex: Int
     @State private var player: AVPlayer?
-    @State private var isPlaying = true
     @State private var showEpisodeList = false
     @State private var controlsVisible = true
     @State private var seekHint: String?
     @State private var hideControlsTask: Task<Void, Never>?
+    @State private var scrubTime: Double = 0
+    @State private var isScrubbing = false
 
     init(session: PlayerSession) {
         self.session = session
@@ -131,6 +186,10 @@ struct VideoPlayerView: View {
 
     private var currentEpisode: Episode {
         session.episodes[currentIndex]
+    }
+
+    private var displayedTime: Double {
+        isScrubbing ? scrubTime : progress.currentTime
     }
 
     var body: some View {
@@ -145,19 +204,16 @@ struct VideoPlayerView: View {
                     .tint(.white)
             }
 
-            if !controlsVisible {
-                PlayerGestureOverlay(
-                    onSingleTap: { revealControls() },
-                    onDoubleTapLeft: { seek(by: -5) },
-                    onDoubleTapRight: { seek(by: 5) }
-                )
-                .ignoresSafeArea()
-            }
+            PlayerGestureOverlay(
+                onSingleTap: { toggleControls() },
+                onDoubleTapLeft: { seek(by: -5) },
+                onDoubleTapRight: { seek(by: 5) }
+            )
+            .ignoresSafeArea()
 
-            if controlsVisible {
-                controlsOverlay
-                    .transition(.opacity)
-            }
+            controlsOverlay
+                .opacity(controlsVisible ? 1 : 0)
+                .allowsHitTesting(controlsVisible)
 
             if let seekHint {
                 Text(seekHint)
@@ -170,8 +226,8 @@ struct VideoPlayerView: View {
                     .transition(.opacity)
             }
         }
+        .animation(controlsAnimation, value: controlsVisible)
         .animation(.easeInOut(duration: 0.2), value: seekHint)
-        .animation(.easeInOut(duration: 0.2), value: controlsVisible)
         .confirmationDialog("Выбор серии", isPresented: $showEpisodeList, titleVisibility: .visible) {
             ForEach(Array(session.episodes.enumerated()), id: \.element.id) { index, episode in
                 Button(episode.displayTitle) {
@@ -189,6 +245,9 @@ struct VideoPlayerView: View {
         }
         .onDisappear {
             hideControlsTask?.cancel()
+            if let player {
+                progress.detach(from: player)
+            }
             player?.pause()
             player = nil
             AudioSessionConfigurator.deactivatePlayback()
@@ -197,18 +256,12 @@ struct VideoPlayerView: View {
     }
 
     private var controlsOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.001)
-                .ignoresSafeArea()
-                .onTapGesture { toggleControls() }
-
-            VStack(spacing: 0) {
-                topBar
-                Spacer()
-                centerControls
-                Spacer()
-                bottomBar
-            }
+        VStack(spacing: 0) {
+            topBar
+            Spacer().allowsHitTesting(false)
+            centerControls
+            Spacer().allowsHitTesting(false)
+            bottomBar
         }
     }
 
@@ -228,6 +281,7 @@ struct VideoPlayerView: View {
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
 
             Button("Закрыть") { dismiss() }
                 .font(.subheadline.weight(.semibold))
@@ -255,7 +309,7 @@ struct VideoPlayerView: View {
                 togglePlayPause()
                 scheduleHideControls()
             } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: progress.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(.white)
             }
@@ -268,24 +322,54 @@ struct VideoPlayerView: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Text(formatTime(displayedTime))
+                    .font(.caption.monospacedDigit())
+                    .frame(width: 48, alignment: .leading)
+
+                Slider(
+                    value: Binding(
+                        get: { min(displayedTime, max(progress.duration, 0.1)) },
+                        set: { scrubTime = $0 }
+                    ),
+                    in: 0...max(progress.duration, 0.1),
+                    onEditingChanged: { editing in
+                        isScrubbing = editing
+                        if editing {
+                            hideControlsTask?.cancel()
+                            scrubTime = progress.currentTime
+                        } else {
+                            seek(to: scrubTime)
+                            scheduleHideControls()
+                        }
+                    }
+                )
+                .tint(.white)
+
+                Text(formatTime(progress.duration))
+                    .font(.caption.monospacedDigit())
+                    .frame(width: 48, alignment: .trailing)
+            }
+
             Text(currentEpisode.displayTitle)
                 .font(.headline)
                 .multilineTextAlignment(.center)
-            Text("\(currentIndex + 1) / \(session.episodes.count)")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.75))
-            Text("Двойной тап слева/справа — ±5 сек")
+                .lineLimit(2)
+                .allowsHitTesting(false)
+
+            Text("\(currentIndex + 1) / \(session.episodes.count) • двойной тап слева/справа ±5 сек")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.white.opacity(0.65))
+                .allowsHitTesting(false)
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             LinearGradient(
-                colors: [.clear, .black.opacity(0.65)],
+                colors: [.clear, .black.opacity(0.7)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -310,18 +394,13 @@ struct VideoPlayerView: View {
     }
 
     private func toggleControls() {
-        if controlsVisible {
-            withAnimation { controlsVisible = false }
-            hideControlsTask?.cancel()
-        } else {
-            revealControls()
-        }
-    }
-
-    private func revealControls() {
         hideControlsTask?.cancel()
-        withAnimation { controlsVisible = true }
-        scheduleHideControls()
+        withAnimation(controlsAnimation) {
+            controlsVisible.toggle()
+        }
+        if controlsVisible {
+            scheduleHideControls()
+        }
     }
 
     private func scheduleHideControls() {
@@ -330,7 +409,9 @@ struct VideoPlayerView: View {
             try? await Task.sleep(nanoseconds: 5_000_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                withAnimation { controlsVisible = false }
+                withAnimation(controlsAnimation) {
+                    controlsVisible = false
+                }
             }
         }
     }
@@ -339,34 +420,30 @@ struct VideoPlayerView: View {
         guard let player else { return }
         if player.rate > 0 {
             player.pause()
-            isPlaying = false
+            progress.isPlaying = false
         } else {
             player.play()
-            isPlaying = true
+            progress.isPlaying = true
         }
     }
 
     private func seek(by seconds: Double) {
-        guard let player, let item = player.currentItem else { return }
-
-        let current = player.currentTime()
-        let duration = item.duration
-        var target = CMTimeAdd(current, CMTime(seconds: seconds, preferredTimescale: 600))
-
-        if duration.isNumeric {
-            target = min(max(target, .zero), duration)
-        } else {
-            target = max(target, .zero)
-        }
-
-        player.seek(to: target)
+        seek(to: max(0, progress.currentTime + seconds))
         seekHint = seconds > 0 ? "+5 сек" : "-5 сек"
-        revealControls()
 
         Task {
             try? await Task.sleep(nanoseconds: 900_000_000)
             await MainActor.run { seekHint = nil }
         }
+    }
+
+    private func seek(to seconds: Double) {
+        guard let player else { return }
+        let clamped = min(max(seconds, 0), max(progress.duration, 0))
+        let target = CMTime(seconds: clamped, preferredTimescale: 600)
+        player.seek(to: target)
+        progress.currentTime = clamped
+        scrubTime = clamped
     }
 
     private func switchToEpisode(at index: Int) {
@@ -379,17 +456,36 @@ struct VideoPlayerView: View {
         let episode = session.episodes[index]
         guard let url = playbackURL(for: episode) else { return }
 
+        if let player {
+            progress.detach(from: player)
+        }
+        progress.reset()
+
         player?.pause()
         let item = AVPlayerItem(url: url)
         if let player {
             player.replaceCurrentItem(with: item)
             player.play()
+            progress.observe(player: player) { isScrubbing }
         } else {
             let newPlayer = AVPlayer(playerItem: item)
             player = newPlayer
             newPlayer.play()
+            progress.observe(player: newPlayer) { isScrubbing }
         }
-        isPlaying = true
+        progress.isPlaying = true
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds >= 0 else { return "0:00" }
+        let total = Int(seconds.rounded(.down))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let secs = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
+        return String(format: "%d:%02d", minutes, secs)
     }
 
     private func playbackURL(for episode: Episode) -> URL? {
