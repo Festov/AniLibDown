@@ -160,7 +160,7 @@ actor APIClient {
         return try await request(path: "anime/catalog/releases", query: query)
     }
 
-    func getCatalogGenres() async throws -> [Genre] {
+    func getCatalogGenres() async throws -> [AnimeGenre] {
         try await request(path: "anime/catalog/references/genres")
     }
 

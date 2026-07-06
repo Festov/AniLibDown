@@ -49,7 +49,7 @@ struct ReleaseAgeRating: Codable, Hashable {
     let description: String?
 }
 
-struct Genre: Codable, Hashable, Identifiable {
+struct AnimeGenre: Codable, Hashable, Identifiable {
     let id: Int
     let name: String
 }
@@ -130,7 +130,7 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
-    let genres: [Genre]?
+    let genres: [AnimeGenre]?
 }
 
 struct ReleaseLatest: Codable, Identifiable, Hashable {
@@ -145,7 +145,7 @@ struct ReleaseLatest: Codable, Identifiable, Hashable {
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
-    let genres: [Genre]?
+    let genres: [AnimeGenre]?
     let latestEpisode: Episode
 }
 
@@ -161,7 +161,7 @@ struct ReleaseDetail: Codable, Identifiable {
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
-    let genres: [Genre]?
+    let genres: [AnimeGenre]?
     let episodes: [Episode]
 }
 
