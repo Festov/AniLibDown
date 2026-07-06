@@ -80,9 +80,9 @@ enum ReleaseFormatting {
 
     static func broadcastStatus(isOngoing: Bool, episodesCount: Int, episodesTotal: Int?) -> BroadcastStatus {
         if isOngoing { return .ongoing }
-        let total = episodesTotal ?? episodesCount
-        if episodesCount == 0 && total == 0 { return .upcoming }
-        return .released
+        let knownEpisodes = max(episodesCount, episodesTotal ?? 0)
+        if knownEpisodes > 0 { return .released }
+        return .upcoming
     }
 }
 
