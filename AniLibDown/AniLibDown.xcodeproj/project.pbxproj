@@ -1,0 +1,303 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		28280A9959A959D4D86176AA /* AniLibDownApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC3539E72E14B36EA9CC9E2C /* AniLibDownApp.swift */; };
+		639EDA09528E490FFF7BCBF1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A5B6B403314127F8FFB1320 /* ContentView.swift */; };
+		1A1A790F82D977A18D4069B1 /* SharedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBC8CEB5917E0D0EB278EC4 /* SharedViews.swift */; };
+		A05ACBCF8AC21B2ECD2974A0 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5316F7B1244734532B7AED0D /* ProfileView.swift */; };
+		5B1E2CB2511E430AD4D2082F /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64E814432747CF7D7E6B13E3 /* VideoPlayerView.swift */; };
+		61B722F88532FAF781F988E9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5229C028439803B81715A5C8 /* LoginView.swift */; };
+		CA68E955DB6C4A121717A345 /* LatestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C59C8C43BF57165EEA9EB372 /* LatestView.swift */; };
+		1B7FACD117B2AA2AAA995EA2 /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE7891065C005A0939657AE /* CatalogView.swift */; };
+		580910367CD0BEA6CF7A73C9 /* ReleaseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59A874528F5C05C02BDF323D /* ReleaseDetailView.swift */; };
+		EE24EF3F7AB4751A66D52720 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB54B5C7F1FF2D78408DC14 /* DownloadsView.swift */; };
+		9BC5A75E8A424C02437EE9B8 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7934A25B9008BC571E75F679 /* APIClient.swift */; };
+		5AB1DBFB68FD3BED197B56BE /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AA08A9557F409592012677 /* APIConfig.swift */; };
+		4AAD6BE6D8DBAF2AF0F98E3C /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA2557138C8596D868BB6FC5 /* AuthService.swift */; };
+		E608C42EA7169E482B3CAED5 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AE3D5034B14D061C0DDC24 /* DownloadManager.swift */; };
+		34174FCBDD28125825A3887C /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC0D2AA64B2003C7840FBBE /* KeychainHelper.swift */; };
+		46659A41986CC58B26A6C1CD /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C257E288C5C10C79282874A /* APIModels.swift */; };
+		0CC4F17B543FE1385850101A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 482CADC4A1A9FABE37CDC88C /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		24620170CE893AC0B091385C /* AniLibDown.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AniLibDown.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DC3539E72E14B36EA9CC9E2C /* AniLibDownApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AniLibDownApp.swift"; sourceTree = "<group>"; };
+		2A5B6B403314127F8FFB1320 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
+		FFBC8CEB5917E0D0EB278EC4 /* SharedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Components/SharedViews.swift"; sourceTree = "<group>"; };
+		5316F7B1244734532B7AED0D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Profile/ProfileView.swift"; sourceTree = "<group>"; };
+		64E814432747CF7D7E6B13E3 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/VideoPlayerView.swift"; sourceTree = "<group>"; };
+		5229C028439803B81715A5C8 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Auth/LoginView.swift"; sourceTree = "<group>"; };
+		C59C8C43BF57165EEA9EB372 /* LatestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Latest/LatestView.swift"; sourceTree = "<group>"; };
+		0CE7891065C005A0939657AE /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Catalog/CatalogView.swift"; sourceTree = "<group>"; };
+		59A874528F5C05C02BDF323D /* ReleaseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseDetailView.swift"; sourceTree = "<group>"; };
+		2EB54B5C7F1FF2D78408DC14 /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Downloads/DownloadsView.swift"; sourceTree = "<group>"; };
+		7934A25B9008BC571E75F679 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/APIClient.swift"; sourceTree = "<group>"; };
+		D4AA08A9557F409592012677 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/APIConfig.swift"; sourceTree = "<group>"; };
+		EA2557138C8596D868BB6FC5 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AuthService.swift"; sourceTree = "<group>"; };
+		61AE3D5034B14D061C0DDC24 /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadManager.swift"; sourceTree = "<group>"; };
+		CCC0D2AA64B2003C7840FBBE /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/KeychainHelper.swift"; sourceTree = "<group>"; };
+		3C257E288C5C10C79282874A /* APIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/APIModels.swift"; sourceTree = "<group>"; };
+		482CADC4A1A9FABE37CDC88C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C8D3EEF2652FD6C1ABB65926 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6398B03D58007FCE49DD5281 /* AniLibDown */ = {
+			isa = PBXGroup;
+			children = (
+				DC3539E72E14B36EA9CC9E2C /* AniLibDownApp.swift */,
+				2A5B6B403314127F8FFB1320 /* ContentView.swift */,
+				FFBC8CEB5917E0D0EB278EC4 /* SharedViews.swift */,
+				5316F7B1244734532B7AED0D /* ProfileView.swift */,
+				64E814432747CF7D7E6B13E3 /* VideoPlayerView.swift */,
+				5229C028439803B81715A5C8 /* LoginView.swift */,
+				C59C8C43BF57165EEA9EB372 /* LatestView.swift */,
+				0CE7891065C005A0939657AE /* CatalogView.swift */,
+				59A874528F5C05C02BDF323D /* ReleaseDetailView.swift */,
+				2EB54B5C7F1FF2D78408DC14 /* DownloadsView.swift */,
+				7934A25B9008BC571E75F679 /* APIClient.swift */,
+				D4AA08A9557F409592012677 /* APIConfig.swift */,
+				EA2557138C8596D868BB6FC5 /* AuthService.swift */,
+				61AE3D5034B14D061C0DDC24 /* DownloadManager.swift */,
+				CCC0D2AA64B2003C7840FBBE /* KeychainHelper.swift */,
+				3C257E288C5C10C79282874A /* APIModels.swift */,
+				482CADC4A1A9FABE37CDC88C /* Assets.xcassets */,
+			);
+			path = AniLibDown;
+			sourceTree = "<group>";
+		};
+		4753D52C63EB5B783D16576E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				24620170CE893AC0B091385C /* AniLibDown.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AEAD0F1E7A88DE163126785A /* */ = {
+			isa = PBXGroup;
+			children = (
+				6398B03D58007FCE49DD5281 /* AniLibDown */,
+				4753D52C63EB5B783D16576E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7BA0F50539ADFA5D6C089F85 /* AniLibDown */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9F51E5EBF6BEEBB0A3F2A83 /* Build configuration list for PBXNativeTarget "AniLibDown" */;
+			buildPhases = (
+				4CC5EC523D8AE68C632EABA8 /* Sources */,
+				C8D3EEF2652FD6C1ABB65926 /* Frameworks */,
+				DA9E1523848E12D05BF8985A /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = AniLibDown;
+			productName = AniLibDown;
+			productReference = 24620170CE893AC0B091385C /* AniLibDown.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6021F8F3199BAA0F4651E5AF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					7BA0F50539ADFA5D6C089F85 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = C8FBC27A4B415B86F4C77223 /* Build configuration list for PBXProject "AniLibDown" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ru;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				ru,
+				Base,
+			);
+			mainGroup = AEAD0F1E7A88DE163126785A /* */;
+			productRefGroup = 4753D52C63EB5B783D16576E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7BA0F50539ADFA5D6C089F85 /* AniLibDown */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DA9E1523848E12D05BF8985A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CC4F17B543FE1385850101A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4CC5EC523D8AE68C632EABA8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28280A9959A959D4D86176AA /* AniLibDownApp.swift in Sources */,
+				639EDA09528E490FFF7BCBF1 /* ContentView.swift in Sources */,
+				1A1A790F82D977A18D4069B1 /* SharedViews.swift in Sources */,
+				A05ACBCF8AC21B2ECD2974A0 /* ProfileView.swift in Sources */,
+				5B1E2CB2511E430AD4D2082F /* VideoPlayerView.swift in Sources */,
+				61B722F88532FAF781F988E9 /* LoginView.swift in Sources */,
+				CA68E955DB6C4A121717A345 /* LatestView.swift in Sources */,
+				1B7FACD117B2AA2AAA995EA2 /* CatalogView.swift in Sources */,
+				580910367CD0BEA6CF7A73C9 /* ReleaseDetailView.swift in Sources */,
+				EE24EF3F7AB4751A66D52720 /* DownloadsView.swift in Sources */,
+				9BC5A75E8A424C02437EE9B8 /* APIClient.swift in Sources */,
+				5AB1DBFB68FD3BED197B56BE /* APIConfig.swift in Sources */,
+				4AAD6BE6D8DBAF2AF0F98E3C /* AuthService.swift in Sources */,
+				E608C42EA7169E482B3CAED5 /* DownloadManager.swift in Sources */,
+				34174FCBDD28125825A3887C /* KeychainHelper.swift in Sources */,
+				46659A41986CC58B26A6C1CD /* APIModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4DA28CED34B2C07E6CAE09A0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B3A100D1AC9FD75DE967468A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		645EC0D7315856C257A033B6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AniLibDown/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AniLibDown;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDown;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4CBDCFB4A72354E871BB1308 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AniLibDown/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AniLibDown;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDown;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C8FBC27A4B415B86F4C77223 /* Build configuration list for PBXProject "AniLibDown" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4DA28CED34B2C07E6CAE09A0 /* Debug */,
+				B3A100D1AC9FD75DE967468A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9F51E5EBF6BEEBB0A3F2A83 /* Build configuration list for PBXNativeTarget "AniLibDown" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				645EC0D7315856C257A033B6 /* Debug */,
+				4CBDCFB4A72354E871BB1308 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6021F8F3199BAA0F4651E5AF /* Project object */;
+}
