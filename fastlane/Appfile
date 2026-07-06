@@ -1,4 +1,0 @@
-app_identifier("top.aniliberty.AniLibDown")
-
-apple_id(ENV["APPLE_ID"]) if ENV["APPLE_ID"]
-team_id(ENV["TEAM_ID"]) if ENV["TEAM_ID"]
