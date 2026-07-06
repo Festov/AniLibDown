@@ -32,8 +32,8 @@ struct OptimizedImage: Codable, Hashable {
 }
 
 struct LabeledValue: Codable, Hashable {
-    let value: String
-    let description: String
+    let value: String?
+    let description: String?
 }
 
 struct ReleaseName: Codable, Hashable {
@@ -234,7 +234,37 @@ struct CollectionResponse: Decodable {
     let meta: PaginatedMeta
 }
 
+struct PlayerSession: Identifiable {
+    let id = UUID()
+    let releaseId: Int
+    let releaseTitle: String
+    let episodes: [Episode]
+    let startEpisodeId: String
+    let quality: VideoQuality
+    let preferOffline: Bool
+
+    var startIndex: Int {
+        episodes.firstIndex(where: { $0.id == startEpisodeId }) ?? 0
+    }
+}
+
+struct DownloadReleaseGroup: Identifiable {
+    let id: String
+    let releaseId: Int?
+    let releaseTitle: String
+    let items: [DownloadItem]
+
+    var completedCount: Int {
+        items.filter { $0.state == .completed }.count
+    }
+
+    var activeCount: Int {
+        items.filter { $0.state == .downloading || $0.state == .queued }.count
+    }
+}
+
 struct APIErrorResponse: Decodable {
     let message: String?
     let error: String?
 }
+
