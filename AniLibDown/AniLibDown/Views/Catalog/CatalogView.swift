@@ -278,17 +278,19 @@ private struct GenreFilterView: View {
                         description: Text("Не удалось загрузить список жанров")
                     )
                 } else {
-                    List(genres) { genre in
-                        Button {
-                            onToggle(genre.id)
-                        } label: {
-                            HStack {
-                                Text(genre.name)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if selectedGenreIds.contains(genre.id) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.accent)
+                    List {
+                        ForEach(genres) { genre in
+                            Button {
+                                onToggle(genre.id)
+                            } label: {
+                                HStack {
+                                    Text(genre.name)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    if selectedGenreIds.contains(genre.id) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.accent)
+                                    }
                                 }
                             }
                         }
