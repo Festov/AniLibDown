@@ -23,6 +23,7 @@ final class CollectionViewModel: ObservableObject {
 
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
+    @ObservedObject private var appSettings = AppSettings.shared
     @StateObject private var collectionViewModel = CollectionViewModel()
     @State private var showLogin = false
     @State private var selectedCollection: CollectionType = .watching
@@ -60,40 +61,38 @@ struct ProfileView: View {
     private func authenticatedContent(profile: UserProfile) -> some View {
         List {
             Section {
-                HStack(spacing: 16) {
-                    if let avatarPath = profile.avatar?.displayURL,
-                       let avatarURL = APIConfig.mediaURL(for: avatarPath) {
-                        AsyncImage(url: avatarURL) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Image(systemName: "person.circle.fill")
-                                .resizable()
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 64, height: 64)
-                        .clipShape(Circle())
-                    } else {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .frame(width: 64, height: 64)
-                            .foregroundStyle(.secondary)
-                    }
+                HStack(spacing: 12) {
+                    profileAvatar(for: profile)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(profile.nickname)
-                            .font(.title3.weight(.semibold))
-                        if let login = profile.login {
+                            .font(.headline)
+                            .lineLimit(1)
+                        if let login = profile.login, login != profile.nickname {
                             Text("@\(login)")
-                                .font(.subheadline)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
                     }
-                }
-                .padding(.vertical, 4)
 
-                Button("Выйти", role: .destructive) {
-                    Task { await authService.logout() }
+                    Spacer(minLength: 8)
+
+                    Button("Выйти", role: .destructive) {
+                        Task { await authService.logout() }
+                    }
+                    .font(.subheadline)
                 }
+                .padding(.vertical, 2)
+            }
+
+            Section("Оформление") {
+                Picker("Тема", selection: $appSettings.colorSchemePreference) {
+                    ForEach(AppColorScheme.allCases) { scheme in
+                        Text(scheme.title).tag(scheme)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
 
             Section("Моя коллекция") {
@@ -125,8 +124,9 @@ struct ProfileView: View {
                         NavigationLink(value: release.id) {
                             ReleaseRowView(
                                 title: release.name.main,
-                                subtitle: String(release.year),
-                                posterPath: release.poster?.displayURL
+                                subtitle: ReleaseFormatting.yearString(release.year),
+                                posterPath: release.poster?.displayURL,
+                                status: release.broadcastStatus
                             )
                         }
                     }
@@ -138,6 +138,27 @@ struct ProfileView: View {
         }
         .task(id: selectedCollection) {
             await collectionViewModel.load(type: selectedCollection)
+        }
+    }
+
+    @ViewBuilder
+    private func profileAvatar(for profile: UserProfile) -> some View {
+        if let avatarPath = profile.avatar?.displayURL,
+           let avatarURL = APIConfig.mediaURL(for: avatarPath) {
+            AsyncImage(url: avatarURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 48, height: 48)
+            .clipShape(Circle())
+        } else {
+            Image(systemName: "person.circle.fill")
+                .resizable()
+                .frame(width: 48, height: 48)
+                .foregroundStyle(.secondary)
         }
     }
 }
