@@ -1,0 +1,58 @@
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if ENV["CI"]
+  end
+
+  desc "Собрать подписанный .ipa для установки на iPhone"
+  lane :build_ipa do
+    UI.user_error!("Добавьте секрет APPLE_ID в GitHub") unless ENV["APPLE_ID"]
+    UI.user_error!("Добавьте секрет FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD") unless ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"]
+    UI.user_error!("Добавьте секрет TEAM_ID в GitHub") unless ENV["TEAM_ID"]
+
+    if ENV["DEVICE_UDID"] && !ENV["DEVICE_UDID"].strip.empty?
+      register_devices(
+        devices: {
+          "iPhone" => ENV["DEVICE_UDID"].strip
+        }
+      )
+    end
+
+    cert(
+      development: true,
+      username: ENV["APPLE_ID"],
+      team_id: ENV["TEAM_ID"]
+    )
+
+    sigh(
+      development: true,
+      app_identifier: "top.aniliberty.AniLibDown",
+      username: ENV["APPLE_ID"],
+      team_id: ENV["TEAM_ID"],
+      force: true
+    )
+
+    profile_name = lane_context[SharedValues::SIGH_NAME]
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "AniLibDown/AniLibDown.xcodeproj",
+      team_id: ENV["TEAM_ID"],
+      targets: ["AniLibDown"],
+      code_sign_identity: "Apple Development",
+      profile_name: profile_name,
+      build_configurations: ["Debug", "Release"]
+    )
+
+    build_app(
+      project: "AniLibDown/AniLibDown.xcodeproj",
+      scheme: "AniLibDown",
+      configuration: "Release",
+      export_method: "development",
+      output_directory: "dist",
+      output_name: "AniLibDown.ipa",
+      clean: true
+    )
+  end
+end
