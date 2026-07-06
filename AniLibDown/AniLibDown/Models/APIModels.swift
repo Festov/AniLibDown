@@ -1,0 +1,266 @@
+import Foundation
+
+// MARK: - Common
+
+struct PaginatedMeta: Codable {
+    let pagination: Pagination
+}
+
+struct Pagination: Codable {
+    let total: Int
+    let count: Int
+    let perPage: Int
+    let currentPage: Int
+    let totalPages: Int
+
+    enum CodingKeys: String, CodingKey {
+        case total, count
+        case perPage = "per_page"
+        case currentPage = "current_page"
+        case totalPages = "total_pages"
+    }
+}
+
+struct ImageAsset: Codable, Hashable {
+    let src: String?
+    let preview: String?
+    let thumbnail: String?
+    let optimized: OptimizedImage?
+
+    var displayURL: String? {
+        optimized?.preview ?? preview ?? src ?? thumbnail
+    }
+}
+
+struct OptimizedImage: Codable, Hashable {
+    let src: String?
+    let preview: String?
+    let thumbnail: String?
+}
+
+struct LabeledValue: Codable, Hashable {
+    let value: String
+    let description: String
+}
+
+struct ReleaseName: Codable, Hashable {
+    let main: String
+    let english: String?
+    let alternative: String?
+}
+
+struct ReleaseAgeRating: Codable, Hashable {
+    let value: String
+    let label: String
+    let isAdult: Bool
+    let description: String?
+
+    enum CodingKeys: String, CodingKey {
+        case value, label, description
+        case isAdult = "is_adult"
+    }
+}
+
+struct Genre: Codable, Hashable, Identifiable {
+    let id: Int
+    let name: String
+}
+
+struct EpisodeSkip: Codable, Hashable {
+    let start: Int?
+    let stop: Int?
+}
+
+// MARK: - Release
+
+struct ReleaseSummary: Codable, Identifiable, Hashable {
+    let id: Int
+    let type: LabeledValue?
+    let year: Int
+    let name: ReleaseName
+    let alias: String
+    let season: LabeledValue?
+    let poster: ImageAsset?
+    let isOngoing: Bool
+    let ageRating: ReleaseAgeRating?
+    let description: String?
+    let episodesTotal: Int?
+    let genres: [Genre]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, year, name, alias, season, poster, description, genres
+        case isOngoing = "is_ongoing"
+        case ageRating = "age_rating"
+        case episodesTotal = "episodes_total"
+    }
+}
+
+struct ReleaseLatest: Codable, Identifiable, Hashable {
+    let id: Int
+    let type: LabeledValue?
+    let year: Int
+    let name: ReleaseName
+    let alias: String
+    let season: LabeledValue?
+    let poster: ImageAsset?
+    let isOngoing: Bool
+    let ageRating: ReleaseAgeRating?
+    let description: String?
+    let episodesTotal: Int?
+    let genres: [Genre]?
+    let latestEpisode: Episode
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, year, name, alias, season, poster, description, genres
+        case isOngoing = "is_ongoing"
+        case ageRating = "age_rating"
+        case episodesTotal = "episodes_total"
+        case latestEpisode = "latest_episode"
+    }
+}
+
+struct ReleaseDetail: Codable, Identifiable {
+    let id: Int
+    let type: LabeledValue?
+    let year: Int
+    let name: ReleaseName
+    let alias: String
+    let season: LabeledValue?
+    let poster: ImageAsset?
+    let isOngoing: Bool
+    let ageRating: ReleaseAgeRating?
+    let description: String?
+    let episodesTotal: Int?
+    let genres: [Genre]?
+    let episodes: [Episode]
+}
+
+// MARK: - Episode
+
+struct Episode: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String?
+    let ordinal: Double
+    let opening: EpisodeSkip?
+    let ending: EpisodeSkip?
+    let preview: ImageAsset?
+    let hls480: String?
+    let hls720: String?
+    let hls1080: String?
+    let duration: Int
+    let releaseId: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, ordinal, opening, ending, preview, duration
+        case hls480 = "hls_480"
+        case hls720 = "hls_720"
+        case hls1080 = "hls_1080"
+        case releaseId = "release_id"
+    }
+
+    var bestStreamURL: URL? {
+        [hls1080, hls720, hls480]
+            .compactMap { $0 }
+            .compactMap(URL.init(string:))
+            .first
+    }
+
+    var displayTitle: String {
+        if let name, !name.isEmpty {
+            return "Серия \(ordinalFormatted): \(name)"
+        }
+        return "Серия \(ordinalFormatted)"
+    }
+
+    var ordinalFormatted: String {
+        ordinal.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", ordinal)
+            : String(ordinal)
+    }
+}
+
+enum VideoQuality: String, CaseIterable, Identifiable {
+    case p1080 = "1080p"
+    case p720 = "720p"
+    case p480 = "480p"
+
+    var id: String { rawValue }
+
+    func streamURL(for episode: Episode) -> URL? {
+        let urlString: String?
+        switch self {
+        case .p1080: urlString = episode.hls1080
+        case .p720: urlString = episode.hls720
+        case .p480: urlString = episode.hls480
+        }
+        guard let urlString else { return nil }
+        return URL(string: urlString)
+    }
+}
+
+// MARK: - Auth
+
+struct LoginRequest: Encodable {
+    let login: String
+    let password: String
+}
+
+struct LoginResponse: Decodable {
+    let token: String?
+    let error: String?
+}
+
+struct UserProfile: Codable, Identifiable {
+    let id: Int
+    let login: String?
+    let email: String?
+    let nickname: String
+    let avatar: ImageAsset?
+    let isBanned: Bool
+    let isWithAds: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, login, email, nickname, avatar
+        case isBanned = "is_banned"
+        case isWithAds = "is_with_ads"
+        case createdAt = "created_at"
+    }
+}
+
+enum CollectionType: String, CaseIterable, Identifiable {
+    case watching = "WATCHING"
+    case planned = "PLANNED"
+    case watched = "WATCHED"
+    case postponed = "POSTPONED"
+    case abandoned = "ABANDONED"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .watching: return "Смотрю"
+        case .planned: return "Запланировано"
+        case .watched: return "Просмотрено"
+        case .postponed: return "Отложено"
+        case .abandoned: return "Брошено"
+        }
+    }
+}
+
+// MARK: - Responses
+
+struct CatalogResponse: Decodable {
+    let data: [ReleaseSummary]
+    let meta: PaginatedMeta
+}
+
+struct CollectionResponse: Decodable {
+    let data: [ReleaseSummary]
+    let meta: PaginatedMeta
+}
+
+struct APIErrorResponse: Decodable {
+    let message: String?
+    let error: String?
+}
