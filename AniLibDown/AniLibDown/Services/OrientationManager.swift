@@ -7,17 +7,22 @@ final class OrientationManager: ObservableObject {
 
     @Published private(set) var isLandscapeLocked = false
 
+    /// Readable from AppDelegate without crossing actor isolation.
+    nonisolated(unsafe) private(set) var landscapeLockedFlag = false
+
     private init() {}
 
     func lockLandscape() {
         guard !isLandscapeLocked else { return }
         isLandscapeLocked = true
+        landscapeLockedFlag = true
         requestLandscape()
     }
 
     func unlockAll() {
         guard isLandscapeLocked else { return }
         isLandscapeLocked = false
+        landscapeLockedFlag = false
         requestPortrait()
     }
 
@@ -39,7 +44,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         supportedInterfaceOrientationsFor window: UIWindow?
     ) -> UIInterfaceOrientationMask {
-        OrientationManager.shared.isLandscapeLocked ? .landscape : .allButUpsideDown
+        OrientationManager.shared.landscapeLockedFlag ? .landscape : .allButUpsideDown
     }
 }
 

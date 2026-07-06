@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "7BA0F50539ADFA5D6C089F85"
+               BlueprintIdentifier = "2AF46B5ACD9689FDF564AF37"
                BuildableName = "AniLibDown.app"
                BlueprintName = "AniLibDown"
                ReferencedContainer = "container:AniLibDown.xcodeproj">
@@ -43,7 +43,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "7BA0F50539ADFA5D6C089F85"
+            BlueprintIdentifier = "2AF46B5ACD9689FDF564AF37"
             BuildableName = "AniLibDown.app"
             BlueprintName = "AniLibDown"
             ReferencedContainer = "container:AniLibDown.xcodeproj">
@@ -61,7 +61,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "7BA0F50539ADFA5D6C089F85"
+            BlueprintIdentifier = "2AF46B5ACD9689FDF564AF37"
             BuildableName = "AniLibDown.app"
             BlueprintName = "AniLibDown"
             ReferencedContainer = "container:AniLibDown.xcodeproj">
