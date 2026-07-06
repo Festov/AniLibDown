@@ -1,86 +1,69 @@
 # Как получить .ipa и установить на iPhone (без Mac)
 
-Артефакт **AniLibDown-simulator** вам **не нужен** — это сборка для симулятора, на телефон она не ставится. Вам нужен workflow **Build IPA**.
+## Способ 1: Без секретов GitHub (рекомендуется)
 
-## Шаг 1. Подготовьте Apple ID
+Sideloadly сам подпишет приложение вашим Apple ID при установке. Секреты в GitHub **не нужны**.
 
-Нужен обычный Apple ID (бесплатно) или Apple Developer (99 $/год).
+### Шаг 1. Запустите сборку
 
-1. Зайдите на [appleid.apple.com](https://appleid.apple.com)
-2. Включите **двухфакторную аутентификацию**
-3. Создайте **пароль для приложений** (App-Specific Password):
-   - Безопасность → Пароли приложений → Создать
-   - Сохраните пароль (формат `xxxx-xxxx-xxxx-xxxx`)
+1. GitHub → вкладка **Actions**
+2. Workflow **Build IPA** → **Run workflow**
+3. Тип сборки: **`unsigned`** (по умолчанию)
+4. Нажмите **Run workflow**
+5. Через 5–15 минут скачайте артефакт **AniLibDown-ipa**
 
-## Шаг 2. Узнайте Team ID
+Внутри будет файл **`AniLibDown.ipa`**.
 
-1. Откройте [developer.apple.com/account](https://developer.apple.com/account)
-2. Войдите тем же Apple ID
-3. Скопируйте **Team ID** (10 символов, например `AB12CD34EF`)
+### Шаг 2. Установите через Sideloadly (Windows)
 
-Если платного аккаунта нет — используйте **Personal Team** (тот же Apple ID, Team ID всё равно есть).
+1. Скачайте [Sideloadly](https://sideloadly.io)
+2. Подключите iPhone по USB
+3. Перетащите `AniLibDown.ipa` в Sideloadly
+4. Введите **Apple ID** и **пароль для приложений**
+   - Пароль создаётся на [appleid.apple.com](https://appleid.apple.com) → Безопасность → Пароли приложений
+5. Нажмите **Start**
 
-## Шаг 3. Узнайте UDID iPhone (рекомендуется)
+Готово — приложение появится на iPhone.
 
-UDID нужен, чтобы приложение установилось именно на ваш телефон.
+### Ограничения бесплатного Apple ID
 
-**На Windows:**
-1. Подключите iPhone к ПК
-2. Откройте iTunes или приложение «Apple Devices» / 3uTools / iMazing
-3. Скопируйте **UDID** (40 символов)
+- Приложение работает **~7 дней**, потом переустановите
+- Одновременно до **3** sideload-приложений
 
-**Без ПК:** на iPhone откройте в Safari ссылку с [get.udid.io](https://get.udid.io) или аналогичный сервис.
+---
 
-## Шаг 4. Добавьте секреты в GitHub
+## Способ 2: Подписанная сборка в GitHub (опционально)
 
-Репозиторий → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+Нужен, только если Sideloadly не подходит. Требует секреты в GitHub.
+
+### Секреты
+
+Репозиторий → **Settings** → **Secrets and variables** → **Actions**
 
 | Secret | Значение |
 |--------|----------|
-| `APPLE_ID` | Ваш email Apple ID |
-| `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD` | Пароль для приложений из шага 1 |
-| `TEAM_ID` | Team ID из шага 2 |
-| `DEVICE_UDID` | UDID iPhone из шага 3 |
+| `APPLE_ID` | Email Apple ID |
+| `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD` | Пароль для приложений |
+| `TEAM_ID` | Team ID с [developer.apple.com/account](https://developer.apple.com/account) |
+| `DEVICE_UDID` | UDID iPhone (необязательно) |
 
-## Шаг 5. Запустите сборку IPA
+### Запуск
 
-1. Вкладка **Actions** → workflow **Build IPA**
-2. **Run workflow** → **Run workflow**
-3. Подождите 10–20 минут
-4. Скачайте артефакт **AniLibDown-ipa**
-5. Внутри будет файл **`AniLibDown.ipa`**
+1. **Actions** → **Build IPA** → **Run workflow**
+2. Тип сборки: **`signed`**
+3. Скачайте артефакт **AniLibDown-ipa-signed**
 
-## Шаг 6. Установите на iPhone (Windows)
+---
 
-### Вариант A: Sideloadly (проще)
-
-1. Скачайте [Sideloadly](https://sideloadly.io) на Windows
-2. Подключите iPhone по USB
-3. Перетащите `AniLibDown.ipa` в Sideloadly
-4. Введите Apple ID и пароль для приложений
-5. Нажмите **Start**
-
-### Вариант B: AltStore
-
-1. Установите [AltServer](https://altstore.io) на Windows
-2. Установите AltStore на iPhone
-3. Откройте `AniLibDown.ipa` через AltStore
-
-## Ограничения бесплатного Apple ID
-
-- Приложение работает **~7 дней**, потом нужно переустановить
-- Одновременно до **3** sideload-приложений
-- С платным Apple Developer — до 1 года и TestFlight
-
-## Если сборка упала
+## Частые ошибки
 
 | Ошибка | Решение |
 |--------|---------|
-| `No signing certificate` | Проверьте `APPLE_ID` и пароль для приложений |
-| `Device not in provisioning profile` | Добавьте секрет `DEVICE_UDID` |
-| `Team ID mismatch` | Проверьте `TEAM_ID` на developer.apple.com |
-| Workflow не виден | Смержите PR в `main` или запустите с ветки, где есть workflow |
+| `exit code 1` на шаге Build signed IPA | Используйте тип **`unsigned`** — секреты не нужны |
+| `Не задан секрет APPLE_ID` | Выбрали `signed`, но секреты не добавлены |
+| Sideloadly не ставит | Проверьте пароль для приложений, не обычный пароль Apple ID |
+| Приложение пропало через неделю | Нормально для бесплатного Apple ID — переустановите |
 
-## Альтернатива без GitHub Secrets
+## Альтернатива
 
-Сервис **[Codemagic](https://codemagic.io)** (бесплатный тариф): подключите репозиторий, войдите Apple ID через веб-интерфейс — сервис сам соберёт и отдаст `.ipa`.
+**[Codemagic](https://codemagic.io)** — подключите репозиторий, войдите Apple ID через сайт, скачайте `.ipa`.
