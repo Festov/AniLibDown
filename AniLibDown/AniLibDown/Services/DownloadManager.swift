@@ -73,6 +73,22 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(episodeId, forKey: .episodeId)
+        try container.encodeIfPresent(releaseId, forKey: .releaseId)
+        try container.encode(releaseTitle, forKey: .releaseTitle)
+        try container.encode(episodeTitle, forKey: .episodeTitle)
+        try container.encode(episodeOrdinal, forKey: .episodeOrdinal)
+        try container.encode(quality, forKey: .quality)
+        try container.encode(remoteURL, forKey: .remoteURL)
+        try container.encodeIfPresent(localBookmark, forKey: .localBookmark)
+        try container.encode(progress, forKey: .progress)
+        try container.encode(state, forKey: .state)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeOrdinal
         case quality, remoteURL, localBookmark, progress, state, createdAt
@@ -280,6 +296,7 @@ final class DownloadManager: NSObject, ObservableObject {
                                 episodeOrdinal: 0,
                                 quality: VideoQuality.p720.rawValue,
                                 remoteURL: downloadTask.urlAsset.url.absoluteString,
+                                localBookmark: nil,
                                 progress: 0,
                                 state: .downloading,
                                 createdAt: Date()
