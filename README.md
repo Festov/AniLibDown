@@ -2,41 +2,39 @@
 
 Нативное iOS-приложение на **SwiftUI** для просмотра и скачивания аниме с [AniLiberty API](https://aniliberty.top/api/docs/v1).
 
+> **Важно:** приложение полностью написано нейросетью. Возможны баги и нестабильная работа.  
+> Если что-то сломалось — создайте запись в разделе [Проблемы](https://github.com/Festov/AniLibDown/issues) (желательно со скриншотом).
+
 ## Возможности
 
-- **Каталог и новинки** — просмотр списков аниме с поиском и пагинацией
-- **Карточка релиза** — описание, жанры, список серий
-- **Онлайн-просмотр** — HLS-плеер (480p / 720p / 1080p) через `AVPlayer`
-- **Офлайн-загрузки** — скачивание серий через `AVAssetDownloadURLSession` и просмотр без сети
-- **Авторизация** — вход в аккаунт AniLiberty, просмотр профиля и коллекций
+- **Новинки и каталог** — списки аниме, поиск, фильтр по жанрам, статус (Онгоинг / Вышло / Не вышло)
+- **Карточка релиза** — описание, жанры, серии, выбор качества, скачивание всех серий
+- **Онлайн-просмотр** — HLS-плеер (480p / 720p / 1080p), смена серий, перемотка двойным тапом
+- **Офлайн-загрузки** — скачивание серий и просмотр без сети, группировка по аниме
+- **Авторизация** — вход в аккаунт AniLiberty, профиль, коллекции (Смотрю / Запланировано / Просмотрено и др.)
+- **Тема** — светлая, тёмная или системная
 
-## Установка на iPhone без Mac
+## Установка на iPhone (без Mac)
 
-1. **Actions** → **Build IPA** → **Run workflow**
-2. Скачайте артефакт **AniLibDown-ipa** → файл `AniLibDown.ipa`
-3. Установите через **[Sideloadly](https://sideloadly.io)** на Windows
+### 1. Скачайте IPA
 
-Подробная инструкция: **[docs/INSTALL_IPA.md](docs/INSTALL_IPA.md)**
+1. Откройте раздел **[Releases](https://github.com/Festov/AniLibDown/releases)** репозитория
+2. Скачайте файл **`AniLibDown.ipa`** из последнего релиза
 
-## Запуск (если Mac есть)
-## Требования
+### 2. Установите через Sideloadly (Windows)
 
-- Xcode 16+
-- iOS 17.0+
-- Аккаунт на [aniliberty.top](https://aniliberty.top) (для входа и коллекций)
+1. Скачайте и установите **[Sideloadly](https://sideloadly.io)**
+2. Подключите iPhone по USB и разблокируйте его
+3. Перетащите `AniLibDown.ipa` в окно Sideloadly
+4. Введите **Apple ID** и **пароль для приложений** (не обычный пароль)
+   - Пароль создаётся на [appleid.apple.com](https://appleid.apple.com) → Безопасность → Пароли приложений
+5. Нажмите **Start** и дождитесь завершения установки
+6. На iPhone: **Настройки → Основные → VPN и управление устройством** → доверьте разработчику
 
-## Запуск
+### Ограничения бесплатного Apple ID
 
-1. Откройте `AniLibDown/AniLibDown.xcodeproj` в Xcode
-2. Выберите симулятор или устройство
-3. Укажите **Development Team** в настройках таргета (Signing & Capabilities)
-4. Соберите и запустите (`Cmd+R`)
-
-## Требования
-
-- Xcode 16+ (только для локальной разработки)
-- iOS 17.0+
-- Аккаунт на [aniliberty.top](https://aniliberty.top) (для входа и коллекций)
+- Приложение работает **~7 дней**, затем нужно переустановить
+- Одновременно до **3** sideload-приложений
 
 ## Структура проекта
 
@@ -44,11 +42,11 @@
 AniLibDown/
 ├── AniLibDown.xcodeproj
 └── AniLibDown/
-    ├── AniLibDownApp.swift      # Точка входа
-    ├── ContentView.swift        # TabView
-    ├── Models/                  # Модели API
-    ├── Services/                # API, авторизация, загрузки
-    └── Views/                   # Экраны SwiftUI
+    ├── AniLibDownApp.swift
+    ├── ContentView.swift
+    ├── Models/
+    ├── Services/
+    └── Views/
 ```
 
 ## API
@@ -61,17 +59,15 @@ AniLibDown/
 | Профиль | `GET /accounts/users/me/profile` |
 | Новинки | `GET /anime/releases/latest` |
 | Каталог | `GET /anime/catalog/releases` |
+| Жанры каталога | `GET /anime/catalog/references/genres` |
 | Релиз | `GET /anime/releases/{id}` |
-| Коллекции | `GET /accounts/users/me/collections/releases` |
+| Коллекции (чтение) | `GET /accounts/users/me/collections/releases` |
+| Коллекции (добавить) | `POST /accounts/users/me/collections` |
+| Коллекции (удалить) | `DELETE /accounts/users/me/collections` |
 
 Базовый URL: `https://aniliberty.top/api/v1`
 
-## Архитектура
-
-- **SwiftUI** + **MVVM**
-- `APIClient` (actor) — сетевой слой с async/await
-- `AuthService` — JWT в Keychain, восстановление сессии
-- `DownloadManager` — фоновые HLS-загрузки с индексом в Documents
+Документация: [aniliberty.top/api/docs/v1](https://aniliberty.top/api/docs/v1)
 
 ## Лицензия
 
