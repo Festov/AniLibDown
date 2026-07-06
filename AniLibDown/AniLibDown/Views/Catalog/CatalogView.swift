@@ -82,7 +82,8 @@ struct CatalogView: View {
                                 ReleaseRowView(
                                     title: release.name.main,
                                     subtitle: subtitle(for: release),
-                                    posterPath: release.poster?.displayURL
+                                    posterPath: release.poster?.displayURL,
+                                    status: release.broadcastStatus
                                 )
                             }
                             .onAppear {
@@ -129,6 +130,6 @@ struct CatalogView: View {
     private func subtitle(for release: ReleaseSummary) -> String {
         let genres = release.genres?.map(\.name).prefix(2).joined(separator: ", ") ?? ""
         let type = release.type?.description ?? ""
-        return [type, String(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
+        return [type, ReleaseFormatting.yearString(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
     }
 }
