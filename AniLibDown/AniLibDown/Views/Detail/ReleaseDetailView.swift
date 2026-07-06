@@ -238,7 +238,8 @@ private struct EpisodeRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    private func durationString(_ seconds: Int) -> String {
+    private func durationString(_ seconds: Int?) -> String {
+        guard let seconds else { return "—" }
         let minutes = seconds / 60
         return "\(minutes) мин"
     }
