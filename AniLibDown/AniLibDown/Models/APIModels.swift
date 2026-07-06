@@ -175,7 +175,7 @@ struct LoginResponse: Decodable {
     let error: String?
 }
 
-struct UserProfile: Codable, Identifiable {
+struct UserProfile: Decodable, Identifiable {
     let id: Int
     let login: String?
     let email: String?
