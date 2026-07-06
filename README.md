@@ -10,50 +10,25 @@
 - **Офлайн-загрузки** — скачивание серий через `AVAssetDownloadURLSession` и просмотр без сети
 - **Авторизация** — вход в аккаунт AniLiberty, просмотр профиля и коллекций
 
-## Сборка без Mac
+## Установка на iPhone без Mac
 
-Собрать iOS-приложение **локально на Windows или Linux нельзя** — Apple требует Xcode, который работает только на macOS. Но Mac вам не обязателен: сборку можно делать в облаке.
+**Артефакт `AniLibDown-simulator` вам не нужен** — это сборка для симулятора Xcode, на телефон она не устанавливается.
 
-### Вариант 1: GitHub Actions (рекомендуется)
+Вам нужен файл **`AniLibDown.ipa`**. Пошаговая инструкция:
 
-В репозитории настроен workflow `.github/workflows/ios-build.yml`. Он собирает приложение на облачном Mac GitHub при каждом push.
+👉 **[docs/INSTALL_IPA.md](docs/INSTALL_IPA.md)** — как собрать `.ipa` в GitHub Actions и установить на iPhone через Sideloadly (Windows).
 
-1. Откройте вкладку **Actions** в GitHub-репозитории
-2. Выберите workflow **iOS Build** → **Run workflow** (или дождитесь запуска после push)
-3. После успешной сборки скачайте артефакт **AniLibDown-simulator**
+Кратко:
 
-Это сборка для **симулятора iOS** — её можно запустить только в симуляторе Xcode (на Mac). На реальный iPhone `.app` из симулятора **не установить**.
+1. Создайте **пароль для приложений** на [appleid.apple.com](https://appleid.apple.com)
+2. Добавьте секреты `APPLE_ID`, `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`, `TEAM_ID`, `DEVICE_UDID` в GitHub
+3. Запустите workflow **Build IPA** (Actions → Build IPA → Run workflow)
+4. Скачайте артефакт **AniLibDown-ipa** → файл `AniLibDown.ipa`
+5. Установите через **[Sideloadly](https://sideloadly.io)** на Windows
 
-### Вариант 2: Установка на iPhone без своего Mac
+## Проверка сборки (для разработчиков)
 
-Для установки на телефон нужен подписанный **.ipa** и аккаунт Apple Developer (99 $/год) или бесплатный Apple ID (с ограничениями).
-
-| Способ | Нужен Mac? | Что потребуется |
-|--------|------------|-----------------|
-| **GitHub Actions + секреты** | Нет | Сертификат `.p12`, provisioning profile, секреты в репозитории |
-| **[Codemagic](https://codemagic.io)** | Нет | Apple ID, настройка через веб-интерфейс |
-| **[Bitrise](https://bitrise.io)** | Нет | Аналогично Codemagic |
-| **Аренда облачного Mac** ([MacinCloud](https://www.macincloud.com), [Scaleway](https://www.scaleway.com/en/apple-silicon/)) | Нет (аренда) | SSH/RDP на Mac, Xcode в облаке |
-| **Попросить друга с Mac** | Один раз | Подписать и собрать IPA |
-
-#### Секреты для подписанного IPA в GitHub Actions
-
-Если есть Apple Developer аккаунт, добавьте в **Settings → Secrets and variables → Actions**:
-
-| Secret | Описание |
-|--------|----------|
-| `BUILD_CERTIFICATE_BASE64` | Distribution/Development сертификат `.p12` в base64 |
-| `P12_PASSWORD` | Пароль от `.p12` |
-| `KEYCHAIN_PASSWORD` | Любой пароль для временного keychain |
-| `PROVISIONING_PROFILE_BASE64` | Provisioning profile в base64 |
-
-После этого раскомментируйте job `build-ipa` в `.github/workflows/ios-build.yml`.
-
-Готовый `.ipa` можно установить через **AltStore**, **Sideloadly** или **TestFlight**.
-
-### Вариант 3: Только посмотреть, что проект компилируется
-
-Достаточно GitHub Actions: если workflow зелёный — код собирается. Скачивать артефакт не обязательно.
+Workflow **iOS Build** собирает версию для симулятора — это только проверка, что код компилируется. Для установки на телефон используйте **Build IPA**.
 
 ## Запуск (если Mac есть)
 
