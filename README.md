@@ -10,6 +10,27 @@
 - **Офлайн-загрузки** — скачивание серий через `AVAssetDownloadURLSession` и просмотр без сети
 - **Авторизация** — вход в аккаунт AniLiberty, просмотр профиля и коллекций
 
+## Установка на iPhone без Mac
+
+**Артефакт `AniLibDown-simulator` вам не нужен** — это сборка для симулятора Xcode, на телефон она не устанавливается.
+
+Вам нужен файл **`AniLibDown.ipa`**. Пошаговая инструкция:
+
+👉 **[docs/INSTALL_IPA.md](docs/INSTALL_IPA.md)** — как собрать `.ipa` в GitHub Actions и установить на iPhone через Sideloadly (Windows).
+
+Кратко:
+
+1. Создайте **пароль для приложений** на [appleid.apple.com](https://appleid.apple.com)
+2. Добавьте секреты `APPLE_ID`, `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`, `TEAM_ID`, `DEVICE_UDID` в GitHub
+3. Запустите workflow **Build IPA** (Actions → Build IPA → Run workflow)
+4. Скачайте артефакт **AniLibDown-ipa** → файл `AniLibDown.ipa`
+5. Установите через **[Sideloadly](https://sideloadly.io)** на Windows
+
+## Проверка сборки (для разработчиков)
+
+Workflow **iOS Build** собирает версию для симулятора — это только проверка, что код компилируется. Для установки на телефон используйте **Build IPA**.
+
+## Запуск (если Mac есть)
 ## Требования
 
 - Xcode 16+
@@ -22,6 +43,12 @@
 2. Выберите симулятор или устройство
 3. Укажите **Development Team** в настройках таргета (Signing & Capabilities)
 4. Соберите и запустите (`Cmd+R`)
+
+## Требования
+
+- Xcode 16+ (только для локальной разработки)
+- iOS 17.0+
+- Аккаунт на [aniliberty.top](https://aniliberty.top) (для входа и коллекций)
 
 ## Структура проекта
 
