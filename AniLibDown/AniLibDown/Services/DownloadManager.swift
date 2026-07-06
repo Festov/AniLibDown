@@ -7,6 +7,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     let releaseId: Int?
     let releaseTitle: String
     let episodeTitle: String
+    let episodeName: String?
     let episodeOrdinal: Double
     let quality: String
     let remoteURL: String
@@ -29,12 +30,38 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         return "title:\(releaseTitle)"
     }
 
+    var displayEpisodeTitle: String {
+        if let episodeName, !episodeName.isEmpty {
+            return formattedEpisodeTitle(name: episodeName)
+        }
+        return episodeTitle
+    }
+
+    var playbackEpisodeName: String? {
+        if let episodeName, !episodeName.isEmpty {
+            return episodeName
+        }
+        guard episodeTitle.hasPrefix("Серия ") else { return nil }
+        let parts = episodeTitle.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return nil }
+        let name = parts[1].trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? nil : name
+    }
+
+    private func formattedEpisodeTitle(name: String) -> String {
+        let ordinalText = episodeOrdinal.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", episodeOrdinal)
+            : String(episodeOrdinal)
+        return "Серия \(ordinalText): \(name)"
+    }
+
     init(
         id: String,
         episodeId: String,
         releaseId: Int?,
         releaseTitle: String,
         episodeTitle: String,
+        episodeName: String?,
         episodeOrdinal: Double,
         quality: String,
         remoteURL: String,
@@ -48,6 +75,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         self.releaseId = releaseId
         self.releaseTitle = releaseTitle
         self.episodeTitle = episodeTitle
+        self.episodeName = episodeName
         self.episodeOrdinal = episodeOrdinal
         self.quality = quality
         self.remoteURL = remoteURL
@@ -64,6 +92,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         releaseId = try container.decodeIfPresent(Int.self, forKey: .releaseId)
         releaseTitle = try container.decode(String.self, forKey: .releaseTitle)
         episodeTitle = try container.decode(String.self, forKey: .episodeTitle)
+        episodeName = try container.decodeIfPresent(String.self, forKey: .episodeName)
         episodeOrdinal = try container.decodeIfPresent(Double.self, forKey: .episodeOrdinal) ?? 0
         quality = try container.decode(String.self, forKey: .quality)
         remoteURL = try container.decode(String.self, forKey: .remoteURL)
@@ -80,6 +109,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(releaseId, forKey: .releaseId)
         try container.encode(releaseTitle, forKey: .releaseTitle)
         try container.encode(episodeTitle, forKey: .episodeTitle)
+        try container.encodeIfPresent(episodeName, forKey: .episodeName)
         try container.encode(episodeOrdinal, forKey: .episodeOrdinal)
         try container.encode(quality, forKey: .quality)
         try container.encode(remoteURL, forKey: .remoteURL)
@@ -90,7 +120,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeOrdinal
+        case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeName, episodeOrdinal
         case quality, remoteURL, localBookmark, progress, state, createdAt
     }
 }
@@ -184,6 +214,7 @@ final class DownloadManager: NSObject, ObservableObject {
             releaseId: releaseId,
             releaseTitle: releaseTitle,
             episodeTitle: episode.displayTitle,
+            episodeName: episode.name,
             episodeOrdinal: episode.ordinal,
             quality: quality.rawValue,
             remoteURL: streamURL.absoluteString,
@@ -293,6 +324,7 @@ final class DownloadManager: NSObject, ObservableObject {
                                 releaseId: nil,
                                 releaseTitle: "Восстановленная загрузка",
                                 episodeTitle: downloadTask.urlAsset.url.lastPathComponent,
+                                episodeName: nil,
                                 episodeOrdinal: 0,
                                 quality: VideoQuality.p720.rawValue,
                                 remoteURL: downloadTask.urlAsset.url.absoluteString,

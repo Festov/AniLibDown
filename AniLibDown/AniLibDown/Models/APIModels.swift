@@ -59,6 +59,63 @@ struct EpisodeSkip: Codable, Hashable {
     let stop: Int?
 }
 
+enum BroadcastStatus: String {
+    case ongoing
+    case released
+    case upcoming
+
+    var title: String {
+        switch self {
+        case .ongoing: return "Онгоинг"
+        case .released: return "Вышло"
+        case .upcoming: return "Не вышло"
+        }
+    }
+}
+
+enum ReleaseFormatting {
+    static func yearString(_ year: Int) -> String {
+        String(year)
+    }
+
+    static func broadcastStatus(isOngoing: Bool, episodesCount: Int, episodesTotal: Int?) -> BroadcastStatus {
+        if isOngoing { return .ongoing }
+        let total = episodesTotal ?? episodesCount
+        if episodesCount == 0 && total == 0 { return .upcoming }
+        return .released
+    }
+}
+
+extension ReleaseSummary {
+    var broadcastStatus: BroadcastStatus {
+        ReleaseFormatting.broadcastStatus(
+            isOngoing: isOngoing,
+            episodesCount: episodesTotal ?? 0,
+            episodesTotal: episodesTotal
+        )
+    }
+}
+
+extension ReleaseLatest {
+    var broadcastStatus: BroadcastStatus {
+        ReleaseFormatting.broadcastStatus(
+            isOngoing: isOngoing,
+            episodesCount: episodesTotal ?? 0,
+            episodesTotal: episodesTotal
+        )
+    }
+}
+
+extension ReleaseDetail {
+    var broadcastStatus: BroadcastStatus {
+        ReleaseFormatting.broadcastStatus(
+            isOngoing: isOngoing,
+            episodesCount: episodes.count,
+            episodesTotal: episodesTotal
+        )
+    }
+}
+
 // MARK: - Release
 
 struct ReleaseSummary: Codable, Identifiable, Hashable {
@@ -202,7 +259,7 @@ struct UserProfile: Decodable, Identifiable {
     }
 }
 
-enum CollectionType: String, CaseIterable, Identifiable {
+enum CollectionType: String, CaseIterable, Identifiable, Hashable {
     case watching = "WATCHING"
     case planned = "PLANNED"
     case watched = "WATCHED"
@@ -232,6 +289,42 @@ struct CatalogResponse: Decodable {
 struct CollectionResponse: Decodable {
     let data: [ReleaseSummary]
     let meta: PaginatedMeta
+}
+
+struct CollectionAddRequest: Encodable {
+    let releaseId: Int
+    let typeOfCollection: String
+
+    enum CodingKeys: String, CodingKey {
+        case releaseId = "release_id"
+        case typeOfCollection = "type_of_collection"
+    }
+}
+
+struct CollectionRemoveRequest: Encodable {
+    let releaseId: Int
+
+    enum CodingKeys: String, CodingKey {
+        case releaseId = "release_id"
+    }
+}
+
+struct CollectionMembership: Decodable {
+    let releaseId: Int
+    let type: CollectionType
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        releaseId = try container.decode(Int.self)
+        let rawType = try container.decode(String.self)
+        guard let collectionType = CollectionType(rawValue: rawType) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown collection type: \(rawType)"
+            )
+        }
+        type = collectionType
+    }
 }
 
 struct PlayerSession: Identifiable {

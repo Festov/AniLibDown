@@ -168,6 +168,28 @@ actor APIClient {
         )
     }
 
+    func getCollectionIds() async throws -> [CollectionMembership] {
+        try await request(path: "accounts/users/me/collections/ids", authorized: true)
+    }
+
+    func addToCollection(releaseId: Int, type: CollectionType) async throws {
+        try await requestVoid(
+            path: "accounts/users/me/collections",
+            method: "POST",
+            body: [CollectionAddRequest(releaseId: releaseId, typeOfCollection: type.rawValue)],
+            authorized: true
+        )
+    }
+
+    func removeFromCollection(releaseId: Int) async throws {
+        try await requestVoid(
+            path: "accounts/users/me/collections",
+            method: "DELETE",
+            body: [CollectionRemoveRequest(releaseId: releaseId)],
+            authorized: true
+        )
+    }
+
     // MARK: - Private
 
     private func performRequest(
