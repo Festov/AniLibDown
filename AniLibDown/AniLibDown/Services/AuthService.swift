@@ -17,6 +17,7 @@ final class AuthService: ObservableObject {
         do {
             profile = try await APIClient.shared.getProfile()
             isAuthenticated = true
+            await CollectionStatusStore.shared.refresh()
         } catch {
             KeychainHelper.deleteToken()
             await APIClient.shared.setAccessToken(nil)
@@ -35,6 +36,7 @@ final class AuthService: ObservableObject {
             KeychainHelper.saveToken(token)
             profile = try await APIClient.shared.getProfile()
             isAuthenticated = true
+            await CollectionStatusStore.shared.refresh()
         } catch {
             errorMessage = error.localizedDescription
             isAuthenticated = false
@@ -55,5 +57,6 @@ final class AuthService: ObservableObject {
         await APIClient.shared.setAccessToken(nil)
         isAuthenticated = false
         profile = nil
+        await CollectionStatusStore.shared.refresh()
     }
 }

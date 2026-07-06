@@ -5,6 +5,9 @@ final class ReleaseDetailViewModel: ObservableObject {
     @Published var release: ReleaseDetail?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var collectionStatus: CollectionType?
+    @Published var isUpdatingCollection = false
+    @Published var collectionError: String?
 
     func load(id: Int) async {
         isLoading = true
@@ -13,8 +16,26 @@ final class ReleaseDetailViewModel: ObservableObject {
 
         do {
             release = try await APIClient.shared.getRelease(idOrAlias: String(id))
+            collectionStatus = CollectionStatusStore.shared.status(for: id)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func refreshCollectionStatus(releaseId: Int) {
+        collectionStatus = CollectionStatusStore.shared.status(for: releaseId)
+    }
+
+    func setCollectionStatus(_ type: CollectionType?, releaseId: Int) async {
+        isUpdatingCollection = true
+        collectionError = nil
+        defer { isUpdatingCollection = false }
+
+        do {
+            try await CollectionStatusStore.shared.setStatus(releaseId: releaseId, type: type)
+            collectionStatus = type
+        } catch {
+            collectionError = error.localizedDescription
         }
     }
 }
@@ -23,9 +44,13 @@ struct ReleaseDetailView: View {
     let releaseId: Int
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
+    @EnvironmentObject private var authService: AuthService
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var selectedQuality: VideoQuality = .p720
     @State private var playerSession: PlayerSession?
+    @State private var selectedEpisodeRangeIndex = 0
+
+    private let episodeRangeSize = 50
 
     var body: some View {
         Group {
@@ -35,6 +60,9 @@ struct ReleaseDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         header(for: release)
+                        if authService.isAuthenticated {
+                            collectionSection(for: release)
+                        }
                         descriptionSection(for: release)
                         qualityPicker
                         downloadAllButton(for: release)
@@ -55,6 +83,9 @@ struct ReleaseDetailView: View {
         .task {
             await viewModel.load(id: releaseId)
         }
+        .onAppear {
+            viewModel.refreshCollectionStatus(releaseId: releaseId)
+        }
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
         }
@@ -72,8 +103,9 @@ struct ReleaseDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Text("\(release.year) • \(release.type?.description ?? "Аниме")")
+                Text("\(ReleaseFormatting.yearString(release.year)) • \(release.type?.description ?? "Аниме")")
                     .font(.subheadline)
+                BroadcastStatusBadge(status: release.broadcastStatus)
                 if let rating = release.ageRating?.label {
                     Text(rating)
                         .font(.caption)
@@ -92,6 +124,43 @@ struct ReleaseDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    @ViewBuilder
+    private func collectionSection(for release: ReleaseDetail) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("В коллекции")
+                .font(.headline)
+
+            Picker("Статус", selection: collectionBinding(for: release.id)) {
+                Text("Не в коллекции").tag(Optional<CollectionType>.none)
+                ForEach(CollectionType.allCases) { type in
+                    Text(type.title).tag(Optional(type))
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(viewModel.isUpdatingCollection)
+
+            if viewModel.isUpdatingCollection {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            if let error = viewModel.collectionError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func collectionBinding(for releaseId: Int) -> Binding<CollectionType?> {
+        Binding(
+            get: { viewModel.collectionStatus },
+            set: { newValue in
+                Task { await viewModel.setCollectionStatus(newValue, releaseId: releaseId) }
+            }
+        )
     }
 
     @ViewBuilder
@@ -141,11 +210,28 @@ struct ReleaseDetailView: View {
 
     @ViewBuilder
     private func episodesSection(for release: ReleaseDetail) -> some View {
+        let ranges = episodeRanges(for: release.episodes.count)
+        let visibleEpisodes = episodes(in: release.episodes, rangeIndex: selectedEpisodeRangeIndex, ranges: ranges)
+
         VStack(alignment: .leading, spacing: 8) {
             Text("Серии")
                 .font(.headline)
 
-            ForEach(release.episodes) { episode in
+            if ranges.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(ranges.enumerated()), id: \.offset) { index, range in
+                            Button(range.label) {
+                                selectedEpisodeRangeIndex = index
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(selectedEpisodeRangeIndex == index ? .accentColor : .secondary)
+                        }
+                    }
+                }
+            }
+
+            ForEach(visibleEpisodes) { episode in
                 EpisodeRow(
                     episode: episode,
                     quality: selectedQuality,
@@ -180,6 +266,37 @@ struct ReleaseDetailView: View {
             preferOffline: true
         )
     }
+
+    private struct EpisodeRange {
+        let start: Int
+        let end: Int
+
+        var label: String { "\(start)-\(end)" }
+    }
+
+    private func episodeRanges(for count: Int) -> [EpisodeRange] {
+        guard count > 100 else {
+            return count > 0 ? [EpisodeRange(start: 1, end: count)] : []
+        }
+
+        var ranges: [EpisodeRange] = []
+        var start = 1
+        while start <= count {
+            let end = min(start + episodeRangeSize - 1, count)
+            ranges.append(EpisodeRange(start: start, end: end))
+            start = end + 1
+        }
+        return ranges
+    }
+
+    private func episodes(in allEpisodes: [Episode], rangeIndex: Int, ranges: [EpisodeRange]) -> [Episode] {
+        guard ranges.indices.contains(rangeIndex) else { return allEpisodes }
+        let range = ranges[rangeIndex]
+        return allEpisodes.filter { episode in
+            let number = Int(episode.ordinal.rounded(.towardZero))
+            return number >= range.start && number <= range.end
+        }
+    }
 }
 
 private struct EpisodeRow: View {
@@ -199,6 +316,10 @@ private struct EpisodeRow: View {
 
     private var isDownloaded: Bool {
         downloadManager.isDownloaded(episodeId: episode.id, quality: quality)
+    }
+
+    private var canPlay: Bool {
+        quality.streamURL(for: episode) != nil || isDownloaded
     }
 
     var body: some View {
@@ -223,7 +344,7 @@ private struct EpisodeRow: View {
                     .font(.title2)
             }
             .buttonStyle(.plain)
-            .disabled(quality.streamURL(for: episode) == nil && !isDownloaded)
+            .disabled(!canPlay)
 
             if isDownloaded {
                 Button(action: onDeleteDownload) {
@@ -248,6 +369,12 @@ private struct EpisodeRow: View {
         .padding(10)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture {
+            if canPlay {
+                onPlay()
+            }
+        }
     }
 
     @ViewBuilder

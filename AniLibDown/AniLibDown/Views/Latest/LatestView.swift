@@ -40,7 +40,8 @@ struct LatestView: View {
                             ReleaseRowView(
                                 title: release.name.main,
                                 subtitle: subtitle(for: release),
-                                posterPath: release.poster?.displayURL
+                                posterPath: release.poster?.displayURL,
+                                status: release.broadcastStatus
                             )
                         }
                     }
@@ -69,6 +70,6 @@ struct LatestView: View {
     private func subtitle(for release: ReleaseLatest) -> String {
         let genres = release.genres?.map(\.name).prefix(2).joined(separator: ", ") ?? ""
         let episode = "Серия \(release.latestEpisode.ordinalFormatted)"
-        return [episode, String(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
+        return [episode, ReleaseFormatting.yearString(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
     }
 }
