@@ -32,7 +32,7 @@ private struct SkeletonShimmer: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func skeletonShimmer() -> some View {
         modifier(SkeletonShimmer())
     }
