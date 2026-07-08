@@ -260,22 +260,11 @@ struct ReleaseDetailView: View {
     }
 
     private func play(episode: Episode, release: ReleaseDetail) {
-        let lastEpisodeId = WatchProgressStore.shared.lastEpisodeId(for: release.id)
-        let startEpisodeId: String
-        if let lastEpisodeId,
-           release.episodes.contains(where: { $0.id == lastEpisodeId }),
-           let position = WatchProgressStore.shared.position(for: lastEpisodeId),
-           position > 5 {
-            startEpisodeId = lastEpisodeId
-        } else {
-            startEpisodeId = episode.id
-        }
-
         playerSession = PlayerSession(
             releaseId: release.id,
             releaseTitle: release.name.main,
             episodes: release.episodes,
-            startEpisodeId: startEpisodeId,
+            startEpisodeId: episode.id,
             quality: selectedQuality,
             preferOffline: true,
             episodesTotal: release.episodesTotal

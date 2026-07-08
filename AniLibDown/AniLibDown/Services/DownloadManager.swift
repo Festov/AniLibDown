@@ -586,14 +586,21 @@ extension DownloadManager: AVAssetDownloadDelegate {
         Task { @MainActor in
             let id = task.taskIdentifier.description
             if let error {
+                let hadLocalFile = self.items.first(where: { $0.id == id })?.localBookmark != nil
                 if let pendingURL = self.pendingDownloadURLs[id] {
                     self.removeItemIfExists(at: pendingURL)
                     self.pendingDownloadURLs.removeValue(forKey: id)
                     self.savePendingURLs()
                 }
-                self.updateItem(id: id) {
-                    $0.state = .failed
-                    $0.progress = 0
+
+                if hadLocalFile {
+                    self.updateItem(id: id) {
+                        $0.state = .failed
+                        $0.progress = 0
+                    }
+                } else {
+                    self.items.removeAll { $0.id == id }
+                    self.saveIndex()
                 }
                 self.activeTasks.removeValue(forKey: id)
                 _ = error.localizedDescription
