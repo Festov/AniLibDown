@@ -116,8 +116,21 @@ actor ShikimoriAPIClient {
     private func authorizedRequest<T: Decodable>(
         path: String,
         method: String,
+        accessToken: String
+    ) async throws -> T {
+        try await authorizedRequest(
+            path: path,
+            method: method,
+            accessToken: accessToken,
+            body: Optional<EmptyRequestBody>.none
+        )
+    }
+
+    private func authorizedRequest<T: Decodable, B: Encodable>(
+        path: String,
+        method: String,
         accessToken: String,
-        body: (any Encodable)? = nil
+        body: B?
     ) async throws -> T {
         guard let url = URL(string: path, relativeTo: ShikimoriConfig.baseURL) else {
             throw ShikimoriError.apiError("Некорректный URL")
@@ -194,3 +207,5 @@ actor ShikimoriAPIClient {
 private struct EmptyResponse: Decodable {
     init() {}
 }
+
+private struct EmptyRequestBody: Encodable {}
