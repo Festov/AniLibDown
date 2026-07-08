@@ -8,7 +8,7 @@ struct AniLibDownApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environmentObject(authService)
                 .environmentObject(downloadManager)
         }
