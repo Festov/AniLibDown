@@ -1,6 +1,6 @@
 import Foundation
 
-enum ShikimoriListStatus: String, CaseIterable, Identifiable, Codable {
+enum ShikimoriListStatus: String, CaseIterable, Identifiable, Codable, Hashable {
     case planned
     case watching
     case completed
