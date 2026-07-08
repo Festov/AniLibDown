@@ -93,6 +93,8 @@ struct ProfileView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+
+                Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
             }
 
             Section("Моя коллекция") {
@@ -145,20 +147,31 @@ struct ProfileView: View {
     private func profileAvatar(for profile: UserProfile) -> some View {
         if let avatarPath = profile.avatar?.displayURL,
            let avatarURL = APIConfig.mediaURL(for: avatarPath) {
-            AsyncImage(url: avatarURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .foregroundStyle(.secondary)
+            AsyncImage(url: avatarURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    avatarFallback
+                case .empty:
+                    SkeletonCircle()
+                @unknown default:
+                    avatarFallback
+                }
             }
             .frame(width: 48, height: 48)
             .clipShape(Circle())
         } else {
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .frame(width: 48, height: 48)
-                .foregroundStyle(.secondary)
+            avatarFallback
         }
+    }
+
+    private var avatarFallback: some View {
+        Image(systemName: "person.circle.fill")
+            .resizable()
+            .frame(width: 48, height: 48)
+            .foregroundStyle(.secondary)
     }
 }
