@@ -62,7 +62,7 @@
 
 Чтобы отмечать статусы на Shikimori из карточки аниме:
 
-1. Создайте OAuth-приложение на [shikimori.one/oauth/applications](https://shikimori.one/oauth/applications)
+1. Создайте OAuth-приложение на [shikimori.io/oauth/applications](https://shikimori.io/oauth/applications)
 2. Укажите **Redirect URI**: `anilibdown://shikimori/callback`
 3. Скопируйте `AniLibDown/AniLibDown/ShikimoriSecrets.plist.example` в `ShikimoriSecrets.plist` (или отредактируйте существующий файл)
 4. Впишите `ClientId` и `ClientSecret` от OAuth-приложения

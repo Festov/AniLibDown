@@ -188,8 +188,11 @@ actor ShikimoriAPIClient {
         }
 
         guard (200...299).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8)
-            throw ShikimoriError.apiError(message?.isEmpty == false ? message! : "Ошибка Shikimori (\(http.statusCode))")
+            let message = Self.sanitizedErrorMessage(
+                data: data,
+                statusCode: http.statusCode
+            )
+            throw ShikimoriError.apiError(message)
         }
 
         if T.self == EmptyResponse.self, data.isEmpty {
@@ -201,6 +204,23 @@ actor ShikimoriAPIClient {
         } catch {
             throw ShikimoriError.apiError("Ошибка разбора ответа: \(error.localizedDescription)")
         }
+    }
+
+    private static func sanitizedErrorMessage(data: Data, statusCode: Int) -> String {
+        guard let raw = String(data: data, encoding: .utf8), !raw.isEmpty else {
+            return "Ошибка Shikimori (\(statusCode))"
+        }
+
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("<") || trimmed.contains("<html") || trimmed.contains("<!DOCTYPE") {
+            return "Shikimori вернул HTML вместо API (код \(statusCode)). Проверьте доступ к shikimori.io"
+        }
+
+        if trimmed.count > 240 {
+            return String(trimmed.prefix(240)) + "…"
+        }
+
+        return trimmed
     }
 }
 

@@ -65,7 +65,7 @@ final class ShikimoriAuthService: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
 
-        var components = URLComponents(string: "https://shikimori.one/oauth/authorize")!
+        var components = URLComponents(url: ShikimoriConfig.oauthAuthorizeURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: ShikimoriConfig.clientId),
             URLQueryItem(name: "redirect_uri", value: ShikimoriConfig.redirectURI),
