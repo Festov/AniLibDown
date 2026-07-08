@@ -58,45 +58,29 @@ final class OrientationManager: ObservableObject {
     private func requestLandscape() async {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
 
-        await MainActor.run {
-            for window in scene.windows {
-                window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
-            }
+        for window in scene.windows {
+            window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
         }
 
         try? await Task.sleep(nanoseconds: 50_000_000)
 
-        await withCheckedContinuation { continuation in
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { _ in
-                Task { @MainActor in
-                    UIViewController.attemptRotationToDeviceOrientation()
-                    try? await Task.sleep(nanoseconds: 550_000_000)
-                    continuation.resume()
-                }
-            }
-        }
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { _ in }
+        UIViewController.attemptRotationToDeviceOrientation()
+        try? await Task.sleep(nanoseconds: 550_000_000)
     }
 
     private func requestPortrait() async {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
 
-        await MainActor.run {
-            for window in scene.windows {
-                window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
-            }
+        for window in scene.windows {
+            window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
         }
 
         try? await Task.sleep(nanoseconds: 50_000_000)
 
-        await withCheckedContinuation { continuation in
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { _ in
-                Task { @MainActor in
-                    UIViewController.attemptRotationToDeviceOrientation()
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    continuation.resume()
-                }
-            }
-        }
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { _ in }
+        UIViewController.attemptRotationToDeviceOrientation()
+        try? await Task.sleep(nanoseconds: 400_000_000)
     }
 }
 

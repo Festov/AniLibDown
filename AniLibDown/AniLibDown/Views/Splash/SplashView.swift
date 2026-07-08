@@ -100,7 +100,12 @@ struct SplashView: View {
 }
 
 struct RootView: View {
+    @ObservedObject private var appSettings = AppSettings.shared
     @State private var showSplash = true
+
+    init() {
+        _showSplash = State(initialValue: AppSettings.shared.isSplashEnabled)
+    }
 
     var body: some View {
         ZStack {
@@ -117,6 +122,11 @@ struct RootView: View {
                 }
                 .transition(.opacity)
                 .zIndex(1)
+            }
+        }
+        .onChange(of: appSettings.isSplashEnabled) { _, isEnabled in
+            if !isEnabled {
+                showSplash = false
             }
         }
     }
