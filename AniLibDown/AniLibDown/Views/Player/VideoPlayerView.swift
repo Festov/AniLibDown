@@ -226,6 +226,7 @@ struct VideoPlayerView: View {
     @State private var isOrientationTransitioning = true
     @State private var progressSaveTask: Task<Void, Never>?
     @State private var didTriggerAutoNext = false
+    @State private var endPlaybackObserver: NSObjectProtocol?
     @State private var skipPrompt: SkipPrompt?
     @State private var skipPromptProgress: CGFloat = 0
     @State private var skipPromptTask: Task<Void, Never>?
@@ -353,6 +354,8 @@ struct VideoPlayerView: View {
             seekAccumTask?.cancel()
             skipPromptTask?.cancel()
             progressSaveTask?.cancel()
+            endPlaybackObserver.map(NotificationCenter.default.removeObserver)
+            endPlaybackObserver = nil
             if let player {
                 progress.detach(from: player)
             }
@@ -417,7 +420,7 @@ struct VideoPlayerView: View {
                     .frame(width: 44, height: 44)
             }
 
-            Button("Закрыть") { dismiss() }
+            Button("Закрыть") { closePlayer() }
                 .font(.subheadline.weight(.semibold))
         }
         .foregroundStyle(.white)
@@ -726,11 +729,53 @@ struct VideoPlayerView: View {
         scrubTime = clamped
     }
 
+    private func restorePlaybackPosition(_ seconds: Double, on player: AVPlayer) {
+        guard seconds > 5 else { return }
+
+        let performSeek = {
+            let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .invalid)
+            let clamped = duration.isFinite && duration > 0 ? min(seconds, duration) : seconds
+            let target = CMTime(seconds: clamped, preferredTimescale: 600)
+            player.seek(to: target)
+            if duration.isFinite, duration > 0 {
+                progress.duration = duration
+            }
+            progress.currentTime = clamped
+            scrubTime = clamped
+        }
+
+        let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .invalid)
+        if duration.isFinite, duration > 0 {
+            performSeek()
+            return
+        }
+
+        Task { @MainActor in
+            guard let item = player.currentItem else { return }
+
+            let keys = ["duration", "playable"]
+            do {
+                try await item.asset.loadValues(forKeys: keys)
+            } catch {
+                return
+            }
+
+            guard player.currentItem === item else { return }
+            performSeek()
+        }
+    }
+
     private func switchToEpisode(at index: Int) {
         guard session.episodes.indices.contains(index), index != currentIndex else { return }
         saveWatchProgress()
         currentIndex = index
         loadEpisode(at: index)
+    }
+
+    private func closePlayer() {
+        OrientationManager.shared.unlockAll(delay: 0) {
+            dismiss()
+        }
     }
 
     private func loadEpisode(at index: Int) {
@@ -748,12 +793,27 @@ struct VideoPlayerView: View {
 
         player?.pause()
         let item = AVPlayerItem(url: url)
+        endPlaybackObserver.map(NotificationCenter.default.removeObserver)
+        endPlaybackObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { _ in
+            guard playerSettings.autoPlayNext,
+                  !didTriggerAutoNext,
+                  currentIndex < session.episodes.count - 1 else {
+                return
+            }
+            didTriggerAutoNext = true
+            switchToEpisode(at: currentIndex + 1)
+        }
+
         if let player {
             player.replaceCurrentItem(with: item)
             progress.observe(player: player) { isScrubbing }
             configureSkipObserver(for: player, episode: episode)
             if savedPosition > 5 {
-                seek(to: savedPosition)
+                restorePlaybackPosition(savedPosition, on: player)
             }
             player.rate = normalPlaybackRate
             player.play()
@@ -763,7 +823,7 @@ struct VideoPlayerView: View {
             progress.observe(player: newPlayer) { isScrubbing }
             configureSkipObserver(for: newPlayer, episode: episode)
             if savedPosition > 5 {
-                seek(to: savedPosition)
+                restorePlaybackPosition(savedPosition, on: newPlayer)
             }
             newPlayer.play()
         }
@@ -794,6 +854,38 @@ struct VideoPlayerView: View {
         skipPrompt = nil
     }
 
+    private func segmentBounds(
+        for key: String,
+        skip: EpisodeSkip?,
+        duration: Double
+    ) -> (start: Double, end: Double)? {
+        guard let skip else { return nil }
+
+        let start = Double(skip.start ?? 0)
+        let end: Double
+
+        if let stop = skip.stop {
+            end = Double(stop)
+        } else if key == "ending", duration > 0 {
+            end = duration
+        } else {
+            return nil
+        }
+
+        let segmentDuration = end - start
+        guard segmentDuration > 0 else { return nil }
+
+        if key == "opening" && segmentDuration > 300 {
+            return nil
+        }
+
+        if key == "ending" && duration > 0 && start < duration * 0.4 {
+            return nil
+        }
+
+        return (start, end)
+    }
+
     private func handleSkipSegments(at time: Double, episode: Episode) {
         if let prompt = skipPrompt {
             let stillInside = isInsideSegment(time: time, episode: episode, segmentKey: prompt.id)
@@ -809,17 +901,14 @@ struct VideoPlayerView: View {
         ]
 
         for (key, title, skip) in segments {
-            guard let skip else { continue }
-            let start = Double(skip.start ?? 0)
-            let end = Double(skip.stop ?? Int(progress.duration))
-            guard end > start else { continue }
+            guard let bounds = segmentBounds(for: key, skip: skip, duration: progress.duration) else { continue }
 
             let segmentKey = "\(episode.id)-\(key)"
             if declinedSkipSegments.contains(segmentKey) { continue }
             if lastSkippedSegment == segmentKey { continue }
 
-            guard time >= start, time < end else { continue }
-            presentSkipPrompt(segmentKey: segmentKey, title: title, endTime: end)
+            guard time >= bounds.start, time < bounds.end else { continue }
+            presentSkipPrompt(segmentKey: segmentKey, title: title, endTime: bounds.end)
             return
         }
     }
@@ -832,10 +921,11 @@ struct VideoPlayerView: View {
 
         for (key, skip) in segments {
             let currentKey = "\(episode.id)-\(key)"
-            guard currentKey == segmentKey, let skip else { continue }
-            let start = Double(skip.start ?? 0)
-            let end = Double(skip.stop ?? Int(progress.duration))
-            return time >= start && time < end
+            guard currentKey == segmentKey else { continue }
+            guard let bounds = segmentBounds(for: key, skip: skip, duration: progress.duration) else {
+                return false
+            }
+            return time >= bounds.start && time < bounds.end
         }
         return false
     }

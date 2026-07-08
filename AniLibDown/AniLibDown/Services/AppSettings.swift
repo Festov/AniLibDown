@@ -34,8 +34,19 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var isSplashEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isSplashEnabled, forKey: "isSplashEnabled")
+        }
+    }
+
     private init() {
         let raw = UserDefaults.standard.string(forKey: "appColorScheme") ?? AppColorScheme.system.rawValue
         colorSchemePreference = AppColorScheme(rawValue: raw) ?? .system
+        if UserDefaults.standard.object(forKey: "isSplashEnabled") == nil {
+            isSplashEnabled = true
+        } else {
+            isSplashEnabled = UserDefaults.standard.bool(forKey: "isSplashEnabled")
+        }
     }
 }
