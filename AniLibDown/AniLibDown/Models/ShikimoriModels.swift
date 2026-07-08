@@ -32,7 +32,7 @@ struct ShikimoriImage: Codable {
     let original: String?
 }
 
-struct ShikimoriAnime: Codable, Identifiable, Hashable {
+struct ShikimoriAnime: Codable, Identifiable {
     let id: Int
     let name: String
     let russian: String?

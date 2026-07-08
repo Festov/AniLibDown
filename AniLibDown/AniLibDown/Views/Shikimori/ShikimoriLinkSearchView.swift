@@ -9,6 +9,7 @@ struct ShikimoriLinkSearchView: View {
     @State private var results: [ShikimoriAnime] = []
     @State private var isSearching = false
     @State private var errorMessage: String?
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
