@@ -98,6 +98,9 @@ struct ReleaseDetailView: View {
                 .frame(width: 120, height: 170)
 
             VStack(alignment: .leading, spacing: 6) {
+                Text(release.name.main)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let english = release.name.english, !english.isEmpty {
                     Text(english)
                         .font(.subheadline)
@@ -257,13 +260,25 @@ struct ReleaseDetailView: View {
     }
 
     private func play(episode: Episode, release: ReleaseDetail) {
+        let lastEpisodeId = WatchProgressStore.shared.lastEpisodeId(for: release.id)
+        let startEpisodeId: String
+        if let lastEpisodeId,
+           release.episodes.contains(where: { $0.id == lastEpisodeId }),
+           let position = WatchProgressStore.shared.position(for: lastEpisodeId),
+           position > 5 {
+            startEpisodeId = lastEpisodeId
+        } else {
+            startEpisodeId = episode.id
+        }
+
         playerSession = PlayerSession(
             releaseId: release.id,
             releaseTitle: release.name.main,
             episodes: release.episodes,
-            startEpisodeId: episode.id,
+            startEpisodeId: startEpisodeId,
             quality: selectedQuality,
-            preferOffline: true
+            preferOffline: true,
+            episodesTotal: release.episodesTotal
         )
     }
 
