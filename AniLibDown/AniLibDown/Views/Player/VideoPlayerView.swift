@@ -1,7 +1,7 @@
 import SwiftUI
 import AVKit
 
-private let controlsAnimation = Animation.easeInOut(duration: 0.35)
+private let overlayAnimation = Animation.easeInOut(duration: 0.35)
 
 // MARK: - Player layer
 
@@ -45,6 +45,8 @@ private final class PlayerGestureView: UIView {
     var onSingleTap: (() -> Void)?
     var onDoubleTapLeft: (() -> Void)?
     var onDoubleTapRight: (() -> Void)?
+    var onLongPressRightBegan: (() -> Void)?
+    var onLongPressRightEnded: (() -> Void)?
 
     private let leftZone = UIView()
     private let rightZone = UIView()
@@ -72,14 +74,14 @@ private final class PlayerGestureView: UIView {
             rightZone.leadingAnchor.constraint(equalTo: leftZone.trailingAnchor)
         ])
 
-        attachGestures(to: leftZone, doubleAction: #selector(handleDoubleTapLeft))
-        attachGestures(to: rightZone, doubleAction: #selector(handleDoubleTapRight))
+        attachGestures(to: leftZone, doubleAction: #selector(handleDoubleTapLeft), longPress: false)
+        attachGestures(to: rightZone, doubleAction: #selector(handleDoubleTapRight), longPress: true)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { nil }
 
-    private func attachGestures(to view: UIView, doubleAction: Selector) {
+    private func attachGestures(to view: UIView, doubleAction: Selector, longPress: Bool) {
         let double = UITapGestureRecognizer(target: self, action: doubleAction)
         double.numberOfTapsRequired = 2
 
@@ -89,30 +91,53 @@ private final class PlayerGestureView: UIView {
 
         view.addGestureRecognizer(double)
         view.addGestureRecognizer(single)
+
+        if longPress {
+            let press = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressRight))
+            press.minimumPressDuration = 0.25
+            view.addGestureRecognizer(press)
+        }
     }
 
     @objc private func handleSingleTap() { onSingleTap?() }
     @objc private func handleDoubleTapLeft() { onDoubleTapLeft?() }
     @objc private func handleDoubleTapRight() { onDoubleTapRight?() }
+
+    @objc private func handleLongPressRight(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            onLongPressRightBegan?()
+        case .ended, .cancelled, .failed:
+            onLongPressRightEnded?()
+        default:
+            break
+        }
+    }
 }
 
 private struct PlayerGestureOverlay: UIViewRepresentable {
     let onSingleTap: () -> Void
     let onDoubleTapLeft: () -> Void
     let onDoubleTapRight: () -> Void
+    let onLongPressRightBegan: () -> Void
+    let onLongPressRightEnded: () -> Void
 
     func makeUIView(context: Context) -> PlayerGestureView {
         let view = PlayerGestureView()
-        view.onSingleTap = onSingleTap
-        view.onDoubleTapLeft = onDoubleTapLeft
-        view.onDoubleTapRight = onDoubleTapRight
+        syncCallbacks(to: view)
         return view
     }
 
     func updateUIView(_ uiView: PlayerGestureView, context: Context) {
-        uiView.onSingleTap = onSingleTap
-        uiView.onDoubleTapLeft = onDoubleTapLeft
-        uiView.onDoubleTapRight = onDoubleTapRight
+        syncCallbacks(to: uiView)
+    }
+
+    private func syncCallbacks(to view: PlayerGestureView) {
+        view.onSingleTap = onSingleTap
+        view.onDoubleTapLeft = onDoubleTapLeft
+        view.onDoubleTapRight = onDoubleTapRight
+        view.onLongPressRightBegan = onLongPressRightBegan
+        view.onLongPressRightEnded = onLongPressRightEnded
     }
 }
 
@@ -125,6 +150,7 @@ final class PlaybackProgress: ObservableObject {
     @Published var isPlaying = false
 
     private var observer: Any?
+    var onTimeUpdate: ((Double) -> Void)?
 
     func observe(player: AVPlayer, isScrubbing: @escaping () -> Bool) {
         detach(from: player)
@@ -137,6 +163,7 @@ final class PlaybackProgress: ObservableObject {
             let seconds = CMTimeGetSeconds(time)
             if seconds.isFinite {
                 self.currentTime = seconds
+                self.onTimeUpdate?(seconds)
             }
             if let item = player.currentItem {
                 let total = CMTimeGetSeconds(item.duration)
@@ -152,6 +179,7 @@ final class PlaybackProgress: ObservableObject {
         guard let observer else { return }
         player.removeTimeObserver(observer)
         self.observer = nil
+        onTimeUpdate = nil
     }
 
     func reset() {
@@ -161,6 +189,14 @@ final class PlaybackProgress: ObservableObject {
     }
 }
 
+// MARK: - Skip prompt
+
+private struct SkipPrompt: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let endTime: Double
+}
+
 // MARK: - Video player
 
 struct VideoPlayerView: View {
@@ -168,16 +204,32 @@ struct VideoPlayerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var downloadManager: DownloadManager
+    @ObservedObject private var playerSettings = PlayerSettings.shared
 
     @StateObject private var progress = PlaybackProgress()
     @State private var currentIndex: Int
     @State private var player: AVPlayer?
     @State private var showEpisodeList = false
+    @State private var showSettings = false
     @State private var controlsVisible = true
     @State private var seekHint: String?
+    @State private var seekAccumulator: Double = 0
     @State private var hideControlsTask: Task<Void, Never>?
+    @State private var seekAccumTask: Task<Void, Never>?
     @State private var scrubTime: Double = 0
     @State private var isScrubbing = false
+    @State private var showRemainingTime = false
+    @State private var isFastForwarding = false
+    @State private var normalPlaybackRate: Float = 1
+    @State private var lastSkippedSegment: String?
+    @State private var playerOpacity: Double = 0
+    @State private var isOrientationTransitioning = true
+    @State private var progressSaveTask: Task<Void, Never>?
+    @State private var didTriggerAutoNext = false
+    @State private var skipPrompt: SkipPrompt?
+    @State private var skipPromptProgress: CGFloat = 0
+    @State private var skipPromptTask: Task<Void, Never>?
+    @State private var declinedSkipSegments: Set<String> = []
 
     init(session: PlayerSession) {
         self.session = session
@@ -192,6 +244,14 @@ struct VideoPlayerView: View {
         isScrubbing ? scrubTime : progress.currentTime
     }
 
+    private var trailingTimeLabel: String {
+        if showRemainingTime {
+            let remaining = max(progress.duration - displayedTime, 0)
+            return "-\(formatTime(remaining))"
+        }
+        return formatTime(progress.duration)
+    }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -199,6 +259,7 @@ struct VideoPlayerView: View {
             if let player {
                 PlayerLayerView(player: player)
                     .ignoresSafeArea()
+                    .opacity(playerOpacity)
             } else {
                 ProgressView("Подготовка плеера...")
                     .tint(.white)
@@ -206,14 +267,23 @@ struct VideoPlayerView: View {
 
             PlayerGestureOverlay(
                 onSingleTap: { toggleControls() },
-                onDoubleTapLeft: { seek(by: -5) },
-                onDoubleTapRight: { seek(by: 5) }
+                onDoubleTapLeft: { seek(by: -playerSettings.seekInterval.seconds) },
+                onDoubleTapRight: { seek(by: playerSettings.seekInterval.seconds) },
+                onLongPressRightBegan: { beginFastForward() },
+                onLongPressRightEnded: { endFastForward() }
             )
             .ignoresSafeArea()
 
             controlsOverlay
                 .opacity(controlsVisible ? 1 : 0)
                 .allowsHitTesting(controlsVisible)
+
+            if skipPrompt != nil {
+                skipPromptOverlay
+                    .zIndex(25)
+            }
+
+            episodeListPanel
 
             if let seekHint {
                 Text(seekHint)
@@ -223,35 +293,76 @@ struct VideoPlayerView: View {
                     .background(.black.opacity(0.55))
                     .clipShape(Capsule())
                     .foregroundStyle(.white)
+                    .transition(.opacity.combined(with: .scale))
+            }
+
+            if isFastForwarding {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Label("2×", systemImage: "forward.fill")
+                            .font(.headline.weight(.semibold))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(.black.opacity(0.55))
+                            .clipShape(Capsule())
+                            .foregroundStyle(.white)
+                            .padding(.trailing, 24)
+                            .padding(.bottom, 120)
+                    }
+                }
+                .transition(.opacity)
+                .allowsHitTesting(false)
+            }
+
+            if isOrientationTransitioning {
+                Color.black
+                    .ignoresSafeArea()
                     .transition(.opacity)
+                    .zIndex(50)
             }
         }
-        .animation(controlsAnimation, value: controlsVisible)
-        .animation(.easeInOut(duration: 0.2), value: seekHint)
-        .confirmationDialog("Выбор серии", isPresented: $showEpisodeList, titleVisibility: .visible) {
-            ForEach(Array(session.episodes.enumerated()), id: \.element.id) { index, episode in
-                Button(episode.displayTitle) {
-                    switchToEpisode(at: index)
-                    scheduleHideControls()
-                }
-            }
-            Button("Отмена", role: .cancel) {}
+        .animation(overlayAnimation, value: controlsVisible)
+        .animation(overlayAnimation, value: showEpisodeList)
+        .animation(overlayAnimation, value: seekHint)
+        .animation(overlayAnimation, value: isFastForwarding)
+        .animation(overlayAnimation, value: skipPrompt)
+        .animation(overlayAnimation, value: isOrientationTransitioning)
+        .sheet(isPresented: $showSettings) {
+            PlayerSettingsSheet()
+                .presentationDetents([.medium])
         }
         .onAppear {
-            OrientationManager.shared.lockLandscape()
             AudioSessionConfigurator.activatePlayback()
+            isOrientationTransitioning = true
+            playerOpacity = 0
             loadEpisode(at: currentIndex)
             scheduleHideControls()
+
+            OrientationManager.shared.lockLandscape(delay: 0.1) {
+                withAnimation(.easeInOut(duration: 0.55)) {
+                    isOrientationTransitioning = false
+                    playerOpacity = 1
+                }
+            }
         }
         .onDisappear {
+            saveWatchProgress()
             hideControlsTask?.cancel()
+            seekAccumTask?.cancel()
+            skipPromptTask?.cancel()
+            progressSaveTask?.cancel()
             if let player {
                 progress.detach(from: player)
             }
             player?.pause()
             player = nil
             AudioSessionConfigurator.deactivatePlayback()
-            OrientationManager.shared.unlockAll()
+            OrientationManager.shared.unlockAll(delay: 0.2)
+        }
+        .onChange(of: currentIndex) { _, _ in
+            resetSkipState()
         }
     }
 
@@ -268,7 +379,9 @@ struct VideoPlayerView: View {
     private var topBar: some View {
         HStack(spacing: 12) {
             Button {
-                showEpisodeList = true
+                withAnimation(overlayAnimation) {
+                    showEpisodeList.toggle()
+                }
                 scheduleHideControls()
             } label: {
                 Label("Серии", systemImage: "list.bullet")
@@ -277,11 +390,32 @@ struct VideoPlayerView: View {
                     .frame(width: 44, height: 44)
             }
 
-            Text(session.releaseTitle)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .allowsHitTesting(false)
+            VStack(spacing: 2) {
+                Text(session.releaseTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+
+                HStack(spacing: 0) {
+                    Text(currentEpisode.playerEpisodeTitle)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(1)
+                    Text(" (\(currentIndex + 1)/\(session.totalEpisodes))")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .allowsHitTesting(false)
+
+            Button {
+                showSettings = true
+                scheduleHideControls()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+            }
 
             Button("Закрыть") { dismiss() }
                 .font(.subheadline.weight(.semibold))
@@ -326,7 +460,7 @@ struct VideoPlayerView: View {
             HStack(spacing: 10) {
                 Text(formatTime(displayedTime))
                     .font(.caption.monospacedDigit())
-                    .frame(width: 48, alignment: .leading)
+                    .frame(width: 52, alignment: .leading)
 
                 Slider(
                     value: Binding(
@@ -347,21 +481,16 @@ struct VideoPlayerView: View {
                 )
                 .tint(.white)
 
-                Text(formatTime(progress.duration))
-                    .font(.caption.monospacedDigit())
-                    .frame(width: 48, alignment: .trailing)
+                Button {
+                    showRemainingTime.toggle()
+                    scheduleHideControls()
+                } label: {
+                    Text(trailingTimeLabel)
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 52, alignment: .trailing)
+                }
+                .buttonStyle(.plain)
             }
-
-            Text(currentEpisode.displayTitle)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .allowsHitTesting(false)
-
-            Text("\(currentIndex + 1) / \(session.episodes.count) • двойной тап слева/справа ±5 сек")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.65))
-                .allowsHitTesting(false)
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
@@ -374,6 +503,125 @@ struct VideoPlayerView: View {
                 endPoint: .bottom
             )
         )
+    }
+
+    private var skipPromptOverlay: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                skipDeclineButton
+            }
+            .padding(.trailing, 16)
+            .padding(.bottom, controlsVisible ? 72 : 20)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private var skipDeclineButton: some View {
+        Button {
+            declineSkip()
+            scheduleHideControls()
+        } label: {
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.16))
+
+                GeometryReader { geometry in
+                    Capsule()
+                        .fill(Color.accentColor.opacity(0.9))
+                        .frame(width: max(geometry.size.width * skipPromptProgress, 0))
+                }
+
+                Text("Не пропускать")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+            }
+            .frame(width: 196, height: 44)
+            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var episodeListPanel: some View {
+        Group {
+            if showEpisodeList {
+                ZStack(alignment: .leading) {
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            closeEpisodeList()
+                        }
+                        .transition(.opacity)
+
+                    episodeListContent
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                .zIndex(20)
+            }
+        }
+    }
+
+    private var episodeListContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Серии")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    closeEpisodeList()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding()
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(session.episodes.enumerated()), id: \.element.id) { index, episode in
+                        Button {
+                            switchToEpisode(at: index)
+                            closeEpisodeList()
+                            scheduleHideControls()
+                        } label: {
+                            HStack {
+                                Text(episode.displayTitle)
+                                    .font(.subheadline)
+                                    .multilineTextAlignment(.leading)
+                                Spacer()
+                                if index == currentIndex {
+                                    Image(systemName: "play.fill")
+                                        .font(.caption)
+                                }
+                            }
+                            .foregroundStyle(index == currentIndex ? Color.accentColor : .white)
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
+                        }
+                        Divider().overlay(.white.opacity(0.15))
+                    }
+                }
+            }
+        }
+        .frame(width: min(320, UIScreen.main.bounds.width * 0.42))
+        .frame(maxHeight: .infinity)
+        .background(.black.opacity(0.92))
+    }
+
+    private func closeEpisodeList() {
+        withAnimation(overlayAnimation) {
+            showEpisodeList = false
+        }
     }
 
     private func episodeButton(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -395,7 +643,7 @@ struct VideoPlayerView: View {
 
     private func toggleControls() {
         hideControlsTask?.cancel()
-        withAnimation(controlsAnimation) {
+        withAnimation(overlayAnimation) {
             controlsVisible.toggle()
         }
         if controlsVisible {
@@ -409,7 +657,7 @@ struct VideoPlayerView: View {
             try? await Task.sleep(nanoseconds: 5_000_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                withAnimation(controlsAnimation) {
+                withAnimation(overlayAnimation) {
                     controlsVisible = false
                 }
             }
@@ -422,18 +670,50 @@ struct VideoPlayerView: View {
             player.pause()
             progress.isPlaying = false
         } else {
+            player.rate = normalPlaybackRate
+            player.play()
+            progress.isPlaying = true
+        }
+    }
+
+    private func beginFastForward() {
+        guard let player, !isFastForwarding else { return }
+        normalPlaybackRate = player.rate > 0 ? player.rate : 1
+        isFastForwarding = true
+        player.rate = 2
+        progress.isPlaying = true
+        withAnimation(overlayAnimation) { controlsVisible = true }
+    }
+
+    private func endFastForward() {
+        guard let player, isFastForwarding else { return }
+        isFastForwarding = false
+        player.rate = normalPlaybackRate
+        if normalPlaybackRate > 0 {
             player.play()
             progress.isPlaying = true
         }
     }
 
     private func seek(by seconds: Double) {
-        seek(to: max(0, progress.currentTime + seconds))
-        seekHint = seconds > 0 ? "+5 сек" : "-5 сек"
+        let step = playerSettings.seekInterval.seconds
+        let signedStep = seconds > 0 ? step : -step
+        seekAccumulator += signedStep
+        seek(to: max(0, progress.currentTime + signedStep))
 
-        Task {
-            try? await Task.sleep(nanoseconds: 900_000_000)
-            await MainActor.run { seekHint = nil }
+        let prefix = seekAccumulator > 0 ? "+" : ""
+        seekHint = "\(prefix)\(Int(seekAccumulator)) сек"
+
+        seekAccumTask?.cancel()
+        seekAccumTask = Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(overlayAnimation) {
+                    seekHint = nil
+                    seekAccumulator = 0
+                }
+            }
         }
     }
 
@@ -448,6 +728,7 @@ struct VideoPlayerView: View {
 
     private func switchToEpisode(at index: Int) {
         guard session.episodes.indices.contains(index), index != currentIndex else { return }
+        saveWatchProgress()
         currentIndex = index
         loadEpisode(at: index)
     }
@@ -460,20 +741,176 @@ struct VideoPlayerView: View {
             progress.detach(from: player)
         }
         progress.reset()
+        resetSkipState()
+        didTriggerAutoNext = false
+
+        let savedPosition = WatchProgressStore.shared.position(for: episode.id) ?? 0
 
         player?.pause()
         let item = AVPlayerItem(url: url)
         if let player {
             player.replaceCurrentItem(with: item)
-            player.play()
             progress.observe(player: player) { isScrubbing }
+            configureSkipObserver(for: player, episode: episode)
+            if savedPosition > 5 {
+                seek(to: savedPosition)
+            }
+            player.rate = normalPlaybackRate
+            player.play()
         } else {
             let newPlayer = AVPlayer(playerItem: item)
             player = newPlayer
-            newPlayer.play()
             progress.observe(player: newPlayer) { isScrubbing }
+            configureSkipObserver(for: newPlayer, episode: episode)
+            if savedPosition > 5 {
+                seek(to: savedPosition)
+            }
+            newPlayer.play()
         }
         progress.isPlaying = true
+        scheduleProgressSaving()
+    }
+
+    private func configureSkipObserver(for player: AVPlayer, episode: Episode) {
+        progress.onTimeUpdate = { [self] time in
+            if playerSettings.skipOPED {
+                handleSkipSegments(at: time, episode: episode)
+            } else {
+                cancelSkipPrompt()
+            }
+            maybeAutoPlayNext(at: time, player: player)
+        }
+    }
+
+    private func resetSkipState() {
+        lastSkippedSegment = nil
+        declinedSkipSegments = []
+        cancelSkipPrompt()
+    }
+
+    private func cancelSkipPrompt() {
+        skipPromptTask?.cancel()
+        skipPromptProgress = 0
+        skipPrompt = nil
+    }
+
+    private func handleSkipSegments(at time: Double, episode: Episode) {
+        if let prompt = skipPrompt {
+            let stillInside = isInsideSegment(time: time, episode: episode, segmentKey: prompt.id)
+            if !stillInside {
+                cancelSkipPrompt()
+            }
+            return
+        }
+
+        let segments: [(key: String, title: String, skip: EpisodeSkip?)] = [
+            ("opening", "Опенинг", episode.opening),
+            ("ending", "Эндинг", episode.ending)
+        ]
+
+        for (key, title, skip) in segments {
+            guard let skip else { continue }
+            let start = Double(skip.start ?? 0)
+            let end = Double(skip.stop ?? Int(progress.duration))
+            guard end > start else { continue }
+
+            let segmentKey = "\(episode.id)-\(key)"
+            if declinedSkipSegments.contains(segmentKey) { continue }
+            if lastSkippedSegment == segmentKey { continue }
+
+            guard time >= start, time < end else { continue }
+            presentSkipPrompt(segmentKey: segmentKey, title: title, endTime: end)
+            return
+        }
+    }
+
+    private func isInsideSegment(time: Double, episode: Episode, segmentKey: String) -> Bool {
+        let segments: [(key: String, skip: EpisodeSkip?)] = [
+            ("opening", episode.opening),
+            ("ending", episode.ending)
+        ]
+
+        for (key, skip) in segments {
+            let currentKey = "\(episode.id)-\(key)"
+            guard currentKey == segmentKey, let skip else { continue }
+            let start = Double(skip.start ?? 0)
+            let end = Double(skip.stop ?? Int(progress.duration))
+            return time >= start && time < end
+        }
+        return false
+    }
+
+    private func presentSkipPrompt(segmentKey: String, title: String, endTime: Double) {
+        skipPromptTask?.cancel()
+        skipPromptProgress = 0
+        withAnimation(overlayAnimation) {
+            skipPrompt = SkipPrompt(id: segmentKey, title: title, endTime: endTime)
+        }
+
+        withAnimation(.linear(duration: 3)) {
+            skipPromptProgress = 1
+        }
+
+        skipPromptTask = Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard skipPrompt?.id == segmentKey else { return }
+                performSkip(to: endTime, segmentKey: segmentKey)
+            }
+        }
+    }
+
+    private func declineSkip() {
+        guard let prompt = skipPrompt else { return }
+        skipPromptTask?.cancel()
+        declinedSkipSegments.insert(prompt.id)
+        withAnimation(overlayAnimation) {
+            skipPromptProgress = 0
+            skipPrompt = nil
+        }
+    }
+
+    private func performSkip(to endTime: Double, segmentKey: String) {
+        lastSkippedSegment = segmentKey
+        withAnimation(overlayAnimation) {
+            skipPromptProgress = 0
+            skipPrompt = nil
+        }
+        seek(to: endTime)
+    }
+
+    private func maybeAutoPlayNext(at time: Double, player: AVPlayer) {
+        guard playerSettings.autoPlayNext, !didTriggerAutoNext else { return }
+        guard progress.duration > 0, time >= progress.duration - 1 else { return }
+        guard currentIndex < session.episodes.count - 1 else { return }
+        didTriggerAutoNext = true
+        switchToEpisode(at: currentIndex + 1)
+    }
+
+    private func scheduleProgressSaving() {
+        progressSaveTask?.cancel()
+        progressSaveTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run { saveWatchProgress() }
+            }
+        }
+    }
+
+    private func saveWatchProgress() {
+        guard progress.currentTime > 0 else { return }
+        let nearEnd = progress.duration > 0 && progress.currentTime >= progress.duration - 10
+        if nearEnd {
+            WatchProgressStore.shared.clearPosition(for: currentEpisode.id)
+        } else {
+            WatchProgressStore.shared.save(
+                position: progress.currentTime,
+                episodeId: currentEpisode.id,
+                releaseId: session.releaseId
+            )
+        }
     }
 
     private func formatTime(_ seconds: Double) -> String {
@@ -494,5 +931,38 @@ struct VideoPlayerView: View {
             return offline
         }
         return session.quality.streamURL(for: episode)
+    }
+}
+
+// MARK: - Player settings sheet
+
+private struct PlayerSettingsSheet: View {
+    @ObservedObject private var settings = PlayerSettings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Перемотка") {
+                    Picker("Шаг перемотки", selection: $settings.seekInterval) {
+                        ForEach(SeekInterval.allCases) { interval in
+                            Text(interval.title).tag(interval)
+                        }
+                    }
+                }
+
+                Section("Воспроизведение") {
+                    Toggle("Пропуск опенинга и эндинга", isOn: $settings.skipOPED)
+                    Toggle("Автозапуск следующей серии", isOn: $settings.autoPlayNext)
+                }
+            }
+            .navigationTitle("Настройки плеера")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") { dismiss() }
+                }
+            }
+        }
     }
 }

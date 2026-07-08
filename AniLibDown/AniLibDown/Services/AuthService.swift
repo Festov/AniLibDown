@@ -18,11 +18,35 @@ final class AuthService: ObservableObject {
             profile = try await APIClient.shared.getProfile()
             isAuthenticated = true
             await CollectionStatusStore.shared.refresh()
+        } catch let error as APIError {
+            if case .unauthorized = error {
+                KeychainHelper.deleteToken()
+                await APIClient.shared.setAccessToken(nil)
+                isAuthenticated = false
+                profile = nil
+            }
         } catch {
-            KeychainHelper.deleteToken()
-            await APIClient.shared.setAccessToken(nil)
-            isAuthenticated = false
-            profile = nil
+            // Keep token on transient network/decoding errors
+        }
+    }
+
+    func refreshSessionIfNeeded() async {
+        guard KeychainHelper.loadToken() != nil else { return }
+        if isAuthenticated {
+            do {
+                profile = try await APIClient.shared.getProfile()
+            } catch let error as APIError {
+                if case .unauthorized = error {
+                    KeychainHelper.deleteToken()
+                    await APIClient.shared.setAccessToken(nil)
+                    isAuthenticated = false
+                    profile = nil
+                }
+            } catch {
+                // Ignore transient errors
+            }
+        } else {
+            await restoreSession()
         }
     }
 
