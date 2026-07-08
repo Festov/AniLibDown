@@ -278,6 +278,11 @@ struct VideoPlayerView: View {
                 .opacity(controlsVisible ? 1 : 0)
                 .allowsHitTesting(controlsVisible)
 
+            if skipPrompt != nil {
+                skipPromptOverlay
+                    .zIndex(25)
+            }
+
             episodeListPanel
 
             if let seekHint {
@@ -451,15 +456,7 @@ struct VideoPlayerView: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 14) {
-            if skipPrompt != nil {
-                HStack {
-                    Spacer()
-                    skipDeclineButton
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
+        VStack(spacing: 10) {
             HStack(spacing: 10) {
                 Text(formatTime(displayedTime))
                     .font(.caption.monospacedDigit())
@@ -506,6 +503,19 @@ struct VideoPlayerView: View {
                 endPoint: .bottom
             )
         )
+    }
+
+    private var skipPromptOverlay: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                skipDeclineButton
+            }
+            .padding(.trailing, 16)
+            .padding(.bottom, controlsVisible ? 72 : 20)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private var skipDeclineButton: some View {
@@ -835,7 +845,6 @@ struct VideoPlayerView: View {
         skipPromptProgress = 0
         withAnimation(overlayAnimation) {
             skipPrompt = SkipPrompt(id: segmentKey, title: title, endTime: endTime)
-            controlsVisible = true
         }
 
         withAnimation(.linear(duration: 3)) {
