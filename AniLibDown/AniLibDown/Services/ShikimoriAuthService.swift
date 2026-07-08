@@ -1,9 +1,18 @@
 import AuthenticationServices
-import Foundation
+import Combine
 import UIKit
 
+private final class ShikimoriPresentationAnchorProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.flatMap(\.windows).first(where: \.isKeyWindow)
+            ?? scenes.flatMap(\.windows).first
+            ?? UIWindow()
+    }
+}
+
 @MainActor
-final class ShikimoriAuthService: NSObject, ObservableObject {
+final class ShikimoriAuthService: ObservableObject {
     static let shared = ShikimoriAuthService()
 
     @Published private(set) var isAuthenticated = false
@@ -11,11 +20,9 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    private var authSession: ASWebAuthenticationSession?
+    private let presentationAnchorProvider = ShikimoriPresentationAnchorProvider()
 
-    private override init() {
-        super.init()
-    }
+    private init() {}
 
     func restoreSession() async {
         guard ShikimoriConfig.isConfigured,
@@ -29,22 +36,22 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
             let user = try await validAccessTokenProfile()
             profile = user
             isAuthenticated = true
-        } catch ShikimoriError.notAuthenticated {
-            if let refresh = KeychainHelper.loadShikimoriRefreshToken() {
-                do {
-                    try await refreshTokens(using: refresh)
-                    let user = try await validAccessTokenProfile()
-                    profile = user
-                    isAuthenticated = true
-                    return
-                } catch {
+        } catch {
+            if isNotAuthenticated(error) {
+                if let refresh = KeychainHelper.loadShikimoriRefreshToken() {
+                    do {
+                        try await refreshTokens(using: refresh)
+                        let user = try await validAccessTokenProfile()
+                        profile = user
+                        isAuthenticated = true
+                        return
+                    } catch {
+                        disconnect()
+                    }
+                } else {
                     disconnect()
                 }
-            } else {
-                disconnect()
             }
-        } catch {
-            // Keep tokens on transient errors
         }
     }
 
@@ -83,10 +90,12 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
             let user = try await ShikimoriAPIClient.shared.whoami(accessToken: tokens.accessToken)
             profile = user
             isAuthenticated = true
-        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
-            errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if isCanceledLogin(error) {
+                errorMessage = nil
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -108,16 +117,19 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
         do {
             _ = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
             return token
-        } catch ShikimoriError.notAuthenticated {
-            guard let refresh = KeychainHelper.loadShikimoriRefreshToken() else {
-                disconnect()
-                throw ShikimoriError.notAuthenticated
+        } catch {
+            if isNotAuthenticated(error) {
+                guard let refresh = KeychainHelper.loadShikimoriRefreshToken() else {
+                    disconnect()
+                    throw ShikimoriError.notAuthenticated
+                }
+                try await refreshTokens(using: refresh)
+                guard let refreshed = KeychainHelper.loadShikimoriAccessToken() else {
+                    throw ShikimoriError.notAuthenticated
+                }
+                return refreshed
             }
-            try await refreshTokens(using: refresh)
-            guard let refreshed = KeychainHelper.loadShikimoriAccessToken() else {
-                throw ShikimoriError.notAuthenticated
-            }
-            return refreshed
+            throw error
         }
     }
 
@@ -175,7 +187,8 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
     }
 
     private func startAuthSession(url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        let presentationAnchorProvider = presentationAnchorProvider
+        return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
                 url: url,
                 callbackURLScheme: ShikimoriConfig.callbackScheme
@@ -190,9 +203,8 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
                 }
                 continuation.resume(returning: callbackURL)
             }
-            session.presentationContextProvider = self
+            session.presentationContextProvider = presentationAnchorProvider
             session.prefersEphemeralWebBrowserSession = false
-            authSession = session
             session.start()
         }
     }
@@ -203,16 +215,17 @@ final class ShikimoriAuthService: NSObject, ObservableObject {
             .first(where: { $0.name == "code" })?
             .value
     }
-}
 
-extension ShikimoriAuthService: ASWebAuthenticationPresentationContextProviding {
-    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        MainActor.assumeIsolated {
-            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            if let window = scenes.flatMap(\.windows).first(where: { $0.isKeyWindow }) {
-                return window
-            }
-            return scenes.flatMap(\.windows).first ?? UIWindow()
+    private func isNotAuthenticated(_ error: Error) -> Bool {
+        if case ShikimoriError.notAuthenticated = error {
+            return true
         }
+        return false
+    }
+
+    private func isCanceledLogin(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == ASWebAuthenticationSessionError.errorDomain
+            && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
     }
 }
