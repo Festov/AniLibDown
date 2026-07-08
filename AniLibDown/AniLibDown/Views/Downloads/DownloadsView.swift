@@ -175,7 +175,8 @@ struct DownloadReleaseDetailView: View {
                 episodes: episodes,
                 startEpisodeId: item.episodeId,
                 quality: quality,
-                preferOffline: true
+                preferOffline: true,
+                episodesTotal: episodes.count
             )
         )
     }

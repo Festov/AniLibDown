@@ -78,10 +78,16 @@ enum ReleaseFormatting {
         String(year)
     }
 
-    static func broadcastStatus(isOngoing: Bool, episodesCount: Int, episodesTotal: Int?) -> BroadcastStatus {
+    static func broadcastStatus(
+        isOngoing: Bool,
+        isInProduction: Bool,
+        episodesCount: Int,
+        episodesTotal: Int?
+    ) -> BroadcastStatus {
         if isOngoing { return .ongoing }
         let knownEpisodes = max(episodesCount, episodesTotal ?? 0)
         if knownEpisodes > 0 { return .released }
+        if isInProduction { return .released }
         return .upcoming
     }
 }
@@ -90,6 +96,7 @@ extension ReleaseSummary {
     var broadcastStatus: BroadcastStatus {
         ReleaseFormatting.broadcastStatus(
             isOngoing: isOngoing,
+            isInProduction: isInProduction,
             episodesCount: episodesTotal ?? 0,
             episodesTotal: episodesTotal
         )
@@ -100,7 +107,8 @@ extension ReleaseLatest {
     var broadcastStatus: BroadcastStatus {
         ReleaseFormatting.broadcastStatus(
             isOngoing: isOngoing,
-            episodesCount: episodesTotal ?? 0,
+            isInProduction: isInProduction,
+            episodesCount: max(episodesTotal ?? 0, Int(latestEpisode.ordinal)),
             episodesTotal: episodesTotal
         )
     }
@@ -110,6 +118,7 @@ extension ReleaseDetail {
     var broadcastStatus: BroadcastStatus {
         ReleaseFormatting.broadcastStatus(
             isOngoing: isOngoing,
+            isInProduction: isInProduction,
             episodesCount: episodes.count,
             episodesTotal: episodesTotal
         )
@@ -127,10 +136,28 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
     let season: LabeledValue?
     let poster: ImageAsset?
     let isOngoing: Bool
+    let isInProduction: Bool
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        type = try container.decodeIfPresent(LabeledValue.self, forKey: .type)
+        year = try container.decode(Int.self, forKey: .year)
+        name = try container.decode(ReleaseName.self, forKey: .name)
+        alias = try container.decode(String.self, forKey: .alias)
+        season = try container.decodeIfPresent(LabeledValue.self, forKey: .season)
+        poster = try container.decodeIfPresent(ImageAsset.self, forKey: .poster)
+        isOngoing = try container.decode(Bool.self, forKey: .isOngoing)
+        isInProduction = try container.decodeIfPresent(Bool.self, forKey: .isInProduction) ?? false
+        ageRating = try container.decodeIfPresent(ReleaseAgeRating.self, forKey: .ageRating)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
+        genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+    }
 }
 
 struct ReleaseLatest: Codable, Identifiable, Hashable {
@@ -142,11 +169,30 @@ struct ReleaseLatest: Codable, Identifiable, Hashable {
     let season: LabeledValue?
     let poster: ImageAsset?
     let isOngoing: Bool
+    let isInProduction: Bool
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
     let latestEpisode: Episode
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        type = try container.decodeIfPresent(LabeledValue.self, forKey: .type)
+        year = try container.decode(Int.self, forKey: .year)
+        name = try container.decode(ReleaseName.self, forKey: .name)
+        alias = try container.decode(String.self, forKey: .alias)
+        season = try container.decodeIfPresent(LabeledValue.self, forKey: .season)
+        poster = try container.decodeIfPresent(ImageAsset.self, forKey: .poster)
+        isOngoing = try container.decode(Bool.self, forKey: .isOngoing)
+        isInProduction = try container.decodeIfPresent(Bool.self, forKey: .isInProduction) ?? false
+        ageRating = try container.decodeIfPresent(ReleaseAgeRating.self, forKey: .ageRating)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
+        genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+        latestEpisode = try container.decode(Episode.self, forKey: .latestEpisode)
+    }
 }
 
 struct ReleaseDetail: Codable, Identifiable {
@@ -158,11 +204,30 @@ struct ReleaseDetail: Codable, Identifiable {
     let season: LabeledValue?
     let poster: ImageAsset?
     let isOngoing: Bool
+    let isInProduction: Bool
     let ageRating: ReleaseAgeRating?
     let description: String?
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
     let episodes: [Episode]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        type = try container.decodeIfPresent(LabeledValue.self, forKey: .type)
+        year = try container.decode(Int.self, forKey: .year)
+        name = try container.decode(ReleaseName.self, forKey: .name)
+        alias = try container.decode(String.self, forKey: .alias)
+        season = try container.decodeIfPresent(LabeledValue.self, forKey: .season)
+        poster = try container.decodeIfPresent(ImageAsset.self, forKey: .poster)
+        isOngoing = try container.decode(Bool.self, forKey: .isOngoing)
+        isInProduction = try container.decodeIfPresent(Bool.self, forKey: .isInProduction) ?? false
+        ageRating = try container.decodeIfPresent(ReleaseAgeRating.self, forKey: .ageRating)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
+        genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+        episodes = try container.decode([Episode].self, forKey: .episodes)
+    }
 }
 
 // MARK: - Episode
@@ -191,6 +256,11 @@ struct Episode: Codable, Identifiable, Hashable {
         if let name, !name.isEmpty {
             return "Серия \(ordinalFormatted): \(name)"
         }
+        return "Серия \(ordinalFormatted)"
+    }
+
+    var playerEpisodeTitle: String {
+        if let name, !name.isEmpty { return name }
         return "Серия \(ordinalFormatted)"
     }
 
@@ -335,9 +405,14 @@ struct PlayerSession: Identifiable {
     let startEpisodeId: String
     let quality: VideoQuality
     let preferOffline: Bool
+    let episodesTotal: Int?
 
     var startIndex: Int {
         episodes.firstIndex(where: { $0.id == startEpisodeId }) ?? 0
+    }
+
+    var totalEpisodes: Int {
+        episodesTotal ?? episodes.count
     }
 }
 
