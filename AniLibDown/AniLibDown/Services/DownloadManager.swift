@@ -135,6 +135,7 @@ final class DownloadManager: NSObject, ObservableObject {
     private var activeTasks: [String: AVAssetDownloadTask] = [:]
     private var pendingDownloadURLs: [String: URL] = [:]
     private var canceledTaskIDs: Set<String> = []
+    private var hasRestoredPendingTasks = false
     private let storageURL: URL
     private let indexURL: URL
     private let pendingURLsIndexURL: URL
@@ -170,7 +171,6 @@ final class DownloadManager: NSObject, ObservableObject {
         loadIndex()
         loadPendingURLs()
         restorePendingTasks()
-        purgeOrphanedDownloadCache()
     }
 
     func isDownloaded(episodeId: String, quality: VideoQuality) -> Bool {
@@ -297,6 +297,8 @@ final class DownloadManager: NSObject, ObservableObject {
     }
 
     func purgeOrphanedDownloadCache() {
+        guard hasRestoredPendingTasks else { return }
+
         let referencedPaths = Set(
             items.compactMap { item -> String? in
                 guard let bookmark = item.localBookmark,
@@ -507,7 +509,9 @@ final class DownloadManager: NSObject, ObservableObject {
                         )
                     }
                 }
+                self.hasRestoredPendingTasks = true
                 self.saveIndex()
+                self.purgeOrphanedDownloadCache()
             }
         }
     }
