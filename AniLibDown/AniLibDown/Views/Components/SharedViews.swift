@@ -74,7 +74,8 @@ struct ReleaseRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let status {
                     BroadcastStatusBadge(status: status)
                 }

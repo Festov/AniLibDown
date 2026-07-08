@@ -5,6 +5,7 @@ struct DownloadsView: View {
     @State private var playerSession: PlayerSession?
     @State private var navigationPath = NavigationPath()
     @State private var openedGroupId: String?
+    @State private var showPurgeConfirmation = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -27,6 +28,30 @@ struct DownloadsView: View {
                 }
             }
             .navigationTitle("Загрузки")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Очистить кеш", systemImage: "trash") {
+                        showPurgeConfirmation = true
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Очистить кеш загрузок?",
+                isPresented: $showPurgeConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Очистить всё", role: .destructive) {
+                    downloadManager.purgeAllDownloadData()
+                    navigationPath = NavigationPath()
+                    openedGroupId = nil
+                }
+                Button("Только осиротевшие файлы") {
+                    downloadManager.purgeOrphanedDownloadCache()
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("Удаляет частично скачанные файлы из памяти iPhone, даже если список загрузок пуст.")
+            }
             .navigationDestination(for: String.self) { groupId in
                 DownloadReleaseDetailView(groupId: groupId) { session in
                     playerSession = session
@@ -175,7 +200,8 @@ struct DownloadReleaseDetailView: View {
                 episodes: episodes,
                 startEpisodeId: item.episodeId,
                 quality: quality,
-                preferOffline: true
+                preferOffline: true,
+                episodesTotal: episodes.count
             )
         )
     }
