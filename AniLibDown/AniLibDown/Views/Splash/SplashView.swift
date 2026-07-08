@@ -15,59 +15,56 @@ struct SplashView: View {
     @State private var breathe = false
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            .white.opacity(0.05),
-                            .white.opacity(0.35),
-                            .white.opacity(0.05)
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: 2
-                )
-                .frame(width: 168, height: 168)
-                .rotationEffect(.degrees(ringRotation))
-                .opacity(glowOpacity)
-                .scaleEffect(glowScale)
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color.white.opacity(0.22), .clear],
-                        center: .center,
-                        startRadius: 8,
-                        endRadius: 130
+        VStack(spacing: 28) {
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.white.opacity(0.2), .clear],
+                            center: .center,
+                            startRadius: 4,
+                            endRadius: 84
+                        )
                     )
-                )
-                .frame(width: 260, height: 260)
-                .scaleEffect(glowScale)
-                .opacity(glowOpacity * 0.9)
 
-            VStack(spacing: 28) {
+                Circle()
+                    .stroke(
+                        AngularGradient(
+                            colors: [
+                                .white.opacity(0.05),
+                                .white.opacity(0.35),
+                                .white.opacity(0.05)
+                            ],
+                            center: .center
+                        ),
+                        lineWidth: 2
+                    )
+                    .rotationEffect(.degrees(ringRotation))
+
                 Image("SplashLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
-                    .shadow(color: .white.opacity(breathe ? 0.35 : 0.15), radius: breathe ? 20 : 8)
-                    .scaleEffect(logoScale * (breathe ? 1.05 : 1))
+                    .frame(width: 100, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    .shadow(color: .white.opacity(breathe ? 0.35 : 0.15), radius: breathe ? 16 : 6)
+                    .scaleEffect(logoScale * (breathe ? 1.04 : 1))
                     .rotationEffect(.degrees(logoRotation))
                     .opacity(logoOpacity)
-
-                Text("Спасибо, что выбираете нас!")
-                    .font(.title3.weight(.medium))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.92))
-                    .opacity(textOpacity)
-                    .offset(y: textOffset)
-                    .padding(.horizontal, 32)
             }
+            .frame(width: 168, height: 168)
+            .scaleEffect(glowScale)
+            .opacity(glowOpacity)
+
+            Text("Спасибо, что выбираете нас!")
+                .font(.title3.weight(.medium))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.92))
+                .opacity(textOpacity)
+                .offset(y: textOffset)
+                .padding(.horizontal, 32)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.ignoresSafeArea())
         .onAppear {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
