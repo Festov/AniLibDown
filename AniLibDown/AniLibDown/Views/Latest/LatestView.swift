@@ -27,7 +27,13 @@ struct LatestView: View {
         NavigationStack {
             Group {
                 if viewModel.isLoading && viewModel.releases.isEmpty {
-                    ProgressView("Загрузка новинок...")
+                    List {
+                        ForEach(0..<8, id: \.self) { _ in
+                            ReleaseRowSkeletonView()
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    .listStyle(.plain)
                 } else if viewModel.releases.isEmpty {
                     ContentUnavailableView(
                         "Нет данных",
