@@ -1,11 +1,13 @@
 import Foundation
 
 enum ShikimoriConfig {
-    static let baseURL = URL(string: "https://shikimori.one")!
+    static let baseURL = URL(string: "https://shikimori.io")!
     static let userAgent = "AniLibDown/1.0.1 (iOS)"
     static let redirectURI = "anilibdown://shikimori/callback"
     static let callbackScheme = "anilibdown"
     static let oauthScope = "user_rates"
+    static let oauthAuthorizeURL = URL(string: "https://shikimori.io/oauth/authorize")!
+    static let oauthApplicationsURL = "https://shikimori.io/oauth/applications"
 
     /// Заполните в ShikimoriSecrets.plist (см. ShikimoriSecrets.plist.example).
     static var clientId: String { secretValue(forKey: "ClientId") }
@@ -16,7 +18,7 @@ enum ShikimoriConfig {
     }
 
     static var configurationHint: String {
-        "Создайте OAuth-приложение на shikimori.one/oauth/applications и скопируйте ShikimoriSecrets.plist.example в ShikimoriSecrets.plist с вашими ClientId и ClientSecret. Redirect URI: \(redirectURI)"
+        "Создайте OAuth-приложение на \(oauthApplicationsURL) и скопируйте ShikimoriSecrets.plist.example в ShikimoriSecrets.plist с вашими ClientId и ClientSecret. Redirect URI: \(redirectURI)"
     }
 
     private static func secretValue(forKey key: String) -> String {

@@ -127,7 +127,7 @@ struct ShikimoriUserRateUpdateBody: Encodable {
     let status: String
 }
 
-enum ShikimoriError: LocalizedError {
+enum ShikimoriError: LocalizedError, Equatable {
     case notConfigured
     case notAuthenticated
     case authorizationCancelled
