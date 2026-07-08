@@ -165,6 +165,39 @@ struct ReleaseRowView: View {
     }
 }
 
+struct ReleaseRowSkeletonView: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            SkeletonPoster(cornerRadius: 8)
+                .frame(width: 56, height: 80)
+
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.22))
+                    .frame(height: 16)
+                    .skeletonShimmer()
+
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 84, height: 22)
+                    .skeletonShimmer()
+
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(height: 12)
+                    .skeletonShimmer()
+
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.16))
+                    .frame(width: 120, height: 12)
+                    .skeletonShimmer()
+            }
+        }
+        .redacted(reason: .placeholder)
+        .padding(.vertical, 4)
+    }
+}
+
 struct ErrorBanner: View {
     let message: String
 

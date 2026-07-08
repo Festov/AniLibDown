@@ -109,10 +109,8 @@ struct ProfileView: View {
                 }
 
                 if collectionViewModel.isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                    ForEach(0..<4, id: \.self) { _ in
+                        ReleaseRowSkeletonView()
                     }
                 } else if let error = collectionViewModel.errorMessage {
                     Text(error)

@@ -153,7 +153,13 @@ struct CatalogView: View {
         NavigationStack {
             Group {
                 if viewModel.isLoading && viewModel.releases.isEmpty {
-                    ProgressView("Загрузка каталога...")
+                    List {
+                        ForEach(0..<8, id: \.self) { _ in
+                            ReleaseRowSkeletonView()
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    .listStyle(.plain)
                 } else if viewModel.releases.isEmpty {
                     ContentUnavailableView(
                         emptyTitle,
