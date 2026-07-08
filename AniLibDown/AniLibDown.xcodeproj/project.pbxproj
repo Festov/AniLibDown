@@ -28,6 +28,13 @@
 		E1F60718293A4B5D6E7F801 /* PlayerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60718293A4B5D6E7F80192 /* PlayerSettings.swift */; };
 		E2F60718293A4B5D6E7F8019 /* WatchProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60718293A4B5D6E7F80193 /* WatchProgressStore.swift */; };
 		E3F60718293A4B5D6E7F801A /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60718293A4B5D6E7F80194 /* SplashView.swift */; };
+		F1A2B3C4D5E60718293A4B60 /* ShikimoriConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B61 /* ShikimoriConfig.swift */; };
+		F1A2B3C4D5E60718293A4B62 /* ShikimoriModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B63 /* ShikimoriModels.swift */; };
+		F1A2B3C4D5E60718293A4B64 /* ShikimoriAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B65 /* ShikimoriAPIClient.swift */; };
+		F1A2B3C4D5E60718293A4B66 /* ShikimoriAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */; };
+		F1A2B3C4D5E60718293A4B68 /* ShikimoriLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */; };
+		F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */; };
+		F1A2B3C4D5E60718293A4B6C /* ShikimoriSecrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */; };
 		7473FB92539D73ABE2977E4C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D4E50EBC37FA17E4DE51630C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -55,6 +62,13 @@
 		F60718293A4B5D6E7F80192 /* PlayerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/PlayerSettings.swift"; sourceTree = "<group>"; };
 		F60718293A4B5D6E7F80193 /* WatchProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/WatchProgressStore.swift"; sourceTree = "<group>"; };
 		F60718293A4B5D6E7F80194 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Splash/SplashView.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B61 /* ShikimoriConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ShikimoriConfig.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B63 /* ShikimoriModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models/ShikimoriModels.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B65 /* ShikimoriAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ShikimoriAPIClient.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ShikimoriAuthService.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ShikimoriLinkStore.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Shikimori/ShikimoriLinkSearchView.swift"; sourceTree = "<group>"; };
+		F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ShikimoriSecrets.plist; sourceTree = "<group>"; };
 		D4E50EBC37FA17E4DE51630C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +107,13 @@
 				F60718293A4B5D6E7F80192 /* PlayerSettings.swift */,
 				F60718293A4B5D6E7F80193 /* WatchProgressStore.swift */,
 				F60718293A4B5D6E7F80194 /* SplashView.swift */,
+				F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */,
+				F1A2B3C4D5E60718293A4B61 /* ShikimoriConfig.swift */,
+				F1A2B3C4D5E60718293A4B63 /* ShikimoriModels.swift */,
+				F1A2B3C4D5E60718293A4B65 /* ShikimoriAPIClient.swift */,
+				F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */,
+				F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */,
+				F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */,
 				2A5DFCE5A0C71DFFA92CD420 /* APIModels.swift */,
 				D4E50EBC37FA17E4DE51630C /* Assets.xcassets */,
 			);
@@ -172,6 +193,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7473FB92539D73ABE2977E4C /* Assets.xcassets in Resources */,
+				F1A2B3C4D5E60718293A4B6C /* ShikimoriSecrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +225,12 @@
 				E1F60718293A4B5D6E7F801 /* PlayerSettings.swift in Sources */,
 				E2F60718293A4B5D6E7F8019 /* WatchProgressStore.swift in Sources */,
 				E3F60718293A4B5D6E7F801A /* SplashView.swift in Sources */,
+				F1A2B3C4D5E60718293A4B60 /* ShikimoriConfig.swift in Sources */,
+				F1A2B3C4D5E60718293A4B62 /* ShikimoriModels.swift in Sources */,
+				F1A2B3C4D5E60718293A4B64 /* ShikimoriAPIClient.swift in Sources */,
+				F1A2B3C4D5E60718293A4B66 /* ShikimoriAuthService.swift in Sources */,
+				F1A2B3C4D5E60718293A4B68 /* ShikimoriLinkStore.swift in Sources */,
+				F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */,
 				0CC3481B9534AD62C2AA379D /* APIModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
