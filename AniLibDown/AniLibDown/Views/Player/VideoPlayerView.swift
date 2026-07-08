@@ -726,6 +726,37 @@ struct VideoPlayerView: View {
         scrubTime = clamped
     }
 
+    private func restorePlaybackPosition(_ seconds: Double, on player: AVPlayer) {
+        guard seconds > 5 else { return }
+
+        let performSeek = {
+            let target = CMTime(seconds: seconds, preferredTimescale: 600)
+            player.seek(to: target)
+            progress.currentTime = seconds
+            scrubTime = seconds
+        }
+
+        let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .invalid)
+        if duration.isFinite, duration > 0 {
+            performSeek()
+            return
+        }
+
+        Task { @MainActor in
+            guard let item = player.currentItem else { return }
+
+            let keys = ["duration", "playable"]
+            do {
+                try await item.asset.loadValues(forKeys: keys)
+            } catch {
+                return
+            }
+
+            guard player.currentItem === item else { return }
+            performSeek()
+        }
+    }
+
     private func switchToEpisode(at index: Int) {
         guard session.episodes.indices.contains(index), index != currentIndex else { return }
         saveWatchProgress()
@@ -753,7 +784,7 @@ struct VideoPlayerView: View {
             progress.observe(player: player) { isScrubbing }
             configureSkipObserver(for: player, episode: episode)
             if savedPosition > 5 {
-                seek(to: savedPosition)
+                restorePlaybackPosition(savedPosition, on: player)
             }
             player.rate = normalPlaybackRate
             player.play()
@@ -763,7 +794,7 @@ struct VideoPlayerView: View {
             progress.observe(player: newPlayer) { isScrubbing }
             configureSkipObserver(for: newPlayer, episode: episode)
             if savedPosition > 5 {
-                seek(to: savedPosition)
+                restorePlaybackPosition(savedPosition, on: newPlayer)
             }
             newPlayer.play()
         }
