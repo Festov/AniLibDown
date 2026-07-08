@@ -15,7 +15,7 @@ final class OrientationManager: ObservableObject {
 
     private init() {}
 
-    func lockLandscape(delay: TimeInterval = 0) {
+    func lockLandscape(delay: TimeInterval = 0, completion: (@MainActor () -> Void)? = nil) {
         lockTask?.cancel()
         unlockTask?.cancel()
 
@@ -24,14 +24,18 @@ final class OrientationManager: ObservableObject {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
             guard !Task.isCancelled else { return }
-            guard !isLandscapeLocked else { return }
+            guard !isLandscapeLocked else {
+                completion?()
+                return
+            }
             isLandscapeLocked = true
             landscapeLockedFlag = true
             await requestLandscape()
+            completion?()
         }
     }
 
-    func unlockAll(delay: TimeInterval = 0) {
+    func unlockAll(delay: TimeInterval = 0, completion: (@MainActor () -> Void)? = nil) {
         lockTask?.cancel()
         unlockTask?.cancel()
 
@@ -40,39 +44,57 @@ final class OrientationManager: ObservableObject {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
             guard !Task.isCancelled else { return }
-            guard isLandscapeLocked else { return }
+            guard isLandscapeLocked else {
+                completion?()
+                return
+            }
             isLandscapeLocked = false
             landscapeLockedFlag = false
             await requestPortrait()
+            completion?()
         }
     }
 
     private func requestLandscape() async {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+
+        await MainActor.run {
+            for window in scene.windows {
+                window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
         await withCheckedContinuation { continuation in
-            UIView.animate(withDuration: 0.45, delay: 0, options: [.curveEaseInOut]) {
-                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { _ in }
-                for window in scene.windows {
-                    window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { _ in
+                Task { @MainActor in
+                    UIViewController.attemptRotationToDeviceOrientation()
+                    try? await Task.sleep(nanoseconds: 550_000_000)
+                    continuation.resume()
                 }
-            } completion: { _ in
-                UIViewController.attemptRotationToDeviceOrientation()
-                continuation.resume()
             }
         }
     }
 
     private func requestPortrait() async {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
+
+        await MainActor.run {
+            for window in scene.windows {
+                window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
         await withCheckedContinuation { continuation in
-            UIView.animate(withDuration: 0.45, delay: 0, options: [.curveEaseInOut]) {
-                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { _ in }
-                for window in scene.windows {
-                    window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { _ in
+                Task { @MainActor in
+                    UIViewController.attemptRotationToDeviceOrientation()
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    continuation.resume()
                 }
-            } completion: { _ in
-                UIViewController.attemptRotationToDeviceOrientation()
-                continuation.resume()
             }
         }
     }
