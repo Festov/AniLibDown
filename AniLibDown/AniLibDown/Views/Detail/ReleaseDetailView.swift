@@ -55,7 +55,15 @@ struct ReleaseDetailView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.release == nil {
-                ProgressView("Загрузка...")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        headerSkeleton
+                        descriptionSkeleton
+                        qualityPickerSkeleton
+                        episodesSkeleton
+                    }
+                    .padding()
+                }
             } else if let release = viewModel.release {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -88,6 +96,87 @@ struct ReleaseDetailView: View {
         }
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
+        }
+    }
+
+    private var headerSkeleton: some View {
+        HStack(alignment: .top, spacing: 16) {
+            SkeletonPoster(cornerRadius: 12)
+                .frame(width: 120, height: 170)
+
+            VStack(alignment: .leading, spacing: 10) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.22))
+                    .frame(height: 24)
+                    .skeletonShimmer()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 180, height: 16)
+                    .skeletonShimmer()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 120, height: 14)
+                    .skeletonShimmer()
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 72, height: 24)
+                    .skeletonShimmer()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.16))
+                    .frame(height: 12)
+                    .skeletonShimmer()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.16))
+                    .frame(width: 140, height: 12)
+                    .skeletonShimmer()
+            }
+        }
+    }
+
+    private var descriptionSkeleton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.22))
+                .frame(width: 110, height: 20)
+                .skeletonShimmer()
+
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.16))
+                    .frame(height: 14)
+                    .frame(maxWidth: index == 3 ? 220 : .infinity, alignment: .leading)
+                    .skeletonShimmer()
+            }
+        }
+    }
+
+    private var qualityPickerSkeleton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.22))
+                .frame(width: 90, height: 20)
+                .skeletonShimmer()
+
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.gray.opacity(0.16))
+                .frame(height: 32)
+                .skeletonShimmer()
+        }
+    }
+
+    private var episodesSkeleton: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.22))
+                .frame(width: 70, height: 20)
+                .skeletonShimmer()
+
+            ForEach(0..<4, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.gray.opacity(0.14))
+                    .frame(height: 52)
+                    .skeletonShimmer()
+            }
         }
     }
 
