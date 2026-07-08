@@ -133,8 +133,11 @@ final class DownloadManager: NSObject, ObservableObject {
 
     private var session: AVAssetDownloadURLSession!
     private var activeTasks: [String: AVAssetDownloadTask] = [:]
+    private var pendingDownloadURLs: [String: URL] = [:]
+    private var canceledTaskIDs: Set<String> = []
     private let storageURL: URL
     private let indexURL: URL
+    private let pendingURLsIndexURL: URL
 
     var groupedReleases: [DownloadReleaseGroup] {
         let grouped = Dictionary(grouping: items, by: \.groupingKey)
@@ -159,12 +162,15 @@ final class DownloadManager: NSObject, ObservableObject {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         storageURL = documents.appendingPathComponent("Downloads", isDirectory: true)
         indexURL = documents.appendingPathComponent("downloads-index.json")
+        pendingURLsIndexURL = documents.appendingPathComponent("downloads-pending-urls.json")
         super.init()
         let config = URLSessionConfiguration.background(withIdentifier: "top.aniliberty.AniLibDown.downloads")
         session = AVAssetDownloadURLSession(configuration: config, assetDownloadDelegate: self, delegateQueue: nil)
         try? FileManager.default.createDirectory(at: storageURL, withIntermediateDirectories: true)
         loadIndex()
+        loadPendingURLs()
         restorePendingTasks()
+        purgeOrphanedDownloadCache()
     }
 
     func isDownloaded(episodeId: String, quality: VideoQuality) -> Bool {
@@ -255,19 +261,27 @@ final class DownloadManager: NSObject, ObservableObject {
     }
 
     func cancel(item: DownloadItem) {
+        removeDownloadEntry(item, markCanceled: true)
+    }
+
+    func delete(item: DownloadItem) {
+        removeDownloadEntry(item, markCanceled: true)
+    }
+
+    private func removeDownloadEntry(_ item: DownloadItem, markCanceled: Bool) {
+        if markCanceled {
+            canceledTaskIDs.insert(item.id)
+        }
         if let task = activeTasks[item.id] {
             task.cancel()
             activeTasks.removeValue(forKey: item.id)
         }
+        removeFiles(for: item)
+        pendingDownloadURLs.removeValue(forKey: item.id)
+        savePendingURLs()
         items.removeAll { $0.id == item.id }
         saveIndex()
-    }
-
-    func delete(item: DownloadItem) {
-        if let url = localPlaybackURL(for: item.episodeId, quality: VideoQuality(rawValue: item.quality) ?? .p720) {
-            try? FileManager.default.removeItem(at: url)
-        }
-        cancel(item: item)
+        purgeOrphanedDownloadCache()
     }
 
     func deleteRelease(group: DownloadReleaseGroup) {
@@ -280,6 +294,72 @@ final class DownloadManager: NSObject, ObservableObject {
         for item in group.items where item.state == .completed {
             delete(item: item)
         }
+    }
+
+    func purgeOrphanedDownloadCache() {
+        let referencedPaths = Set(
+            items.compactMap { item -> String? in
+                guard let bookmark = item.localBookmark,
+                      let url = resolveBookmark(bookmark) else {
+                    return nil
+                }
+                return url.standardizedFileURL.path
+            }
+            + pendingDownloadURLs.values.map { $0.standardizedFileURL.path }
+        )
+
+        for directory in downloadStorageDirectories() {
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+
+            for url in contents {
+                let path = url.standardizedFileURL.path
+                if referencedPaths.contains(path) { continue }
+                removeItemIfExists(at: url)
+            }
+        }
+
+        let activeIds = Set(items.map(\.id))
+        pendingDownloadURLs = pendingDownloadURLs.filter { activeIds.contains($0.key) }
+        savePendingURLs()
+
+        items.removeAll { item in
+            guard item.state == .completed, let bookmark = item.localBookmark else { return false }
+            guard let url = resolveBookmark(bookmark) else { return true }
+            return !FileManager.default.fileExists(atPath: url.path)
+        }
+        saveIndex()
+    }
+
+    func purgeAllDownloadData() {
+        for (_, task) in activeTasks {
+            task.cancel()
+        }
+        activeTasks.removeAll()
+
+        session.getAllTasks { tasks in
+            tasks.forEach { $0.cancel() }
+        }
+
+        for item in items {
+            removeFiles(for: item)
+        }
+
+        for url in pendingDownloadURLs.values {
+            removeItemIfExists(at: url)
+        }
+        pendingDownloadURLs.removeAll()
+        savePendingURLs()
+
+        for directory in downloadStorageDirectories() {
+            wipeDirectoryContents(directory)
+        }
+
+        items.removeAll()
+        saveIndex()
     }
 
     private func preferredBitrate(for quality: VideoQuality) -> Int {
@@ -307,6 +387,96 @@ final class DownloadManager: NSObject, ObservableObject {
     private func saveIndex() {
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: indexURL, options: .atomic)
+    }
+
+    private func loadPendingURLs() {
+        guard let data = try? Data(contentsOf: pendingURLsIndexURL),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return
+        }
+        pendingDownloadURLs = decoded.compactMapValues { URL(string: $0) }
+    }
+
+    private func savePendingURLs() {
+        let encoded = pendingDownloadURLs.mapValues(\.absoluteString)
+        guard let data = try? JSONEncoder().encode(encoded) else { return }
+        try? data.write(to: pendingURLsIndexURL, options: .atomic)
+    }
+
+    private func resolveBookmark(_ bookmark: Data) -> URL? {
+        var isStale = false
+        return try? URL(
+            resolvingBookmarkData: bookmark,
+            options: .withoutImplicitStartAccessing,
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+    }
+
+    private func removeFiles(for item: DownloadItem) {
+        if let bookmark = item.localBookmark, let url = resolveBookmark(bookmark) {
+            removeItemIfExists(at: url)
+        }
+        if let pendingURL = pendingDownloadURLs[item.id] {
+            removeItemIfExists(at: pendingURL)
+        }
+        removeItemsMatching(remoteURL: item.remoteURL)
+    }
+
+    private func removeItemsMatching(remoteURL: String) {
+        guard let remote = URL(string: remoteURL) else { return }
+        let marker = remote.lastPathComponent
+        guard !marker.isEmpty else { return }
+
+        for directory in downloadStorageDirectories() {
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+
+            for url in contents where url.lastPathComponent.contains(marker) || url.path.contains(marker) {
+                removeItemIfExists(at: url)
+            }
+        }
+    }
+
+    private func removeItemIfExists(at url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    private func wipeDirectoryContents(_ directory: URL) {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        for url in contents {
+            removeItemIfExists(at: url)
+        }
+    }
+
+    private func downloadStorageDirectories() -> [URL] {
+        var directories = [storageURL]
+
+        if let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first,
+           let managedAssets = try? FileManager.default.contentsOfDirectory(
+               at: library,
+               includingPropertiesForKeys: nil,
+               options: [.skipsHiddenFiles]
+           ).first(where: { $0.lastPathComponent.hasPrefix("com.apple.UserManagedAssets") }) {
+            directories.append(managedAssets)
+        }
+
+        if let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
+            let sessionCache = caches
+                .appendingPathComponent("com.apple.nsurlsessiond/Downloads/top.aniliberty.AniLibDown.downloads", isDirectory: true)
+            directories.append(sessionCache)
+        }
+
+        return directories
     }
 
     private func restorePendingTasks() {
@@ -347,6 +517,18 @@ extension DownloadManager: AVAssetDownloadDelegate {
     nonisolated func urlSession(
         _ session: URLSession,
         assetDownloadTask: AVAssetDownloadTask,
+        willDownloadTo location: URL
+    ) {
+        Task { @MainActor in
+            let id = assetDownloadTask.taskIdentifier.description
+            self.pendingDownloadURLs[id] = location
+            self.savePendingURLs()
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        assetDownloadTask: AVAssetDownloadTask,
         didLoad timeRange: CMTimeRange,
         totalTimeRangesLoaded loadedTimeRanges: [NSValue],
         timeRangeExpectedToLoad: CMTimeRange
@@ -372,6 +554,17 @@ extension DownloadManager: AVAssetDownloadDelegate {
     ) {
         Task { @MainActor in
             let id = assetDownloadTask.taskIdentifier.description
+            self.pendingDownloadURLs.removeValue(forKey: id)
+            self.savePendingURLs()
+
+            if self.canceledTaskIDs.contains(id) {
+                self.canceledTaskIDs.remove(id)
+                self.removeItemIfExists(at: location)
+                self.activeTasks.removeValue(forKey: id)
+                self.purgeOrphanedDownloadCache()
+                return
+            }
+
             if let bookmark = try? location.bookmarkData() {
                 self.updateItem(id: id) {
                     $0.localBookmark = bookmark
@@ -386,15 +579,22 @@ extension DownloadManager: AVAssetDownloadDelegate {
     }
 
     nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let error else { return }
         Task { @MainActor in
             let id = task.taskIdentifier.description
-            self.updateItem(id: id) {
-                $0.state = .failed
-                $0.progress = 0
+            if let error {
+                if let pendingURL = self.pendingDownloadURLs[id] {
+                    self.removeItemIfExists(at: pendingURL)
+                    self.pendingDownloadURLs.removeValue(forKey: id)
+                    self.savePendingURLs()
+                }
+                self.updateItem(id: id) {
+                    $0.state = .failed
+                    $0.progress = 0
+                }
+                self.activeTasks.removeValue(forKey: id)
+                _ = error.localizedDescription
+                self.purgeOrphanedDownloadCache()
             }
-            self.activeTasks.removeValue(forKey: id)
-            _ = error.localizedDescription
         }
     }
 }
