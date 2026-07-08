@@ -1,5 +1,81 @@
 import SwiftUI
 
+private struct SkeletonShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                GeometryReader { geometry in
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            .white.opacity(0.2),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(width: geometry.size.width * 0.9)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: geometry.size.width * phase)
+                    .blendMode(.plusLighter)
+                }
+                .clipped()
+                .allowsHitTesting(false)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
+                    phase = 1.3
+                }
+            }
+    }
+}
+
+private extension View {
+    func skeletonShimmer() -> some View {
+        modifier(SkeletonShimmer())
+    }
+}
+
+struct SkeletonPoster: View {
+    var cornerRadius: CGFloat = 8
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.gray.opacity(0.18),
+                        Color.gray.opacity(0.28),
+                        Color.gray.opacity(0.18)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .skeletonShimmer()
+    }
+}
+
+struct SkeletonCircle: View {
+    var body: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.gray.opacity(0.18),
+                        Color.gray.opacity(0.28),
+                        Color.gray.opacity(0.18)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .skeletonShimmer()
+    }
+}
+
 struct PosterImage: View {
     let path: String?
     var cornerRadius: CGFloat = 8
@@ -16,7 +92,7 @@ struct PosterImage: View {
                     case .failure:
                         placeholder
                     case .empty:
-                        placeholder.overlay(ProgressView())
+                        SkeletonPoster(cornerRadius: cornerRadius)
                     @unknown default:
                         placeholder
                     }
