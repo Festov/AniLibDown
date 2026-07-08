@@ -105,8 +105,6 @@ struct ShikimoriLinkSearchView: View {
         }
     }
 
-    @State private var searchTask: Task<Void, Never>?
-
     private func searchDebounced() async {
         searchTask?.cancel()
         let currentQuery = query
