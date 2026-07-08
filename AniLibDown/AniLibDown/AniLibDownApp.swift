@@ -11,6 +11,9 @@ struct AniLibDownApp: App {
             RootView()
                 .environmentObject(authService)
                 .environmentObject(downloadManager)
+                .task {
+                    await ShikimoriAuthService.shared.restoreSession()
+                }
         }
     }
 }
