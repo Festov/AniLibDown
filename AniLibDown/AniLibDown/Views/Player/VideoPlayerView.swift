@@ -227,6 +227,7 @@ struct VideoPlayerView: View {
     @State private var progressSaveTask: Task<Void, Never>?
     @State private var didTriggerAutoNext = false
     @State private var skipPrompt: SkipPrompt?
+    @State private var skipPromptProgress: CGFloat = 0
     @State private var skipPromptTask: Task<Void, Never>?
     @State private var declinedSkipSegments: Set<String> = []
 
@@ -450,7 +451,15 @@ struct VideoPlayerView: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 14) {
+            if skipPrompt != nil {
+                HStack {
+                    Spacer()
+                    skipDeclineButton
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             HStack(spacing: 10) {
                 Text(formatTime(displayedTime))
                     .font(.caption.monospacedDigit())
@@ -475,33 +484,15 @@ struct VideoPlayerView: View {
                 )
                 .tint(.white)
 
-                VStack(alignment: .trailing, spacing: 6) {
-                    if let skipPrompt {
-                        Button {
-                            declineSkip()
-                            scheduleHideControls()
-                        } label: {
-                            Text("Не пропускать")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(.white.opacity(0.18))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                    }
-
-                    Button {
-                        showRemainingTime.toggle()
-                        scheduleHideControls()
-                    } label: {
-                        Text(trailingTimeLabel)
-                            .font(.caption.monospacedDigit())
-                            .frame(width: 52, alignment: .trailing)
-                    }
-                    .buttonStyle(.plain)
+                Button {
+                    showRemainingTime.toggle()
+                    scheduleHideControls()
+                } label: {
+                    Text(trailingTimeLabel)
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 52, alignment: .trailing)
                 }
+                .buttonStyle(.plain)
             }
         }
         .foregroundStyle(.white)
@@ -515,6 +506,38 @@ struct VideoPlayerView: View {
                 endPoint: .bottom
             )
         )
+    }
+
+    private var skipDeclineButton: some View {
+        Button {
+            declineSkip()
+            scheduleHideControls()
+        } label: {
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.16))
+
+                GeometryReader { geometry in
+                    Capsule()
+                        .fill(Color.accentColor.opacity(0.9))
+                        .frame(width: max(geometry.size.width * skipPromptProgress, 0))
+                }
+
+                Text("Не пропускать")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+            }
+            .frame(width: 196, height: 44)
+            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var episodeListPanel: some View {
@@ -757,6 +780,7 @@ struct VideoPlayerView: View {
 
     private func cancelSkipPrompt() {
         skipPromptTask?.cancel()
+        skipPromptProgress = 0
         skipPrompt = nil
     }
 
@@ -808,9 +832,14 @@ struct VideoPlayerView: View {
 
     private func presentSkipPrompt(segmentKey: String, title: String, endTime: Double) {
         skipPromptTask?.cancel()
+        skipPromptProgress = 0
         withAnimation(overlayAnimation) {
             skipPrompt = SkipPrompt(id: segmentKey, title: title, endTime: endTime)
             controlsVisible = true
+        }
+
+        withAnimation(.linear(duration: 3)) {
+            skipPromptProgress = 1
         }
 
         skipPromptTask = Task {
@@ -828,6 +857,7 @@ struct VideoPlayerView: View {
         skipPromptTask?.cancel()
         declinedSkipSegments.insert(prompt.id)
         withAnimation(overlayAnimation) {
+            skipPromptProgress = 0
             skipPrompt = nil
         }
     }
@@ -835,6 +865,7 @@ struct VideoPlayerView: View {
     private func performSkip(to endTime: Double, segmentKey: String) {
         lastSkippedSegment = segmentKey
         withAnimation(overlayAnimation) {
+            skipPromptProgress = 0
             skipPrompt = nil
         }
         seek(to: endTime)
