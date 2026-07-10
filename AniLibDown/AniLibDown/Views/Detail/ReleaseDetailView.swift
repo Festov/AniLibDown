@@ -545,7 +545,7 @@ struct ReleaseDetailView: View {
                                 selectedEpisodeRangeIndex = index
                             }
                             .buttonStyle(.bordered)
-                            .tint(selectedEpisodeRangeIndex == index ? .accentColor : .secondary)
+                            .tint(selectedEpisodeRangeIndex == index ? Color.accentColor : .secondary)
                         }
                     }
                 }
