@@ -36,6 +36,9 @@
 		F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */; };
 		F1A2B3C4D5E60718293A4B6C /* ShikimoriSecrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */; };
 		7473FB92539D73ABE2977E4C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D4E50EBC37FA17E4DE51630C /* Assets.xcassets */; };
+		A4B5C6D7E8F9012345678A01 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A11 /* CatalogStore.swift */; };
+		A4B5C6D7E8F9012345678A02 /* AppCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A12 /* AppCacheManager.swift */; };
+		A4B5C6D7E8F9012345678A03 /* CollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A13 /* CollectionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -70,6 +73,9 @@
 		F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Shikimori/ShikimoriLinkSearchView.swift"; sourceTree = "<group>"; };
 		F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ShikimoriSecrets.plist; sourceTree = "<group>"; };
 		D4E50EBC37FA17E4DE51630C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A4B5C6D7E8F9012345678A11 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CatalogStore.swift"; sourceTree = "<group>"; };
+		A4B5C6D7E8F9012345678A12 /* AppCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppCacheManager.swift"; sourceTree = "<group>"; };
+		A4B5C6D7E8F9012345678A13 /* CollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Collection/CollectionView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +99,7 @@
 				E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */,
 				68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */,
 				1F0E0D222A020A50D4AF210D /* LatestView.swift */,
+				A4B5C6D7E8F9012345678A13 /* CollectionView.swift */,
 				41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */,
 				4725FFC840C7005115EACA69 /* ReleaseDetailView.swift */,
 				DE17FB4D4221487B09CE3D80 /* DownloadsView.swift */,
@@ -106,6 +113,8 @@
 				D4E5F60718293A4B5D6E7F80 /* CollectionStatusStore.swift */,
 				F60718293A4B5D6E7F80192 /* PlayerSettings.swift */,
 				F60718293A4B5D6E7F80193 /* WatchProgressStore.swift */,
+				A4B5C6D7E8F9012345678A11 /* CatalogStore.swift */,
+				A4B5C6D7E8F9012345678A12 /* AppCacheManager.swift */,
 				F60718293A4B5D6E7F80194 /* SplashView.swift */,
 				F1A2B3C4D5E60718293A4B6B /* ShikimoriLinkSearchView.swift */,
 				F1A2B3C4D5E60718293A4B61 /* ShikimoriConfig.swift */,
@@ -211,6 +220,7 @@
 				1897B79A8AE1A6B2DF8F8630 /* VideoPlayerView.swift in Sources */,
 				1836311D6991F858AD83D6D9 /* LoginView.swift in Sources */,
 				2B309A817A50BCE55A6ECA33 /* LatestView.swift in Sources */,
+				A4B5C6D7E8F9012345678A03 /* CollectionView.swift in Sources */,
 				6837C48C4EBC81ACE1D27874 /* CatalogView.swift in Sources */,
 				E5480594966857B836DE1CEB /* ReleaseDetailView.swift in Sources */,
 				46B491019A1663FA376D296E /* DownloadsView.swift in Sources */,
@@ -224,6 +234,8 @@
 				C3D4E5F60718293A4B5D6E7F /* CollectionStatusStore.swift in Sources */,
 				E1F60718293A4B5D6E7F801 /* PlayerSettings.swift in Sources */,
 				E2F60718293A4B5D6E7F8019 /* WatchProgressStore.swift in Sources */,
+				A4B5C6D7E8F9012345678A01 /* CatalogStore.swift in Sources */,
+				A4B5C6D7E8F9012345678A02 /* AppCacheManager.swift in Sources */,
 				E3F60718293A4B5D6E7F801A /* SplashView.swift in Sources */,
 				F1A2B3C4D5E60718293A4B60 /* ShikimoriConfig.swift in Sources */,
 				F1A2B3C4D5E60718293A4B62 /* ShikimoriModels.swift in Sources */,

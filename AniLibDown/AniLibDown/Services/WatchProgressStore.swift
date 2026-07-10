@@ -46,6 +46,20 @@ final class WatchProgressStore {
         storeProgress(progress)
     }
 
+    func progressFraction(for episodeId: String, duration: Int?) -> Double {
+        guard let position = position(for: episodeId),
+              let duration,
+              duration > 0 else {
+            return 0
+        }
+        return min(1, max(0, position / Double(duration)))
+    }
+
+    func clearAll() {
+        defaults.removeObject(forKey: progressKey)
+        defaults.removeObject(forKey: lastEpisodeKey)
+    }
+
     private func loadProgress() -> [String: WatchProgress] {
         guard let data = defaults.data(forKey: progressKey),
               let decoded = try? JSONDecoder().decode([String: WatchProgress].self, from: data) else {
