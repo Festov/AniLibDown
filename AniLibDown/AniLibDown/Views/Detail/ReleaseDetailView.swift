@@ -8,6 +8,10 @@ final class ReleaseDetailViewModel: ObservableObject {
     @Published var collectionStatus: CollectionType?
     @Published var isUpdatingCollection = false
     @Published var collectionError: String?
+    @Published var shikimoriStatus: ShikimoriListStatus?
+    @Published var shikimoriLink: ShikimoriLink?
+    @Published var isUpdatingShikimori = false
+    @Published var shikimoriError: String?
 
     func load(id: Int) async {
         isLoading = true
@@ -17,6 +21,8 @@ final class ReleaseDetailViewModel: ObservableObject {
         do {
             release = try await APIClient.shared.getRelease(idOrAlias: String(id))
             collectionStatus = CollectionStatusStore.shared.status(for: id)
+            refreshShikimoriLink(releaseId: id)
+            await refreshShikimoriStatus(releaseId: id)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -24,6 +30,56 @@ final class ReleaseDetailViewModel: ObservableObject {
 
     func refreshCollectionStatus(releaseId: Int) {
         collectionStatus = CollectionStatusStore.shared.status(for: releaseId)
+    }
+
+    func refreshShikimoriLink(releaseId: Int) {
+        shikimoriLink = ShikimoriLinkStore.shared.link(for: releaseId)
+    }
+
+    func refreshShikimoriStatus(releaseId: Int) async {
+        guard ShikimoriAuthService.shared.isAuthenticated,
+              let link = ShikimoriLinkStore.shared.link(for: releaseId) else {
+            shikimoriStatus = nil
+            return
+        }
+
+        shikimoriError = nil
+        do {
+            let rate = try await ShikimoriAuthService.shared.userRate(for: link.animeId)
+            shikimoriStatus = rate?.listStatus
+        } catch {
+            shikimoriError = error.localizedDescription
+        }
+    }
+
+    func linkShikimori(anime: ShikimoriAnime, releaseId: Int) async {
+        let link = ShikimoriLink(animeId: anime.id, title: anime.displayTitle)
+        ShikimoriLinkStore.shared.setLink(link, for: releaseId)
+        shikimoriLink = link
+        shikimoriStatus = nil
+        await refreshShikimoriStatus(releaseId: releaseId)
+    }
+
+    func unlinkShikimori(releaseId: Int) {
+        ShikimoriLinkStore.shared.setLink(nil, for: releaseId)
+        shikimoriLink = nil
+        shikimoriStatus = nil
+        shikimoriError = nil
+    }
+
+    func setShikimoriStatus(_ status: ShikimoriListStatus, releaseId: Int) async {
+        guard let link = ShikimoriLinkStore.shared.link(for: releaseId) else { return }
+
+        isUpdatingShikimori = true
+        shikimoriError = nil
+        defer { isUpdatingShikimori = false }
+
+        do {
+            let rate = try await ShikimoriAuthService.shared.setStatus(status, animeId: link.animeId)
+            shikimoriStatus = rate.listStatus
+        } catch {
+            shikimoriError = error.localizedDescription
+        }
     }
 
     func setCollectionStatus(_ type: CollectionType?, releaseId: Int) async {
@@ -45,10 +101,12 @@ struct ReleaseDetailView: View {
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
     @EnvironmentObject private var authService: AuthService
+    @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var selectedQuality: VideoQuality = .p720
     @State private var playerSession: PlayerSession?
     @State private var selectedEpisodeRangeIndex = 0
+    @State private var showShikimoriSearch = false
 
     private let episodeRangeSize = 50
 
@@ -71,6 +129,7 @@ struct ReleaseDetailView: View {
                         if authService.isAuthenticated {
                             collectionSection(for: release)
                         }
+                        shikimoriSection(for: release)
                         descriptionSection(for: release)
                         qualityPicker
                         downloadAllButton(for: release)
@@ -93,6 +152,17 @@ struct ReleaseDetailView: View {
         }
         .onAppear {
             viewModel.refreshCollectionStatus(releaseId: releaseId)
+            viewModel.refreshShikimoriLink(releaseId: releaseId)
+        }
+        .onChange(of: shikimoriAuth.isAuthenticated) { _, _ in
+            Task { await viewModel.refreshShikimoriStatus(releaseId: releaseId) }
+        }
+        .sheet(isPresented: $showShikimoriSearch) {
+            if let release = viewModel.release {
+                ShikimoriLinkSearchView(releaseTitle: release.name.main) { anime in
+                    Task { await viewModel.linkShikimori(anime: anime, releaseId: releaseId) }
+                }
+            }
         }
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
@@ -251,6 +321,78 @@ struct ReleaseDetailView: View {
             get: { viewModel.collectionStatus },
             set: { newValue in
                 Task { await viewModel.setCollectionStatus(newValue, releaseId: releaseId) }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func shikimoriSection(for release: ReleaseDetail) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Shikimori")
+                .font(.headline)
+
+            if !ShikimoriConfig.isConfigured {
+                Text(ShikimoriConfig.configurationHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if !shikimoriAuth.isAuthenticated {
+                Text("Подключите аккаунт Shikimori в профиле, чтобы отмечать статус просмотра.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let link = viewModel.shikimoriLink {
+                Text("Привязано: \(link.title)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Picker("Статус", selection: shikimoriStatusBinding(for: release.id)) {
+                    ForEach(ShikimoriListStatus.allCases.filter { $0 != .rewatching }) { status in
+                        Text(status.title).tag(status)
+                    }
+                }
+                .pickerStyle(.menu)
+                .disabled(viewModel.isUpdatingShikimori)
+
+                if viewModel.isUpdatingShikimori {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Button("Сменить привязку", role: .destructive) {
+                    showShikimoriSearch = true
+                }
+                .font(.caption)
+
+                Button("Отвязать") {
+                    viewModel.unlinkShikimori(releaseId: release.id)
+                }
+                .font(.caption)
+            } else {
+                Text("Привяжите этот релиз к тайтлу на Shikimori, чтобы ставить статусы вроде «Смотрю» или «Просмотрено».")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    showShikimoriSearch = true
+                } label: {
+                    Label("Привязать к Shikimori", systemImage: "link")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let error = viewModel.shikimoriError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func shikimoriStatusBinding(for releaseId: Int) -> Binding<ShikimoriListStatus> {
+        Binding(
+            get: { viewModel.shikimoriStatus ?? .planned },
+            set: { newValue in
+                Task { await viewModel.setShikimoriStatus(newValue, releaseId: releaseId) }
             }
         )
     }
