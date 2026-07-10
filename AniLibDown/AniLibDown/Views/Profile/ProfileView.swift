@@ -24,16 +24,21 @@ struct ProfileView: View {
                 await shikimoriAuth.restoreSession()
             }
             .confirmationDialog(
-                "Очистить кеш приложения?",
+                "Что очистить?",
                 isPresented: $showCacheConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Очистить", role: .destructive) {
+                ForEach(AppCacheKind.allCases) { kind in
+                    Button(kind.title, role: .destructive) {
+                        AppCacheManager.clear([kind])
+                    }
+                }
+                Button("Очистить всё", role: .destructive) {
                     AppCacheManager.clearAll()
                 }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Удалит кеш каталога, изображений и локальный прогресс просмотра. Загрузки не затрагиваются.")
+                Text("Загрузки серий не удаляются. Можно выбрать только нужный тип кеша.")
             }
         }
     }
@@ -139,11 +144,17 @@ struct ProfileView: View {
 
     private var cacheSection: some View {
         Section("Память") {
-            Text(AppCacheManager.estimatedCacheDescription)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            ForEach(AppCacheKind.allCases) { kind in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(kind.title)
+                        .font(.subheadline)
+                    Text(kind.detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
-            Button("Очистить кеш приложения", role: .destructive) {
+            Button("Очистить кеш…", role: .destructive) {
                 showCacheConfirmation = true
             }
         }

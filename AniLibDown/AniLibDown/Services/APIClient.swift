@@ -173,10 +173,7 @@ actor APIClient {
     }
 
     func getFranchises(forReleaseId releaseId: Int) async throws -> [Franchise] {
-        try await request(
-            path: "anime/franchises/release/\(releaseId)",
-            query: ["include": "franchiseReleases.release"]
-        )
+        try await request(path: "anime/franchises/release/\(releaseId)")
     }
 
     func getCollection(type: CollectionType, page: Int, limit: Int = 20) async throws -> CollectionResponse {
