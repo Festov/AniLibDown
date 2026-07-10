@@ -4,57 +4,127 @@ import SwiftUI
 final class CollectionStore: ObservableObject {
     static let shared = CollectionStore()
 
+    private let pageSize = 10
+
     @Published private(set) var releases: [ReleaseSummary] = []
     @Published var selectedType: CollectionType = .watching
     @Published var isLoading = false
     @Published var isRefreshing = false
+    @Published var isLoadingMore = false
     @Published var errorMessage: String?
 
-    private var loadedTypes: Set<CollectionType> = []
+    private struct TypeCache {
+        var releases: [ReleaseSummary]
+        var nextPage: Int
+        var totalPages: Int
+    }
+
+    private var caches: [CollectionType: TypeCache] = [:]
+
+    var canLoadMore: Bool {
+        guard let cache = caches[selectedType] else { return false }
+        return cache.nextPage <= cache.totalPages
+    }
 
     private init() {}
 
     func loadIfNeeded(type: CollectionType) async {
-        guard !loadedTypes.contains(type) || releases.isEmpty else { return }
-        await load(type: type, force: false)
+        if caches[type] != nil {
+            selectedType = type
+            releases = caches[type]?.releases ?? []
+            return
+        }
+        await loadInitial(type: type, refreshing: false)
     }
 
     func refresh(type: CollectionType) async {
-        await load(type: type, force: true, refreshing: true)
+        caches.removeValue(forKey: type)
+        if selectedType == type {
+            releases = []
+        }
+        await loadInitial(type: type, refreshing: true)
+    }
+
+    func selectType(_ type: CollectionType) async {
+        selectedType = type
+        if let cache = caches[type] {
+            releases = cache.releases
+            errorMessage = nil
+            return
+        }
+        releases = []
+        await loadInitial(type: type, refreshing: false)
     }
 
     func load(type: CollectionType, force: Bool = false, refreshing: Bool = false) async {
-        if !force, loadedTypes.contains(type), selectedType == type, !releases.isEmpty {
+        if force {
+            caches.removeValue(forKey: type)
+            if selectedType == type {
+                releases = []
+            }
+            await loadInitial(type: type, refreshing: refreshing)
             return
         }
+        await selectType(type)
+    }
 
+    func loadMore() async {
+        guard !isLoadingMore, !isLoading, !isRefreshing, canLoadMore else { return }
+        guard var cache = caches[selectedType] else { return }
+
+        isLoadingMore = true
+        errorMessage = nil
+        defer { isLoadingMore = false }
+
+        do {
+            let response = try await APIClient.shared.getCollection(
+                type: selectedType,
+                page: cache.nextPage,
+                limit: pageSize
+            )
+            cache.releases.append(contentsOf: response.data)
+            cache.nextPage += 1
+            cache.totalPages = max(response.meta.pagination.totalPages, cache.totalPages)
+            caches[selectedType] = cache
+            releases = cache.releases
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func invalidate() {
+        caches.removeAll()
+        releases = []
+    }
+
+    private func loadInitial(type: CollectionType, refreshing: Bool) async {
         if refreshing {
             isRefreshing = true
-        } else if releases.isEmpty || selectedType != type {
+        } else if caches[type] == nil {
             isLoading = true
         }
-        errorMessage = nil
         selectedType = type
+        errorMessage = nil
         defer {
             isLoading = false
             isRefreshing = false
         }
 
         do {
-            let response = try await APIClient.shared.getCollection(type: type, page: 1, limit: 50)
+            let response = try await APIClient.shared.getCollection(type: type, page: 1, limit: pageSize)
+            let totalPages = max(response.meta.pagination.totalPages, 1)
+            caches[type] = TypeCache(
+                releases: response.data,
+                nextPage: 2,
+                totalPages: totalPages
+            )
             releases = response.data
-            loadedTypes.insert(type)
         } catch {
-            if force || releases.isEmpty {
+            if refreshing || releases.isEmpty {
                 errorMessage = error.localizedDescription
                 releases = []
             }
         }
-    }
-
-    func invalidate() {
-        loadedTypes.removeAll()
-        releases = []
     }
 }
 
@@ -106,7 +176,7 @@ struct CollectionView: View {
             Picker("Тип", selection: Binding(
                 get: { store.selectedType },
                 set: { newType in
-                    Task { await store.load(type: newType) }
+                    Task { await store.selectType(newType) }
                 }
             )) {
                 ForEach(CollectionType.allCases) { type in
@@ -134,13 +204,29 @@ struct CollectionView: View {
                         description: Text(store.errorMessage ?? "Добавьте аниме из карточки релиза")
                     )
                 } else {
-                    List(store.releases) { release in
-                        NavigationLink(value: release.id) {
-                            ReleaseRowView(
-                                title: release.name.main,
-                                subtitle: ReleaseFormatting.yearString(release.year),
-                                posterPath: release.poster?.displayURL
-                            )
+                    List {
+                        ForEach(store.releases) { release in
+                            NavigationLink(value: release.id) {
+                                ReleaseRowView(
+                                    title: release.name.main,
+                                    subtitle: ReleaseFormatting.yearString(release.year),
+                                    posterPath: release.poster?.displayURL
+                                )
+                            }
+                            .onAppear {
+                                if release.id == store.releases.last?.id {
+                                    Task { await store.loadMore() }
+                                }
+                            }
+                        }
+
+                        if store.isLoadingMore {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                            .listRowSeparator(.hidden)
                         }
                     }
                     .listStyle(.plain)

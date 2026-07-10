@@ -128,6 +128,7 @@ struct ReleaseDetailView: View {
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
     @EnvironmentObject private var authService: AuthService
+    @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var selectedQuality: VideoQuality = .p720
@@ -158,7 +159,9 @@ struct ReleaseDetailView: View {
                             collectionSection(for: release)
                         }
                         relatedSection(currentReleaseId: release.id)
-                        shikimoriSection(for: release)
+                        if appSettings.showShikimoriOnReleaseCard {
+                            shikimoriSection(for: release)
+                        }
                         descriptionSection(for: release)
                         qualityPicker
                         downloadAllButton(for: release)
@@ -659,26 +662,22 @@ private struct EpisodeRow: View {
 
             downloadStatusIcon
 
-            Button(action: onPlay) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canPlay)
-
             if isDownloaded {
                 Button(action: onDeleteDownload) {
-                    Image(systemName: "trash.circle")
-                        .font(.title3)
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 30))
                         .foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
             } else {
                 Button(action: onDownload) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.title3)
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 32))
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
                 .disabled(
                     quality.streamURL(for: episode) == nil
                     || downloadState == .downloading
