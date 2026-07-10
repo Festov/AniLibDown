@@ -110,10 +110,11 @@ struct CollectionView: View {
                 }
             )) {
                 ForEach(CollectionType.allCases) { type in
-                    Text(type.title).tag(type)
+                    Text(type.shortTitle).tag(type)
                 }
             }
             .pickerStyle(.segmented)
+            .font(.caption)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
@@ -138,8 +139,7 @@ struct CollectionView: View {
                             ReleaseRowView(
                                 title: release.name.main,
                                 subtitle: ReleaseFormatting.yearString(release.year),
-                                posterPath: release.poster?.displayURL,
-                                status: release.broadcastStatus
+                                posterPath: release.poster?.displayURL
                             )
                         }
                     }

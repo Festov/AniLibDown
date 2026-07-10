@@ -101,6 +101,7 @@ struct PosterImage: View {
                 placeholder
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
@@ -114,33 +115,10 @@ struct PosterImage: View {
     }
 }
 
-struct BroadcastStatusBadge: View {
-    let status: BroadcastStatus
-
-    var body: some View {
-        Text(status.title)
-            .font(.caption.weight(.medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(backgroundColor.opacity(0.2))
-            .foregroundStyle(backgroundColor)
-            .clipShape(Capsule())
-    }
-
-    private var backgroundColor: Color {
-        switch status {
-        case .ongoing: return .green
-        case .released: return .blue
-        case .upcoming: return .orange
-        }
-    }
-}
-
 struct ReleaseRowView: View {
     let title: String
     let subtitle: String
     let posterPath: String?
-    var status: BroadcastStatus?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -152,9 +130,6 @@ struct ReleaseRowView: View {
                     .font(.headline)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
-                if let status {
-                    BroadcastStatusBadge(status: status)
-                }
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
