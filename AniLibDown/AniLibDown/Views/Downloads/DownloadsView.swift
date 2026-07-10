@@ -96,7 +96,7 @@ private struct DownloadGroupRow: View {
                 if group.completedCount > 0 {
                     Image(systemName: "play.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.accentColor)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .padding(.vertical, 4)
