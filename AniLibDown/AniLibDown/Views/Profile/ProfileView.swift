@@ -24,6 +24,7 @@ final class CollectionViewModel: ObservableObject {
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
+    @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @StateObject private var collectionViewModel = CollectionViewModel()
     @State private var showLogin = false
     @State private var selectedCollection: CollectionType = .watching
@@ -41,19 +42,30 @@ struct ProfileView: View {
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
+            .task {
+                await shikimoriAuth.restoreSession()
+            }
         }
     }
 
     private var guestContent: some View {
-        ContentUnavailableView {
-            Label("Войдите в аккаунт", systemImage: "person.crop.circle.badge.questionmark")
-        } description: {
-            Text("Авторизация нужна для коллекций и синхронизации с AniLiberty")
-        } actions: {
-            Button("Войти") {
-                showLogin = true
+        List {
+            shikimoriSection
+
+            Section {
+                ContentUnavailableView {
+                    Label("Войдите в аккаунт", systemImage: "person.crop.circle.badge.questionmark")
+                } description: {
+                    Text("Авторизация нужна для коллекций и синхронизации с AniLiberty")
+                } actions: {
+                    Button("Войти") {
+                        showLogin = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -96,6 +108,8 @@ struct ProfileView: View {
 
                 Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
             }
+
+            shikimoriSection
 
             Section("Моя коллекция") {
                 Picker("Тип", selection: $selectedCollection) {
@@ -171,5 +185,53 @@ struct ProfileView: View {
             .resizable()
             .frame(width: 48, height: 48)
             .foregroundStyle(.secondary)
+    }
+
+    private var shikimoriSection: some View {
+        Section("Shikimori") {
+            if !ShikimoriConfig.isConfigured {
+                Text(ShikimoriConfig.configurationHint)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if shikimoriAuth.isAuthenticated, let profile = shikimoriAuth.profile {
+                HStack {
+                    Label(profile.nickname, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Отключить", role: .destructive) {
+                        shikimoriAuth.disconnect()
+                    }
+                    .font(.subheadline)
+                }
+
+                Text("В карточке релиза можно привязать тайтл и ставить статусы: смотрю, просмотрено, брошено и др.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Отмечайте статус просмотра на Shikimori прямо из карточки аниме.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    Task { await shikimoriAuth.connect() }
+                } label: {
+                    if shikimoriAuth.isLoading {
+                        HStack {
+                            ProgressView()
+                            Text("Подключение...")
+                        }
+                    } else {
+                        Text("Подключить Shikimori")
+                    }
+                }
+                .disabled(shikimoriAuth.isLoading)
+            }
+
+            if let error = shikimoriAuth.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        }
     }
 }
