@@ -45,6 +45,10 @@ struct ProfileView: View {
 
     private var guestContent: some View {
         List {
+            Section("Карточка аниме") {
+                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
+            }
+
             shikimoriSection
             cacheSection
 
@@ -103,6 +107,10 @@ struct ProfileView: View {
                 .pickerStyle(.segmented)
 
                 Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
+            }
+
+            Section("Карточка аниме") {
+                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
             }
 
             shikimoriSection
