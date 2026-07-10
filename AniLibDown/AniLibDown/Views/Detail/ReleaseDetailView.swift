@@ -296,7 +296,6 @@ struct ReleaseDetailView: View {
                 }
                 Text("\(ReleaseFormatting.yearString(release.year)) • \(release.type?.description ?? "Аниме")")
                     .font(.subheadline)
-                BroadcastStatusBadge(status: release.broadcastStatus)
                 if let rating = release.ageRating?.label {
                     Text(rating)
                         .font(.caption)
@@ -359,8 +358,7 @@ struct ReleaseDetailView: View {
                             ReleaseRowView(
                                 title: summary.name.main,
                                 subtitle: ReleaseFormatting.yearString(summary.year),
-                                posterPath: summary.poster?.displayURL,
-                                status: summary.broadcastStatus
+                                posterPath: summary.poster?.displayURL
                             )
                         }
                     } else {

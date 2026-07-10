@@ -60,6 +60,9 @@ struct DownloadsView: View {
             .fullScreenCover(item: $playerSession) { session in
                 VideoPlayerView(session: session)
             }
+            .task {
+                await downloadManager.backfillPostersIfNeeded()
+            }
         }
     }
 }
@@ -74,6 +77,7 @@ private struct DownloadGroupRow: View {
                 if let posterPath = group.posterPath {
                     PosterImage(path: posterPath, cornerRadius: 8)
                         .frame(width: 48, height: 68)
+                        .clipped()
                 } else {
                     Image(systemName: "film.stack")
                         .font(.title2)

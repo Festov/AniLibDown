@@ -11,7 +11,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     let episodeOrdinal: Double
     let quality: String
     let remoteURL: String
-    let posterPath: String?
+    var posterPath: String?
     var localBookmark: Data?
     var progress: Double
     var state: DownloadState
@@ -163,6 +163,34 @@ final class DownloadManager: NSObject, ObservableObject {
         .sorted { $0.releaseTitle.localizedCaseInsensitiveCompare($1.releaseTitle) == .orderedAscending }
     }
 
+    func backfillPostersIfNeeded() async {
+        let missingPosterReleaseIds = Set(
+            groupedReleases
+                .filter { $0.posterPath == nil }
+                .compactMap(\.releaseId)
+        )
+        guard !missingPosterReleaseIds.isEmpty else { return }
+
+        for releaseId in missingPosterReleaseIds {
+            guard let release = try? await APIClient.shared.getRelease(idOrAlias: String(releaseId)),
+                  let posterPath = release.poster?.displayURL else {
+                continue
+            }
+            applyPosterPath(posterPath, toReleaseId: releaseId)
+        }
+    }
+
+    private func applyPosterPath(_ posterPath: String, toReleaseId releaseId: Int) {
+        var updated = false
+        for index in items.indices where items[index].releaseId == releaseId && items[index].posterPath == nil {
+            items[index].posterPath = posterPath
+            updated = true
+        }
+        if updated {
+            saveIndex()
+        }
+    }
+
     private override init() {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         storageURL = documents.appendingPathComponent("Downloads", isDirectory: true)
@@ -236,6 +264,9 @@ final class DownloadManager: NSObject, ObservableObject {
             createdAt: Date()
         )
         items.insert(placeholder, at: 0)
+        if let posterPath {
+            applyPosterPath(posterPath, toReleaseId: releaseId)
+        }
         saveIndex()
 
         let asset = AVURLAsset(url: streamURL)

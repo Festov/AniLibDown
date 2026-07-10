@@ -422,6 +422,16 @@ enum CollectionType: String, CaseIterable, Identifiable, Hashable {
         case .abandoned: return "Брошено"
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .watching: return "Смотрю"
+        case .planned: return "План"
+        case .watched: return "Готово"
+        case .postponed: return "Позже"
+        case .abandoned: return "Бросил"
+        }
+    }
 }
 
 // MARK: - Responses
