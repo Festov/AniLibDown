@@ -7,14 +7,14 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            LatestView()
-                .tabItem {
-                    Label("Новинки", systemImage: "sparkles")
-                }
-
             CatalogView()
                 .tabItem {
                     Label("Каталог", systemImage: "books.vertical")
+                }
+
+            CollectionView()
+                .tabItem {
+                    Label("Коллекция", systemImage: "heart.text.square")
                 }
 
             DownloadsView()
@@ -32,8 +32,11 @@ struct ContentView: View {
             await authService.restoreSession()
             await CollectionStatusStore.shared.refresh()
         }
-        .onChange(of: authService.isAuthenticated) { _, _ in
+        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             Task { await CollectionStatusStore.shared.refresh() }
+            if !isAuthenticated {
+                CollectionStore.shared.invalidate()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

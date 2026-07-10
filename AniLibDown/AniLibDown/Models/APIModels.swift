@@ -85,10 +85,20 @@ enum ReleaseFormatting {
         episodesTotal: Int?
     ) -> BroadcastStatus {
         if isOngoing { return .ongoing }
-        let knownEpisodes = max(episodesCount, episodesTotal ?? 0)
-        if knownEpisodes > 0 { return .released }
-        if isInProduction { return .released }
+        if episodesCount > 0 { return .released }
+        if let episodesTotal, episodesTotal > 0 { return .released }
+        if isInProduction { return .upcoming }
         return .upcoming
+    }
+
+    static func displayEpisodeOrdinal(_ ordinal: Double) -> String {
+        guard ordinal > 0 else { return "—" }
+        if ordinal < 1 { return "1" }
+        let fraction = ordinal.truncatingRemainder(dividingBy: 1)
+        if abs(fraction) < 0.05 || abs(fraction - 1) < 0.05 {
+            return String(format: "%.0f", ordinal.rounded())
+        }
+        return String(format: "%.1f", ordinal)
     }
 }
 
@@ -105,10 +115,13 @@ extension ReleaseSummary {
 
 extension ReleaseLatest {
     var broadcastStatus: BroadcastStatus {
-        ReleaseFormatting.broadcastStatus(
+        let airedEpisodes = latestEpisode.ordinal >= 1
+            ? Int(latestEpisode.ordinal.rounded(.up))
+            : (latestEpisode.ordinal > 0 ? 1 : 0)
+        return ReleaseFormatting.broadcastStatus(
             isOngoing: isOngoing,
             isInProduction: isInProduction,
-            episodesCount: max(episodesTotal ?? 0, Int(latestEpisode.ordinal)),
+            episodesCount: max(episodesTotal ?? 0, airedEpisodes),
             episodesTotal: episodesTotal
         )
     }
@@ -265,9 +278,71 @@ struct Episode: Codable, Identifiable, Hashable {
     }
 
     var ordinalFormatted: String {
-        ordinal.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", ordinal)
-            : String(ordinal)
+        ReleaseFormatting.displayEpisodeOrdinal(ordinal)
+    }
+
+    init(
+        id: String,
+        name: String?,
+        ordinal: Double,
+        opening: EpisodeSkip? = nil,
+        ending: EpisodeSkip? = nil,
+        preview: ImageAsset? = nil,
+        hls480: String? = nil,
+        hls720: String? = nil,
+        hls1080: String? = nil,
+        duration: Int? = nil,
+        releaseId: Int? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.ordinal = ordinal
+        self.opening = opening
+        self.ending = ending
+        self.preview = preview
+        self.hls480 = hls480
+        self.hls720 = hls720
+        self.hls1080 = hls1080
+        self.duration = duration
+        self.releaseId = releaseId
+    }
+}
+
+// MARK: - Franchise
+
+struct FranchiseRelease: Codable, Identifiable, Hashable {
+    let id: String
+    let sortOrder: Int
+    let releaseId: Int
+    let franchiseId: String
+    let release: ReleaseSummary?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+        releaseId = try container.decode(Int.self, forKey: .releaseId)
+        franchiseId = try container.decode(String.self, forKey: .franchiseId)
+        release = try container.decodeIfPresent(ReleaseSummary.self, forKey: .release)
+    }
+}
+
+struct Franchise: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let nameEnglish: String?
+    let franchiseReleases: [FranchiseRelease]?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        nameEnglish = try container.decodeIfPresent(String.self, forKey: .nameEnglish)
+        franchiseReleases = try container.decodeIfPresent([FranchiseRelease].self, forKey: .franchiseReleases)
+    }
+
+    var relatedReleases: [FranchiseRelease] {
+        (franchiseReleases ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 }
 
@@ -420,6 +495,7 @@ struct DownloadReleaseGroup: Identifiable {
     let id: String
     let releaseId: Int?
     let releaseTitle: String
+    let posterPath: String?
     let items: [DownloadItem]
 
     var completedCount: Int {
