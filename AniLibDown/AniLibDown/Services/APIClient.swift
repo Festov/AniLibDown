@@ -168,6 +168,17 @@ actor APIClient {
         try await request(path: "anime/releases/\(idOrAlias)")
     }
 
+    func getRandomReleases(limit: Int = 1) async throws -> [ReleaseSummary] {
+        try await request(path: "anime/releases/random", query: ["limit": String(limit)])
+    }
+
+    func getFranchises(forReleaseId releaseId: Int) async throws -> [Franchise] {
+        try await request(
+            path: "anime/franchises/release/\(releaseId)",
+            query: ["include": "franchiseReleases.release"]
+        )
+    }
+
     func getCollection(type: CollectionType, page: Int, limit: Int = 20) async throws -> CollectionResponse {
         try await request(
             path: "accounts/users/me/collections/releases",
