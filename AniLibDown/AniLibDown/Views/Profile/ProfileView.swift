@@ -1,33 +1,11 @@
 import SwiftUI
 
-@MainActor
-final class CollectionViewModel: ObservableObject {
-    @Published var releases: [ReleaseSummary] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-
-    func load(type: CollectionType) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        do {
-            let response = try await APIClient.shared.getCollection(type: type, page: 1, limit: 50)
-            releases = response.data
-        } catch {
-            errorMessage = error.localizedDescription
-            releases = []
-        }
-    }
-}
-
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
-    @StateObject private var collectionViewModel = CollectionViewModel()
     @State private var showLogin = false
-    @State private var selectedCollection: CollectionType = .watching
+    @State private var showCacheConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -45,12 +23,34 @@ struct ProfileView: View {
             .task {
                 await shikimoriAuth.restoreSession()
             }
+            .confirmationDialog(
+                "Что очистить?",
+                isPresented: $showCacheConfirmation,
+                titleVisibility: .visible
+            ) {
+                ForEach(AppCacheKind.allCases) { kind in
+                    Button(kind.title, role: .destructive) {
+                        AppCacheManager.clear([kind])
+                    }
+                }
+                Button("Очистить всё", role: .destructive) {
+                    AppCacheManager.clearAll()
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("Загрузки серий не удаляются. Можно выбрать только нужный тип кеша.")
+            }
         }
     }
 
     private var guestContent: some View {
         List {
+            Section("Карточка аниме") {
+                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
+            }
+
             shikimoriSection
+            cacheSection
 
             Section {
                 ContentUnavailableView {
@@ -109,49 +109,12 @@ struct ProfileView: View {
                 Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
             }
 
-            shikimoriSection
-
-            Section("Моя коллекция") {
-                Picker("Тип", selection: $selectedCollection) {
-                    ForEach(CollectionType.allCases) { type in
-                        Text(type.title).tag(type)
-                    }
-                }
-                .pickerStyle(.menu)
-                .onChange(of: selectedCollection) { _, newValue in
-                    Task { await collectionViewModel.load(type: newValue) }
-                }
-
-                if collectionViewModel.isLoading {
-                    ForEach(0..<4, id: \.self) { _ in
-                        ReleaseRowSkeletonView()
-                    }
-                } else if let error = collectionViewModel.errorMessage {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                } else if collectionViewModel.releases.isEmpty {
-                    Text("Коллекция пуста")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(collectionViewModel.releases) { release in
-                        NavigationLink(value: release.id) {
-                            ReleaseRowView(
-                                title: release.name.main,
-                                subtitle: ReleaseFormatting.yearString(release.year),
-                                posterPath: release.poster?.displayURL,
-                                status: release.broadcastStatus
-                            )
-                        }
-                    }
-                }
+            Section("Карточка аниме") {
+                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
             }
-        }
-        .navigationDestination(for: Int.self) { releaseId in
-            ReleaseDetailView(releaseId: releaseId)
-        }
-        .task(id: selectedCollection) {
-            await collectionViewModel.load(type: selectedCollection)
+
+            shikimoriSection
+            cacheSection
         }
     }
 
@@ -185,6 +148,24 @@ struct ProfileView: View {
             .resizable()
             .frame(width: 48, height: 48)
             .foregroundStyle(.secondary)
+    }
+
+    private var cacheSection: some View {
+        Section("Память") {
+            ForEach(AppCacheKind.allCases) { kind in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(kind.title)
+                        .font(.subheadline)
+                    Text(kind.detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button("Очистить кеш…", role: .destructive) {
+                showCacheConfirmation = true
+            }
+        }
     }
 
     private var shikimoriSection: some View {

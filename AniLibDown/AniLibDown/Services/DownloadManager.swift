@@ -11,6 +11,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     let episodeOrdinal: Double
     let quality: String
     let remoteURL: String
+    var posterPath: String?
     var localBookmark: Data?
     var progress: Double
     var state: DownloadState
@@ -49,9 +50,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     }
 
     private func formattedEpisodeTitle(name: String) -> String {
-        let ordinalText = episodeOrdinal.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", episodeOrdinal)
-            : String(episodeOrdinal)
+        let ordinalText = ReleaseFormatting.displayEpisodeOrdinal(episodeOrdinal)
         return "Серия \(ordinalText): \(name)"
     }
 
@@ -65,6 +64,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         episodeOrdinal: Double,
         quality: String,
         remoteURL: String,
+        posterPath: String? = nil,
         localBookmark: Data?,
         progress: Double,
         state: DownloadState,
@@ -79,6 +79,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         self.episodeOrdinal = episodeOrdinal
         self.quality = quality
         self.remoteURL = remoteURL
+        self.posterPath = posterPath
         self.localBookmark = localBookmark
         self.progress = progress
         self.state = state
@@ -96,6 +97,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         episodeOrdinal = try container.decodeIfPresent(Double.self, forKey: .episodeOrdinal) ?? 0
         quality = try container.decode(String.self, forKey: .quality)
         remoteURL = try container.decode(String.self, forKey: .remoteURL)
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         localBookmark = try container.decodeIfPresent(Data.self, forKey: .localBookmark)
         progress = try container.decode(Double.self, forKey: .progress)
         state = try container.decode(DownloadState.self, forKey: .state)
@@ -113,6 +115,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         try container.encode(episodeOrdinal, forKey: .episodeOrdinal)
         try container.encode(quality, forKey: .quality)
         try container.encode(remoteURL, forKey: .remoteURL)
+        try container.encodeIfPresent(posterPath, forKey: .posterPath)
         try container.encodeIfPresent(localBookmark, forKey: .localBookmark)
         try container.encode(progress, forKey: .progress)
         try container.encode(state, forKey: .state)
@@ -121,7 +124,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeName, episodeOrdinal
-        case quality, remoteURL, localBookmark, progress, state, createdAt
+        case quality, remoteURL, posterPath, localBookmark, progress, state, createdAt
     }
 }
 
@@ -153,10 +156,39 @@ final class DownloadManager: NSObject, ObservableObject {
                 id: key,
                 releaseId: sorted.first?.releaseId,
                 releaseTitle: sorted.first?.releaseTitle ?? "Без названия",
+                posterPath: sorted.compactMap(\.posterPath).first,
                 items: sorted
             )
         }
         .sorted { $0.releaseTitle.localizedCaseInsensitiveCompare($1.releaseTitle) == .orderedAscending }
+    }
+
+    func backfillPostersIfNeeded() async {
+        let missingPosterReleaseIds = Set(
+            groupedReleases
+                .filter { $0.posterPath == nil }
+                .compactMap(\.releaseId)
+        )
+        guard !missingPosterReleaseIds.isEmpty else { return }
+
+        for releaseId in missingPosterReleaseIds {
+            guard let release = try? await APIClient.shared.getRelease(idOrAlias: String(releaseId)),
+                  let posterPath = release.poster?.displayURL else {
+                continue
+            }
+            applyPosterPath(posterPath, toReleaseId: releaseId)
+        }
+    }
+
+    private func applyPosterPath(_ posterPath: String, toReleaseId releaseId: Int) {
+        var updated = false
+        for index in items.indices where items[index].releaseId == releaseId && items[index].posterPath == nil {
+            items[index].posterPath = posterPath
+            updated = true
+        }
+        if updated {
+            saveIndex()
+        }
     }
 
     private override init() {
@@ -195,7 +227,8 @@ final class DownloadManager: NSObject, ObservableObject {
         episode: Episode,
         releaseId: Int,
         releaseTitle: String,
-        quality: VideoQuality
+        quality: VideoQuality,
+        posterPath: String? = nil
     ) {
         guard let streamURL = quality.streamURL(for: episode) else { return }
 
@@ -224,12 +257,16 @@ final class DownloadManager: NSObject, ObservableObject {
             episodeOrdinal: episode.ordinal,
             quality: quality.rawValue,
             remoteURL: streamURL.absoluteString,
+            posterPath: posterPath,
             localBookmark: nil,
             progress: 0,
             state: .queued,
             createdAt: Date()
         )
         items.insert(placeholder, at: 0)
+        if let posterPath {
+            applyPosterPath(posterPath, toReleaseId: releaseId)
+        }
         saveIndex()
 
         let asset = AVURLAsset(url: streamURL)
@@ -254,10 +291,58 @@ final class DownloadManager: NSObject, ObservableObject {
         task.resume()
     }
 
-    func enqueueAll(episodes: [Episode], releaseId: Int, releaseTitle: String, quality: VideoQuality) {
+    func enqueueAll(
+        episodes: [Episode],
+        releaseId: Int,
+        releaseTitle: String,
+        quality: VideoQuality,
+        posterPath: String? = nil
+    ) {
         for episode in episodes {
-            enqueue(episode: episode, releaseId: releaseId, releaseTitle: releaseTitle, quality: quality)
+            enqueue(
+                episode: episode,
+                releaseId: releaseId,
+                releaseTitle: releaseTitle,
+                quality: quality,
+                posterPath: posterPath
+            )
         }
+    }
+
+    func playerSession(for group: DownloadReleaseGroup) -> PlayerSession? {
+        let completed = group.items
+            .filter { $0.state == .completed }
+            .sorted { $0.episodeOrdinal < $1.episodeOrdinal }
+        guard !completed.isEmpty else { return nil }
+
+        let episodes = completed.map { item in
+            Episode(
+                id: item.episodeId,
+                name: item.playbackEpisodeName,
+                ordinal: item.episodeOrdinal,
+                releaseId: item.releaseId
+            )
+        }
+
+        let preferredQuality = VideoQuality(rawValue: completed.last?.quality ?? VideoQuality.p720.rawValue) ?? .p720
+        let startEpisodeId: String
+        if let releaseId = group.releaseId,
+           let lastId = WatchProgressStore.shared.lastEpisodeId(for: releaseId),
+           episodes.contains(where: { $0.id == lastId }) {
+            startEpisodeId = lastId
+        } else {
+            startEpisodeId = episodes[0].id
+        }
+
+        return PlayerSession(
+            releaseId: group.releaseId ?? 0,
+            releaseTitle: group.releaseTitle,
+            episodes: episodes,
+            startEpisodeId: startEpisodeId,
+            quality: preferredQuality,
+            preferOffline: true,
+            episodesTotal: episodes.count
+        )
     }
 
     func cancel(item: DownloadItem) {
