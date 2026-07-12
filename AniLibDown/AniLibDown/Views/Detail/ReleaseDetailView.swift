@@ -12,19 +12,46 @@ final class ReleaseDetailViewModel: ObservableObject {
     @Published var shikimoriLink: ShikimoriLink?
     @Published var isUpdatingShikimori = false
     @Published var shikimoriError: String?
+    @Published var relatedReleases: [FranchiseRelease] = []
+    @Published var isLoadingRelated = false
 
     func load(id: Int) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
+        async let releaseTask = APIClient.shared.getRelease(idOrAlias: String(id))
+        async let relatedTask = loadRelatedReleases(releaseId: id)
+
         do {
-            release = try await APIClient.shared.getRelease(idOrAlias: String(id))
+            release = try await releaseTask
             collectionStatus = CollectionStatusStore.shared.status(for: id)
             refreshShikimoriLink(releaseId: id)
             await refreshShikimoriStatus(releaseId: id)
+            _ = await relatedTask
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func loadRelatedReleases(releaseId: Int) async {
+        isLoadingRelated = true
+        defer { isLoadingRelated = false }
+
+        do {
+            let franchises = try await APIClient.shared.getFranchises(forReleaseId: releaseId)
+            var seen = Set<Int>()
+            var related: [FranchiseRelease] = []
+            for franchise in franchises {
+                for item in franchise.relatedReleases where item.releaseId != releaseId {
+                    if seen.insert(item.releaseId).inserted {
+                        related.append(item)
+                    }
+                }
+            }
+            relatedReleases = related
+        } catch {
+            relatedReleases = []
         }
     }
 
@@ -101,6 +128,7 @@ struct ReleaseDetailView: View {
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
     @EnvironmentObject private var authService: AuthService
+    @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var selectedQuality: VideoQuality = .p720
@@ -126,10 +154,14 @@ struct ReleaseDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         header(for: release)
+                        watchButton(for: release)
                         if authService.isAuthenticated {
                             collectionSection(for: release)
                         }
-                        shikimoriSection(for: release)
+                        relatedSection(currentReleaseId: release.id)
+                        if appSettings.showShikimoriOnReleaseCard {
+                            shikimoriSection(for: release)
+                        }
                         descriptionSection(for: release)
                         qualityPicker
                         downloadAllButton(for: release)
@@ -267,7 +299,6 @@ struct ReleaseDetailView: View {
                 }
                 Text("\(ReleaseFormatting.yearString(release.year)) • \(release.type?.description ?? "Аниме")")
                     .font(.subheadline)
-                BroadcastStatusBadge(status: release.broadcastStatus)
                 if let rating = release.ageRating?.label {
                     Text(rating)
                         .font(.caption)
@@ -284,6 +315,61 @@ struct ReleaseDetailView: View {
                 Text("\(release.episodes.count) / \(release.episodesTotal ?? release.episodes.count) серий")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func watchButton(for release: ReleaseDetail) -> some View {
+        let resumeEpisode = resumeEpisode(for: release)
+        Button {
+            if let episode = resumeEpisode {
+                play(episode: episode, release: release)
+            }
+        } label: {
+            Label(
+                resumeEpisode != nil ? "Смотреть" : "Смотреть с начала",
+                systemImage: "play.fill"
+            )
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(release.episodes.isEmpty)
+    }
+
+    private func resumeEpisode(for release: ReleaseDetail) -> Episode? {
+        if let lastId = WatchProgressStore.shared.lastEpisodeId(for: release.id),
+           let episode = release.episodes.first(where: { $0.id == lastId }) {
+            return episode
+        }
+        return release.episodes.first
+    }
+
+    @ViewBuilder
+    private func relatedSection(currentReleaseId: Int) -> some View {
+        if viewModel.isLoadingRelated {
+            ProgressView("Связанные релизы...")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if !viewModel.relatedReleases.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Связанные")
+                    .font(.headline)
+
+                ForEach(viewModel.relatedReleases) { item in
+                    if let summary = item.release {
+                        NavigationLink(value: item.releaseId) {
+                            ReleaseRowView(
+                                title: summary.name.main,
+                                subtitle: ReleaseFormatting.yearString(summary.year),
+                                posterPath: summary.poster?.displayURL
+                            )
+                        }
+                    } else {
+                        NavigationLink(value: item.releaseId) {
+                            Text("Релиз #\(item.releaseId)")
+                        }
+                    }
+                }
             }
         }
     }
@@ -432,7 +518,8 @@ struct ReleaseDetailView: View {
                     episodes: downloadable,
                     releaseId: release.id,
                     releaseTitle: release.name.main,
-                    quality: selectedQuality
+                    quality: selectedQuality,
+                    posterPath: release.poster?.displayURL
                 )
             } label: {
                 Label("Скачать все серии (\(downloadable.count))", systemImage: "arrow.down.circle.fill")
@@ -459,7 +546,7 @@ struct ReleaseDetailView: View {
                                 selectedEpisodeRangeIndex = index
                             }
                             .buttonStyle(.bordered)
-                            .tint(selectedEpisodeRangeIndex == index ? .accentColor : .secondary)
+                            .tint(selectedEpisodeRangeIndex == index ? Color.accentColor : .secondary)
                         }
                     }
                 }
@@ -477,7 +564,8 @@ struct ReleaseDetailView: View {
                             episode: episode,
                             releaseId: release.id,
                             releaseTitle: release.name.main,
-                            quality: selectedQuality
+                            quality: selectedQuality,
+                            posterPath: release.poster?.displayURL
                         )
                     },
                     onDeleteDownload: {
@@ -574,26 +662,22 @@ private struct EpisodeRow: View {
 
             downloadStatusIcon
 
-            Button(action: onPlay) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canPlay)
-
             if isDownloaded {
                 Button(action: onDeleteDownload) {
-                    Image(systemName: "trash.circle")
-                        .font(.title3)
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 30))
                         .foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
             } else {
                 Button(action: onDownload) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.title3)
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 32))
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
                 .disabled(
                     quality.streamURL(for: episode) == nil
                     || downloadState == .downloading
@@ -602,7 +686,20 @@ private struct EpisodeRow: View {
             }
         }
         .padding(10)
-        .background(Color(.secondarySystemBackground))
+        .background {
+            ZStack(alignment: .leading) {
+                Color(.secondarySystemBackground)
+                if watchProgress > 0 {
+                    Color.accentColor.opacity(0.18)
+                        .frame(maxWidth: .infinity)
+                        .mask(alignment: .leading) {
+                            Rectangle()
+                                .frame(maxWidth: .infinity)
+                                .scaleEffect(x: watchProgress, y: 1, anchor: .leading)
+                        }
+                }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture {
@@ -610,6 +707,10 @@ private struct EpisodeRow: View {
                 onPlay()
             }
         }
+    }
+
+    private var watchProgress: Double {
+        WatchProgressStore.shared.progressFraction(for: episode.id, duration: episode.duration)
     }
 
     @ViewBuilder

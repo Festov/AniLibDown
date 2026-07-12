@@ -40,6 +40,12 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var showShikimoriOnReleaseCard: Bool {
+        didSet {
+            UserDefaults.standard.set(showShikimoriOnReleaseCard, forKey: "showShikimoriOnReleaseCard")
+        }
+    }
+
     private init() {
         let raw = UserDefaults.standard.string(forKey: "appColorScheme") ?? AppColorScheme.system.rawValue
         colorSchemePreference = AppColorScheme(rawValue: raw) ?? .system
@@ -47,6 +53,11 @@ final class AppSettings: ObservableObject {
             isSplashEnabled = true
         } else {
             isSplashEnabled = UserDefaults.standard.bool(forKey: "isSplashEnabled")
+        }
+        if UserDefaults.standard.object(forKey: "showShikimoriOnReleaseCard") == nil {
+            showShikimoriOnReleaseCard = true
+        } else {
+            showShikimoriOnReleaseCard = UserDefaults.standard.bool(forKey: "showShikimoriOnReleaseCard")
         }
     }
 }
