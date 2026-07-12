@@ -46,8 +46,7 @@ struct LatestView: View {
                             ReleaseRowView(
                                 title: release.name.main,
                                 subtitle: subtitle(for: release),
-                                posterPath: release.poster?.displayURL,
-                                status: release.broadcastStatus
+                                posterPath: release.poster?.displayURL
                             )
                         }
                     }
