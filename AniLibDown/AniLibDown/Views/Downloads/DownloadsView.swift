@@ -110,7 +110,7 @@ private struct DownloadGroupRow: View {
     }
 
     private var subtitle: String {
-        var parts: [String] = ["\(group.items.count) серий"]
+        var parts: [String] = [ReleaseFormatting.episodesCountLabel(group.items.count)]
         if group.completedCount > 0 {
             parts.append("готово: \(group.completedCount)")
         }
