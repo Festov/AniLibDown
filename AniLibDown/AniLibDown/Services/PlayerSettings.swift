@@ -25,8 +25,8 @@ enum HoldSpeedRate: Float, CaseIterable, Identifiable {
 
     static func migrated(from stored: Double) -> HoldSpeedRate {
         guard stored > 0 else { return .x2_5 }
-        if abs(stored - HoldSpeedRate.x1_5.rawValue) < 0.01 { return .x1_5 }
-        if abs(stored - HoldSpeedRate.x2_5.rawValue) < 0.01 { return .x2_5 }
+        if abs(stored - Double(HoldSpeedRate.x1_5.rawValue)) < 0.01 { return .x1_5 }
+        if abs(stored - Double(HoldSpeedRate.x2_5.rawValue)) < 0.01 { return .x2_5 }
         return stored <= 2 ? .x1_5 : .x2_5
     }
 }
