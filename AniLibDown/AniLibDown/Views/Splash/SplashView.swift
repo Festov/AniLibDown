@@ -246,7 +246,7 @@ struct SplashView: View {
         do {
             let engine = try CHHapticEngine()
             engine.isAutoShutdownEnabled = true
-            try engine.start()
+            try await engine.start()
 
             let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
             let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.65)
