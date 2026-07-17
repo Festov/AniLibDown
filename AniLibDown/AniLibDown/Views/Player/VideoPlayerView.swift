@@ -302,7 +302,7 @@ struct VideoPlayerView: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        Label("2×", systemImage: "forward.fill")
+                        Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
                             .font(.headline.weight(.semibold))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -683,7 +683,7 @@ struct VideoPlayerView: View {
         guard let player, !isFastForwarding else { return }
         normalPlaybackRate = player.rate > 0 ? player.rate : 1
         isFastForwarding = true
-        player.rate = 2
+        player.rate = playerSettings.holdSpeedRate.rawValue
         progress.isPlaying = true
         withAnimation(overlayAnimation) { controlsVisible = true }
     }
@@ -1044,6 +1044,11 @@ private struct PlayerSettingsSheet: View {
                 Section("Воспроизведение") {
                     Toggle("Пропуск опенинга и эндинга", isOn: $settings.skipOPED)
                     Toggle("Автозапуск следующей серии", isOn: $settings.autoPlayNext)
+                    Picker("Ускорение при удержании", selection: $settings.holdSpeedRate) {
+                        ForEach(HoldSpeedRate.allCases) { rate in
+                            Text(rate.title).tag(rate)
+                        }
+                    }
                 }
             }
             .navigationTitle("Настройки плеера")

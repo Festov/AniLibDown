@@ -78,6 +78,22 @@ enum ReleaseFormatting {
         String(year)
     }
 
+    /// Russian pluralization for «серия / серии / серий».
+    static func episodesWord(for count: Int) -> String {
+        let mod100 = abs(count) % 100
+        let mod10 = abs(count) % 10
+        if mod100 >= 11 && mod100 <= 14 { return "серий" }
+        switch mod10 {
+        case 1: return "серия"
+        case 2, 3, 4: return "серии"
+        default: return "серий"
+        }
+    }
+
+    static func episodesCountLabel(_ count: Int) -> String {
+        "\(count) \(episodesWord(for: count))"
+    }
+
     static func broadcastStatus(
         isOngoing: Bool,
         isInProduction: Bool,

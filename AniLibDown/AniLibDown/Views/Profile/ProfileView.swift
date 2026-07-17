@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
+    @ObservedObject private var playerSettings = PlayerSettings.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @State private var showLogin = false
     @State private var showCacheConfirmation = false
@@ -45,12 +46,19 @@ struct ProfileView: View {
 
     private var guestContent: some View {
         List {
-            Section("Карточка аниме") {
+            playbackSettingsSection
+
+            Section {
                 Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
+            } header: {
+                Text("Карточка аниме")
+            } footer: {
+                Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
             }
 
             shikimoriSection
             cacheSection
+            aboutSection
 
             Section {
                 ContentUnavailableView {
@@ -109,12 +117,46 @@ struct ProfileView: View {
                 Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
             }
 
-            Section("Карточка аниме") {
+            playbackSettingsSection
+
+            Section {
                 Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
+            } header: {
+                Text("Карточка аниме")
+            } footer: {
+                Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
             }
 
             shikimoriSection
             cacheSection
+            aboutSection
+        }
+    }
+
+    private var playbackSettingsSection: some View {
+        Section("Просмотр и загрузки") {
+            Picker("Качество по умолчанию", selection: $appSettings.defaultVideoQuality) {
+                ForEach(VideoQuality.allCases) { quality in
+                    Text(quality.rawValue).tag(quality)
+                }
+            }
+
+            Picker("Ускорение при удержании", selection: $playerSettings.holdSpeedRate) {
+                ForEach(HoldSpeedRate.allCases) { rate in
+                    Text(rate.title).tag(rate)
+                }
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        Section {
+            Text("Версия \(AppSettings.appVersion)")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+                .listRowBackground(Color.clear)
         }
     }
 
