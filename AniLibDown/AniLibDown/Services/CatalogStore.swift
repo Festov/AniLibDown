@@ -6,6 +6,10 @@ struct CatalogCacheEntry: Codable {
     let cachedAt: Date
 }
 
+private struct PersistedCatalogCache: Codable {
+    var entries: [String: CatalogCacheEntry]
+}
+
 @MainActor
 final class CatalogStore: ObservableObject {
     static let shared = CatalogStore()
@@ -24,7 +28,13 @@ final class CatalogStore: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var pageCache: [String: CatalogCacheEntry] = [:]
-    private var sessionKey = UUID().uuidString
+
+    /// Pages older than this are ignored and refetched.
+    private let cacheTTL: TimeInterval = 60 * 60
+    private let cacheFileURL: URL = {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("catalog-page-cache.json")
+    }()
 
     var canLoadMore: Bool { currentPage < totalPages }
 
@@ -32,7 +42,9 @@ final class CatalogStore: ObservableObject {
         !searchText.isEmpty || !selectedGenreIds.isEmpty
     }
 
-    private init() {}
+    private init() {
+        loadPersistedCache()
+    }
 
     func loadGenresIfNeeded() async {
         guard genres.isEmpty else { return }
@@ -173,13 +185,13 @@ final class CatalogStore: ObservableObject {
         releases = []
         currentPage = 1
         totalPages = 1
-        sessionKey = UUID().uuidString
+        try? FileManager.default.removeItem(at: cacheFileURL)
     }
 
     private func cacheKey(page: Int) -> String {
         let genres = selectedGenreIds.sorted().map(String.init).joined(separator: ",")
         let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return "\(sessionKey)|\(search)|\(genres)|\(page)"
+        return "\(search)|\(genres)|\(page)"
     }
 
     private func cachedFirstPage() -> CatalogCacheEntry? {
@@ -187,7 +199,13 @@ final class CatalogStore: ObservableObject {
     }
 
     private func cachedPage(_ page: Int) -> CatalogCacheEntry? {
-        pageCache[cacheKey(page: page)]
+        guard let entry = pageCache[cacheKey(page: page)] else { return nil }
+        guard Date().timeIntervalSince(entry.cachedAt) <= cacheTTL else {
+            pageCache.removeValue(forKey: cacheKey(page: page))
+            persistCache()
+            return nil
+        }
+        return entry
     }
 
     private func storeCache(page: Int, releases: [ReleaseSummary], totalPages: Int) {
@@ -196,6 +214,24 @@ final class CatalogStore: ObservableObject {
             totalPages: totalPages,
             cachedAt: Date()
         )
+        persistCache()
+    }
+
+    private func loadPersistedCache() {
+        guard let data = try? Data(contentsOf: cacheFileURL),
+              let decoded = try? JSONDecoder().decode(PersistedCatalogCache.self, from: data) else {
+            return
+        }
+        let now = Date()
+        pageCache = decoded.entries.filter { _, entry in
+            now.timeIntervalSince(entry.cachedAt) <= cacheTTL
+        }
+    }
+
+    private func persistCache() {
+        let payload = PersistedCatalogCache(entries: pageCache)
+        guard let data = try? JSONEncoder().encode(payload) else { return }
+        try? data.write(to: cacheFileURL, options: .atomic)
     }
 
     private func isIgnorable(_ error: Error) -> Bool {

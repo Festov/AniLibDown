@@ -136,10 +136,6 @@ actor APIClient {
         try await request(path: "accounts/users/me/profile", authorized: true)
     }
 
-    func getLatestReleases(limit: Int = 20) async throws -> [ReleaseLatest] {
-        try await request(path: "anime/releases/latest", query: ["limit": String(limit)])
-    }
-
     func getCatalog(
         page: Int,
         limit: Int = 20,
