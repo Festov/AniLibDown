@@ -298,23 +298,16 @@ struct VideoPlayerView: View {
             }
 
             if isFastForwarding {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
-                            .font(.headline.weight(.semibold))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(.black.opacity(0.55))
-                            .clipShape(Capsule())
-                            .foregroundStyle(.white)
-                            .padding(.trailing, 24)
-                            .padding(.bottom, 120)
-                    }
-                }
-                .transition(.opacity)
-                .allowsHitTesting(false)
+                Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
+                    .font(.title2.weight(.bold))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(.black.opacity(0.6))
+                    .clipShape(Capsule())
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+                    .transition(.opacity.combined(with: .scale))
+                    .allowsHitTesting(false)
             }
 
             if isOrientationTransitioning {
@@ -1033,17 +1026,16 @@ private struct PlayerSettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Перемотка") {
+                Section {
                     Picker("Шаг перемотки", selection: $settings.seekInterval) {
                         ForEach(SeekInterval.allCases) { interval in
                             Text(interval.title).tag(interval)
                         }
                     }
-                }
 
-                Section("Воспроизведение") {
                     Toggle("Пропуск опенинга и эндинга", isOn: $settings.skipOPED)
                     Toggle("Автозапуск следующей серии", isOn: $settings.autoPlayNext)
+
                     Picker("Ускорение при удержании", selection: $settings.holdSpeedRate) {
                         ForEach(HoldSpeedRate.allCases) { rate in
                             Text(rate.title).tag(rate)

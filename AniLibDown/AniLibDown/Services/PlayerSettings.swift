@@ -15,21 +15,19 @@ enum SeekInterval: Int, CaseIterable, Identifiable {
 
 enum HoldSpeedRate: Float, CaseIterable, Identifiable {
     case x1_5 = 1.5
-    case x2 = 2
     case x2_5 = 2.5
-    case x3 = 3
-    case x3_5 = 3.5
-    case x4 = 4
-    case x4_5 = 4.5
-    case x5 = 5
 
     var id: Float { rawValue }
 
     var title: String {
-        if rawValue.truncatingRemainder(dividingBy: 1) == 0 {
-            return "\(Int(rawValue))×"
-        }
-        return String(format: "%.1f×", rawValue).replacingOccurrences(of: ".", with: ",")
+        String(format: "%.1f×", rawValue).replacingOccurrences(of: ".", with: ",")
+    }
+
+    static func migrated(from stored: Double) -> HoldSpeedRate {
+        guard stored > 0 else { return .x2_5 }
+        if abs(stored - HoldSpeedRate.x1_5.rawValue) < 0.01 { return .x1_5 }
+        if abs(stored - HoldSpeedRate.x2_5.rawValue) < 0.01 { return .x2_5 }
+        return stored <= 2 ? .x1_5 : .x2_5
     }
 }
 
@@ -77,11 +75,6 @@ final class PlayerSettings: ObservableObject {
         }
 
         let storedSpeed = UserDefaults.standard.double(forKey: Keys.holdSpeedRate)
-        if storedSpeed > 0,
-           let rate = HoldSpeedRate.allCases.first(where: { abs(Double($0.rawValue) - storedSpeed) < 0.01 }) {
-            holdSpeedRate = rate
-        } else {
-            holdSpeedRate = .x2
-        }
+        holdSpeedRate = HoldSpeedRate.migrated(from: storedSpeed)
     }
 }
