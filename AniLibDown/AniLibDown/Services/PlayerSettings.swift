@@ -13,6 +13,26 @@ enum SeekInterval: Int, CaseIterable, Identifiable {
     var seconds: Double { Double(rawValue) }
 }
 
+enum HoldSpeedRate: Float, CaseIterable, Identifiable {
+    case x1_5 = 1.5
+    case x2 = 2.0
+
+    var id: Float { rawValue }
+
+    var title: String {
+        if rawValue.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(rawValue))×"
+        }
+        return String(format: "%.1f×", rawValue).replacingOccurrences(of: ".", with: ",")
+    }
+
+    static func migrated(from stored: Double) -> HoldSpeedRate {
+        guard stored > 0 else { return .x2 }
+        if abs(stored - Double(HoldSpeedRate.x1_5.rawValue)) < 0.01 { return .x1_5 }
+        return .x2
+    }
+}
+
 @MainActor
 final class PlayerSettings: ObservableObject {
     static let shared = PlayerSettings()
@@ -29,10 +49,15 @@ final class PlayerSettings: ObservableObject {
         didSet { UserDefaults.standard.set(autoPlayNext, forKey: Keys.autoPlayNext) }
     }
 
+    @Published var holdSpeedRate: HoldSpeedRate {
+        didSet { UserDefaults.standard.set(Double(holdSpeedRate.rawValue), forKey: Keys.holdSpeedRate) }
+    }
+
     private enum Keys {
         static let seekInterval = "playerSeekInterval"
         static let skipOPED = "playerSkipOPED"
         static let autoPlayNext = "playerAutoPlayNext"
+        static let holdSpeedRate = "playerHoldSpeedRate"
     }
 
     private init() {
@@ -50,5 +75,8 @@ final class PlayerSettings: ObservableObject {
         } else {
             autoPlayNext = UserDefaults.standard.bool(forKey: Keys.autoPlayNext)
         }
+
+        let storedSpeed = UserDefaults.standard.double(forKey: Keys.holdSpeedRate)
+        holdSpeedRate = HoldSpeedRate.migrated(from: storedSpeed)
     }
 }
