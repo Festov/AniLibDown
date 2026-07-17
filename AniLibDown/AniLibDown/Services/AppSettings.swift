@@ -46,6 +46,20 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var defaultVideoQuality: VideoQuality {
+        didSet {
+            UserDefaults.standard.set(defaultVideoQuality.rawValue, forKey: "defaultVideoQuality")
+        }
+    }
+
+    static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.2"
+    }
+
+    static var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
     private init() {
         let raw = UserDefaults.standard.string(forKey: "appColorScheme") ?? AppColorScheme.system.rawValue
         colorSchemePreference = AppColorScheme(rawValue: raw) ?? .system
@@ -59,5 +73,7 @@ final class AppSettings: ObservableObject {
         } else {
             showShikimoriOnReleaseCard = UserDefaults.standard.bool(forKey: "showShikimoriOnReleaseCard")
         }
+        let qualityRaw = UserDefaults.standard.string(forKey: "defaultVideoQuality") ?? VideoQuality.p720.rawValue
+        defaultVideoQuality = VideoQuality(rawValue: qualityRaw) ?? .p720
     }
 }

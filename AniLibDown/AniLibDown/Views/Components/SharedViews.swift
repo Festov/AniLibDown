@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct SkeletonShimmer: ViewModifier {
     @State private var phase: CGFloat = -1
@@ -82,7 +83,11 @@ struct PosterImage: View {
 
     var body: some View {
         Group {
-            if let url = APIConfig.mediaURL(for: path) {
+            if let localImage {
+                Image(uiImage: localImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let url = APIConfig.mediaURL(for: path), !isLocalFilePath {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
@@ -105,6 +110,18 @@ struct PosterImage: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
+    private var isLocalFilePath: Bool {
+        path?.hasPrefix("file:") == true
+    }
+
+    private var localImage: UIImage? {
+        guard let path, path.hasPrefix("file:"),
+              let url = URL(string: path) else {
+            return nil
+        }
+        return UIImage(contentsOfFile: url.path)
+    }
+
     private var placeholder: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
             .fill(Color.gray.opacity(0.2))
@@ -112,6 +129,87 @@ struct PosterImage: View {
                 Image(systemName: "photo")
                     .foregroundStyle(.secondary)
             }
+    }
+}
+
+struct PosterFullscreenView: View {
+    let path: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            Group {
+                if let path, path.hasPrefix("file:"),
+                   let url = URL(string: path),
+                   let image = UIImage(contentsOfFile: url.path) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                } else if let url = APIConfig.mediaURL(for: path) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                        case .failure:
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .foregroundStyle(.white.opacity(0.5))
+                        case .empty:
+                            ProgressView()
+                                .tint(.white)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                } else {
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            .scaleEffect(scale)
+            .gesture(
+                MagnificationGesture()
+                    .onChanged { value in
+                        scale = max(1, min(lastScale * value, 4))
+                    }
+                    .onEnded { _ in
+                        lastScale = scale
+                        if scale < 1.05 {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                scale = 1
+                                lastScale = 1
+                            }
+                        }
+                    }
+            )
+            .onTapGesture {
+                dismiss()
+            }
+            .padding()
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                    .padding()
+                }
+                Spacer()
+            }
+        }
     }
 }
 
@@ -128,14 +226,20 @@ struct ReleaseRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
+                    .multilineTextAlignment(.leading)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
                     .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
     }
 }
