@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
@@ -47,15 +48,6 @@ struct ProfileView: View {
     private var guestContent: some View {
         List {
             playbackSettingsSection
-
-            Section {
-                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
-            } header: {
-                Text("Карточка аниме")
-            } footer: {
-                Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
-            }
-
             shikimoriSection
             cacheSection
             aboutSection
@@ -118,15 +110,6 @@ struct ProfileView: View {
             }
 
             playbackSettingsSection
-
-            Section {
-                Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
-            } header: {
-                Text("Карточка аниме")
-            } footer: {
-                Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
-            }
-
             shikimoriSection
             cacheSection
             aboutSection
@@ -211,7 +194,9 @@ struct ProfileView: View {
     }
 
     private var shikimoriSection: some View {
-        Section("Shikimori") {
+        Section {
+            Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
+
             if !ShikimoriConfig.isConfigured {
                 Text(ShikimoriConfig.configurationHint)
                     .font(.footnote)
@@ -255,6 +240,10 @@ struct ProfileView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+        } header: {
+            Text("Shikimori")
+        } footer: {
+            Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
         }
     }
 }
