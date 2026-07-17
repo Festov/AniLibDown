@@ -298,16 +298,20 @@ struct VideoPlayerView: View {
             }
 
             if isFastForwarding {
-                Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
-                    .font(.title2.weight(.bold))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(.black.opacity(0.6))
-                    .clipShape(Capsule())
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
-                    .transition(.opacity.combined(with: .scale))
-                    .allowsHitTesting(false)
+                VStack {
+                    Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
+                        .font(.title2.weight(.bold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(.black.opacity(0.6))
+                        .clipShape(Capsule())
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+                        .padding(.top, 72)
+                    Spacer()
+                }
+                .transition(.opacity.combined(with: .scale))
+                .allowsHitTesting(false)
             }
 
             if isOrientationTransitioning {

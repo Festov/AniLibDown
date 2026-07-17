@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AudioToolbox
 
 struct SplashView: View {
     let onFinished: () -> Void
@@ -234,32 +235,16 @@ struct SplashView: View {
 
     @MainActor
     private func playSplashHapticPattern() async {
-        let heavy = UIImpactFeedbackGenerator(style: .heavy)
-        let medium = UIImpactFeedbackGenerator(style: .medium)
-        let light = UIImpactFeedbackGenerator(style: .light)
-        heavy.prepare()
-        medium.prepare()
-        light.prepare()
+        // kSystemSoundID_Vibrate (4095) — тот же сигнал, что используется для звонков и будильников.
+        // Повторяем несколько раз с паузой, чтобы вибрация была продолжительной.
+        let vibrate: SystemSoundID = kSystemSoundID_Vibrate
+        let pulseGap: UInt64 = 350_000_000 // 0.35 с между импульсами
 
-        let pulses: [(UIImpactFeedbackGenerator, CGFloat, UInt64)] = [
-            (heavy, 1.0, 0),
-            (medium, 0.85, 90_000_000),
-            (medium, 0.9, 90_000_000),
-            (light, 0.75, 80_000_000),
-            (medium, 0.95, 90_000_000),
-            (heavy, 1.0, 100_000_000),
-            (medium, 0.8, 90_000_000),
-            (light, 0.7, 80_000_000),
-            (medium, 0.85, 90_000_000),
-            (heavy, 0.9, 110_000_000)
-        ]
-
-        for (generator, intensity, delay) in pulses {
-            if delay > 0 {
-                try? await Task.sleep(nanoseconds: delay)
-            }
-            generator.impactOccurred(intensity: intensity)
-        }
+        AudioServicesPlaySystemSound(vibrate)
+        try? await Task.sleep(nanoseconds: pulseGap)
+        AudioServicesPlaySystemSound(vibrate)
+        try? await Task.sleep(nanoseconds: pulseGap)
+        AudioServicesPlaySystemSound(vibrate)
     }
 }
 
