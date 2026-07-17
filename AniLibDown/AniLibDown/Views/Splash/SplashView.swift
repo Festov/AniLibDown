@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import AudioToolbox
+import CoreHaptics
 
 struct SplashView: View {
     let onFinished: () -> Void
@@ -235,16 +236,35 @@ struct SplashView: View {
 
     @MainActor
     private func playSplashHapticPattern() async {
-        // kSystemSoundID_Vibrate (4095) — тот же сигнал, что используется для звонков и будильников.
-        // Повторяем несколько раз с паузой, чтобы вибрация была продолжительной.
-        let vibrate: SystemSoundID = kSystemSoundID_Vibrate
-        let pulseGap: UInt64 = 350_000_000 // 0.35 с между импульсами
+        let duration: TimeInterval = 0.9
 
-        AudioServicesPlaySystemSound(vibrate)
-        try? await Task.sleep(nanoseconds: pulseGap)
-        AudioServicesPlaySystemSound(vibrate)
-        try? await Task.sleep(nanoseconds: pulseGap)
-        AudioServicesPlaySystemSound(vibrate)
+        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+            return
+        }
+
+        do {
+            let engine = try CHHapticEngine()
+            engine.isAutoShutdownEnabled = true
+            try engine.start()
+
+            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.65)
+            let event = CHHapticEvent(
+                eventType: .hapticContinuous,
+                parameters: [intensity, sharpness],
+                relativeTime: 0,
+                duration: duration
+            )
+
+            let pattern = try CHHapticPattern(events: [event], parameters: [])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: CHHapticTimeImmediate)
+
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+        } catch {
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        }
     }
 }
 
