@@ -299,21 +299,18 @@ struct VideoPlayerView: View {
 
             if isFastForwarding {
                 VStack {
+                    Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
+                        .font(.title2.weight(.bold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(.black.opacity(0.6))
+                        .clipShape(Capsule())
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+                        .padding(.top, 72)
                     Spacer()
-                    HStack {
-                        Spacer()
-                        Label("2×", systemImage: "forward.fill")
-                            .font(.headline.weight(.semibold))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(.black.opacity(0.55))
-                            .clipShape(Capsule())
-                            .foregroundStyle(.white)
-                            .padding(.trailing, 24)
-                            .padding(.bottom, 120)
-                    }
                 }
-                .transition(.opacity)
+                .transition(.opacity.combined(with: .scale))
                 .allowsHitTesting(false)
             }
 
@@ -683,7 +680,7 @@ struct VideoPlayerView: View {
         guard let player, !isFastForwarding else { return }
         normalPlaybackRate = player.rate > 0 ? player.rate : 1
         isFastForwarding = true
-        player.rate = 2
+        player.rate = playerSettings.holdSpeedRate.rawValue
         progress.isPlaying = true
         withAnimation(overlayAnimation) { controlsVisible = true }
     }
@@ -1033,17 +1030,21 @@ private struct PlayerSettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Перемотка") {
+                Section {
                     Picker("Шаг перемотки", selection: $settings.seekInterval) {
                         ForEach(SeekInterval.allCases) { interval in
                             Text(interval.title).tag(interval)
                         }
                     }
-                }
 
-                Section("Воспроизведение") {
                     Toggle("Пропуск опенинга и эндинга", isOn: $settings.skipOPED)
                     Toggle("Автозапуск следующей серии", isOn: $settings.autoPlayNext)
+
+                    Picker("Ускорение при удержании", selection: $settings.holdSpeedRate) {
+                        ForEach(HoldSpeedRate.allCases) { rate in
+                            Text(rate.title).tag(rate)
+                        }
+                    }
                 }
             }
             .navigationTitle("Настройки плеера")
