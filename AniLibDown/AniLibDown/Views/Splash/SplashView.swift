@@ -236,7 +236,7 @@ struct SplashView: View {
 
     @MainActor
     private func playSplashHapticPattern() async {
-        let duration: TimeInterval = 0.4
+        let duration: TimeInterval = 0.6
 
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
             AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
