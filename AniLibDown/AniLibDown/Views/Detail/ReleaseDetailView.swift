@@ -606,6 +606,11 @@ struct ReleaseDetailView: View {
                         if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
                             downloadManager.delete(item: item)
                         }
+                    },
+                    onRetryDownload: {
+                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
+                            downloadManager.retry(item: item)
+                        }
                     }
                 )
             }
@@ -665,15 +670,20 @@ private struct EpisodeRow: View {
     let onDownload: () -> Void
     let onCancelDownload: () -> Void
     let onDeleteDownload: () -> Void
+    let onRetryDownload: () -> Void
 
     @EnvironmentObject private var downloadManager: DownloadManager
 
+    private var downloadItem: DownloadItem? {
+        downloadManager.downloadItem(for: episode.id, quality: quality)
+    }
+
     private var downloadState: DownloadItem.DownloadState? {
-        downloadManager.downloadItem(for: episode.id, quality: quality)?.state
+        downloadItem?.state
     }
 
     private var downloadProgress: Double {
-        downloadManager.downloadItem(for: episode.id, quality: quality)?.progress ?? 0
+        downloadItem?.progress ?? 0
     }
 
     private var isDownloaded: Bool {
@@ -684,6 +694,10 @@ private struct EpisodeRow: View {
         downloadState == .downloading || downloadState == .queued
     }
 
+    private var isFailed: Bool {
+        downloadState == .failed
+    }
+
     private var canPlay: Bool {
         quality.streamURL(for: episode) != nil || isDownloaded
     }
@@ -692,6 +706,7 @@ private struct EpisodeRow: View {
         HStack(spacing: 12) {
             PosterImage(path: episode.preview?.thumbnail ?? episode.preview?.displayURL, cornerRadius: 6)
                 .frame(width: 72, height: 40)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(episode.displayTitle)
@@ -699,14 +714,15 @@ private struct EpisodeRow: View {
                 Text(durationString(episode.duration))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if isFailed {
+                    Text(downloadItem?.lastError ?? "Ошибка загрузки")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                        .lineLimit(2)
+                }
             }
 
             Spacer()
-
-            if downloadState == .failed {
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(.red)
-            }
 
             downloadActionButton
         }
@@ -727,6 +743,8 @@ private struct EpisodeRow: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .contentShape(RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(episode.displayTitle)
         .onTapGesture {
             if canPlay {
                 onPlay()
@@ -744,6 +762,7 @@ private struct EpisodeRow: View {
             }
             .buttonStyle(.plain)
             .frame(width: 44, height: 44)
+            .accessibilityLabel("Удалить скачанную серию")
         } else if isDownloading {
             Button(action: onCancelDownload) {
                 ZStack {
@@ -767,6 +786,17 @@ private struct EpisodeRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Отменить загрузку")
+        } else if isFailed {
+            Button(action: onRetryDownload) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.system(size: 32))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .frame(width: 44, height: 44)
+            .accessibilityLabel("Повторить загрузку")
+            .accessibilityHint(downloadItem?.lastError ?? "Попробовать скачать снова")
         } else {
             Button(action: onDownload) {
                 Image(systemName: "arrow.down.circle.fill")
@@ -776,6 +806,7 @@ private struct EpisodeRow: View {
             .buttonStyle(.plain)
             .frame(width: 44, height: 44)
             .disabled(quality.streamURL(for: episode) == nil)
+            .accessibilityLabel("Скачать серию")
         }
     }
 
