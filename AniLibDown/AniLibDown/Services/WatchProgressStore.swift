@@ -10,11 +10,13 @@ struct WatchProgress: Codable {
 final class WatchProgressStore {
     static let shared = WatchProgressStore()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let progressKey = "watchProgressByEpisode"
     private let lastEpisodeKey = "lastWatchedEpisodeByRelease"
 
-    private init() {}
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     func position(for episodeId: String) -> Double? {
         loadProgress()[episodeId]?.position

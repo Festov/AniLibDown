@@ -118,42 +118,6 @@ enum ReleaseFormatting {
     }
 }
 
-extension ReleaseSummary {
-    var broadcastStatus: BroadcastStatus {
-        ReleaseFormatting.broadcastStatus(
-            isOngoing: isOngoing,
-            isInProduction: isInProduction,
-            episodesCount: episodesTotal ?? 0,
-            episodesTotal: episodesTotal
-        )
-    }
-}
-
-extension ReleaseLatest {
-    var broadcastStatus: BroadcastStatus {
-        let airedEpisodes = latestEpisode.ordinal >= 1
-            ? Int(latestEpisode.ordinal.rounded(.up))
-            : (latestEpisode.ordinal > 0 ? 1 : 0)
-        return ReleaseFormatting.broadcastStatus(
-            isOngoing: isOngoing,
-            isInProduction: isInProduction,
-            episodesCount: max(episodesTotal ?? 0, airedEpisodes),
-            episodesTotal: episodesTotal
-        )
-    }
-}
-
-extension ReleaseDetail {
-    var broadcastStatus: BroadcastStatus {
-        ReleaseFormatting.broadcastStatus(
-            isOngoing: isOngoing,
-            isInProduction: isInProduction,
-            episodesCount: episodes.count,
-            episodesTotal: episodesTotal
-        )
-    }
-}
-
 // MARK: - Release
 
 struct ReleaseSummary: Codable, Identifiable, Hashable {
@@ -186,41 +150,6 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
         genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
-    }
-}
-
-struct ReleaseLatest: Codable, Identifiable, Hashable {
-    let id: Int
-    let type: LabeledValue?
-    let year: Int
-    let name: ReleaseName
-    let alias: String
-    let season: LabeledValue?
-    let poster: ImageAsset?
-    let isOngoing: Bool
-    let isInProduction: Bool
-    let ageRating: ReleaseAgeRating?
-    let description: String?
-    let episodesTotal: Int?
-    let genres: [AnimeGenre]?
-    let latestEpisode: Episode
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(Int.self, forKey: .id)
-        type = try container.decodeIfPresent(LabeledValue.self, forKey: .type)
-        year = try container.decode(Int.self, forKey: .year)
-        name = try container.decode(ReleaseName.self, forKey: .name)
-        alias = try container.decode(String.self, forKey: .alias)
-        season = try container.decodeIfPresent(LabeledValue.self, forKey: .season)
-        poster = try container.decodeIfPresent(ImageAsset.self, forKey: .poster)
-        isOngoing = try container.decode(Bool.self, forKey: .isOngoing)
-        isInProduction = try container.decodeIfPresent(Bool.self, forKey: .isInProduction) ?? false
-        ageRating = try container.decodeIfPresent(ReleaseAgeRating.self, forKey: .ageRating)
-        description = try container.decodeIfPresent(String.self, forKey: .description)
-        episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
-        genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
-        latestEpisode = try container.decode(Episode.self, forKey: .latestEpisode)
     }
 }
 
@@ -379,6 +308,16 @@ enum VideoQuality: String, CaseIterable, Identifiable {
         guard let urlString else { return nil }
         return URL(string: urlString)
     }
+
+    func isAvailable(for episode: Episode) -> Bool {
+        streamURL(for: episode) != nil
+    }
+}
+
+extension Episode {
+    func availableStreamQualities() -> [VideoQuality] {
+        VideoQuality.allCases.filter { $0.isAvailable(for: self) }
+    }
 }
 
 // MARK: - Auth
@@ -530,6 +469,10 @@ struct DownloadReleaseGroup: Identifiable {
 
     var activeCount: Int {
         items.filter { $0.state == .downloading || $0.state == .queued }.count
+    }
+
+    var failedCount: Int {
+        items.filter { $0.state == .failed }.count
     }
 }
 
