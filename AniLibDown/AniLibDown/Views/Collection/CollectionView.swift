@@ -38,10 +38,7 @@ final class CollectionStore: ObservableObject {
     }
 
     func refresh(type: CollectionType) async {
-        caches.removeValue(forKey: type)
-        if selectedType == type {
-            releases = []
-        }
+        guard !isRefreshing else { return }
         await loadInitial(type: type, refreshing: true)
     }
 
@@ -120,7 +117,9 @@ final class CollectionStore: ObservableObject {
             )
             releases = response.data
         } catch {
-            if refreshing || releases.isEmpty {
+            if refreshing {
+                errorMessage = error.localizedDescription
+            } else if releases.isEmpty {
                 errorMessage = error.localizedDescription
                 releases = []
             }
@@ -189,7 +188,7 @@ struct CollectionView: View {
             .padding(.vertical, 8)
 
             Group {
-                if store.isLoading && store.releases.isEmpty {
+                if (store.isLoading || store.isRefreshing) && store.releases.isEmpty {
                     List {
                         ForEach(0..<6, id: \.self) { _ in
                             ReleaseRowSkeletonView()
@@ -198,11 +197,14 @@ struct CollectionView: View {
                     }
                     .listStyle(.plain)
                 } else if store.releases.isEmpty {
-                    ContentUnavailableView(
-                        "Коллекция пуста",
-                        systemImage: "heart",
-                        description: Text(store.errorMessage ?? "Добавьте аниме из карточки релиза")
-                    )
+                    ScrollView {
+                        ContentUnavailableView(
+                            "Коллекция пуста",
+                            systemImage: "heart",
+                            description: Text(store.errorMessage ?? "Добавьте аниме из карточки релиза")
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 360)
+                    }
                 } else {
                     List {
                         ForEach(store.releases) { release in
