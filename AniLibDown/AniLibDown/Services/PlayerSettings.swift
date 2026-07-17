@@ -15,19 +15,21 @@ enum SeekInterval: Int, CaseIterable, Identifiable {
 
 enum HoldSpeedRate: Float, CaseIterable, Identifiable {
     case x1_5 = 1.5
-    case x2_5 = 2.5
+    case x2 = 2.0
 
     var id: Float { rawValue }
 
     var title: String {
-        String(format: "%.1f×", rawValue).replacingOccurrences(of: ".", with: ",")
+        if rawValue.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(rawValue))×"
+        }
+        return String(format: "%.1f×", rawValue).replacingOccurrences(of: ".", with: ",")
     }
 
     static func migrated(from stored: Double) -> HoldSpeedRate {
-        guard stored > 0 else { return .x2_5 }
+        guard stored > 0 else { return .x2 }
         if abs(stored - Double(HoldSpeedRate.x1_5.rawValue)) < 0.01 { return .x1_5 }
-        if abs(stored - Double(HoldSpeedRate.x2_5.rawValue)) < 0.01 { return .x2_5 }
-        return stored <= 2 ? .x1_5 : .x2_5
+        return .x2
     }
 }
 
