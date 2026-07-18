@@ -1119,10 +1119,10 @@ private struct PlayerSettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                if !availableQualities.isEmpty {
-                    Section("Качество") {
+                Section {
+                    if !availableQualities.isEmpty {
                         Picker(
-                            "Качество видео",
+                            "Качество",
                             selection: Binding(
                                 get: { currentQuality },
                                 set: { onQualityChange($0) }
@@ -1132,12 +1132,9 @@ private struct PlayerSettingsSheet: View {
                                 Text(quality.rawValue).tag(quality)
                             }
                         }
-                        .pickerStyle(.segmented)
                         .accessibilityLabel("Качество видео")
                     }
-                }
 
-                Section {
                     Picker("Шаг перемотки", selection: $settings.seekInterval) {
                         ForEach(SeekInterval.allCases) { interval in
                             Text(interval.title).tag(interval)
