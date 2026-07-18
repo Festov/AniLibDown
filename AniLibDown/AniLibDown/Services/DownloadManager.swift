@@ -818,9 +818,18 @@ extension DownloadManager: AVAssetDownloadDelegate {
         Task { @MainActor in
             let id = task.taskIdentifier.description
             if let error {
-                if self.canceledTaskIDs.contains(id) {
+                // User cancel / system cancel: remove quietly, never show as a failed download.
+                if self.canceledTaskIDs.contains(id) || Self.isCancellationError(error) {
                     self.canceledTaskIDs.remove(id)
+                    if let pendingURL = self.pendingDownloadURLs[id] {
+                        self.removeItemIfExists(at: pendingURL)
+                        self.pendingDownloadURLs.removeValue(forKey: id)
+                        self.savePendingURLs()
+                    }
+                    self.items.removeAll { $0.id == id }
+                    self.saveIndex()
                     self.activeTasks.removeValue(forKey: id)
+                    self.purgeOrphanedDownloadCache()
                     return
                 }
 
@@ -830,7 +839,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
                     self.savePendingURLs()
                 }
 
-                let message = error.localizedDescription
+                let message = Self.userFacingDownloadError(error)
                 if self.items.contains(where: { $0.id == id }) {
                     self.updateItem(id: id) {
                         $0.state = .failed
@@ -843,5 +852,33 @@ extension DownloadManager: AVAssetDownloadDelegate {
                 self.purgeOrphanedDownloadCache()
             }
         }
+    }
+
+    private nonisolated static func isCancellationError(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        let message = error.localizedDescription.lowercased()
+        return message.contains("cancel") || message.contains("отмен")
+    }
+
+    private nonisolated static func userFacingDownloadError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "Нет соединения с интернетом"
+            case .timedOut:
+                return "Время ожидания истекло"
+            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return "Не удалось подключиться к серверу"
+            default:
+                break
+            }
+        }
+        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? "Не удалось скачать серию" : message
     }
 }

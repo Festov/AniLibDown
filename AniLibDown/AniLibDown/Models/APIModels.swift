@@ -135,6 +135,11 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
 
+    enum CodingKeys: String, CodingKey {
+        case id, type, year, name, alias, season, poster
+        case isOngoing, isInProduction, ageRating, description, episodesTotal, genres
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
@@ -150,6 +155,23 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
         genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(type, forKey: .type)
+        try container.encode(year, forKey: .year)
+        try container.encode(name, forKey: .name)
+        try container.encode(alias, forKey: .alias)
+        try container.encodeIfPresent(season, forKey: .season)
+        try container.encodeIfPresent(poster, forKey: .poster)
+        try container.encode(isOngoing, forKey: .isOngoing)
+        try container.encode(isInProduction, forKey: .isInProduction)
+        try container.encodeIfPresent(ageRating, forKey: .ageRating)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(episodesTotal, forKey: .episodesTotal)
+        try container.encodeIfPresent(genres, forKey: .genres)
     }
 }
 
