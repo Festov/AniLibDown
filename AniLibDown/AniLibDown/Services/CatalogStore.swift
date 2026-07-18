@@ -7,7 +7,10 @@ struct CatalogCacheEntry: Codable {
 }
 
 private struct PersistedCatalogCache: Codable {
+    var version: Int
     var entries: [String: CatalogCacheEntry]
+    /// Last successful unfiltered first page — restored immediately on launch.
+    var browseSnapshot: CatalogCacheEntry?
 }
 
 @MainActor
@@ -28,22 +31,42 @@ final class CatalogStore: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var pageCache: [String: CatalogCacheEntry] = [:]
+    private var browseSnapshot: CatalogCacheEntry?
+    private var lastRequestedQueryKey: String?
 
     /// Pages older than this are ignored and refetched.
-    private let cacheTTL: TimeInterval = 60 * 60
+    private let cacheTTL: TimeInterval = 60 * 60 * 24
+    private let cacheVersion = 2
     private let cacheFileURL: URL = {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("catalog-page-cache.json")
     }()
 
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+
     var canLoadMore: Bool { currentPage < totalPages }
 
     var hasActiveFilters: Bool {
-        !searchText.isEmpty || !selectedGenreIds.isEmpty
+        !normalizedSearch.isEmpty || !selectedGenreIds.isEmpty
+    }
+
+    private var normalizedSearch: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private init() {
         loadPersistedCache()
+        restoreVisibleCatalogIfPossible()
     }
 
     func loadGenresIfNeeded() async {
@@ -60,61 +83,74 @@ final class CatalogStore: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         errorMessage = nil
-        currentPage = 1
         defer { isRefreshing = false }
 
         do {
             let response = try await APIClient.shared.getCatalog(
                 page: 1,
                 limit: 20,
-                search: searchText.isEmpty ? nil : searchText,
+                search: normalizedSearch.isEmpty ? nil : normalizedSearch,
                 genreIds: Array(selectedGenreIds)
             )
-            releases = response.data
-            totalPages = max(response.meta.pagination.totalPages, 1)
-            currentPage = 2
+            applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
         } catch {
             if !isIgnorable(error) {
                 errorMessage = error.localizedDescription
             }
+            // Keep current list on refresh failure.
         }
     }
 
     func loadInitialIfNeeded() async {
-        guard releases.isEmpty else { return }
+        if !releases.isEmpty { return }
         await loadInitial(force: false)
     }
 
     func loadInitial(force: Bool = false) async {
-        if !force, let cached = cachedFirstPage() {
-            releases = cached.releases
-            totalPages = cached.totalPages
-            currentPage = 2
+        let queryKey = cacheKey(page: 1)
+
+        if !force, let cached = cachedPage(1) {
+            applyFirstPage(cached.releases, totalPages: cached.totalPages)
+            lastRequestedQueryKey = queryKey
+            return
+        }
+
+        if !force,
+           !hasActiveFilters,
+           let snapshot = browseSnapshot,
+           isFresh(snapshot) {
+            applyFirstPage(snapshot.releases, totalPages: snapshot.totalPages)
+            lastRequestedQueryKey = queryKey
             return
         }
 
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
-        currentPage = 1
-        if force { releases = [] }
+        // Do not wipe the list before a successful response — avoids empty catalog on failed reload.
         defer { isLoading = false }
 
         do {
             let response = try await APIClient.shared.getCatalog(
                 page: 1,
                 limit: 20,
-                search: searchText.isEmpty ? nil : searchText,
+                search: normalizedSearch.isEmpty ? nil : normalizedSearch,
                 genreIds: Array(selectedGenreIds)
             )
-            releases = response.data
-            totalPages = max(response.meta.pagination.totalPages, 1)
-            currentPage = 2
+            applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
+            lastRequestedQueryKey = queryKey
         } catch {
             if !isIgnorable(error) {
                 errorMessage = error.localizedDescription
+            }
+            if releases.isEmpty {
+                if let cached = cachedPage(1) {
+                    applyFirstPage(cached.releases, totalPages: cached.totalPages)
+                } else if !hasActiveFilters, let snapshot = browseSnapshot, isFresh(snapshot) {
+                    applyFirstPage(snapshot.releases, totalPages: snapshot.totalPages)
+                }
             }
         }
     }
@@ -137,7 +173,7 @@ final class CatalogStore: ObservableObject {
             let response = try await APIClient.shared.getCatalog(
                 page: currentPage,
                 limit: 20,
-                search: searchText.isEmpty ? nil : searchText,
+                search: normalizedSearch.isEmpty ? nil : normalizedSearch,
                 genreIds: Array(selectedGenreIds)
             )
             releases.append(contentsOf: response.data)
@@ -157,6 +193,12 @@ final class CatalogStore: ObservableObject {
     }
 
     func scheduleSearch() {
+        let queryKey = cacheKey(page: 1)
+        // searchable can fire onChange when the view appears with the same empty text
+        if queryKey == lastRequestedQueryKey, !releases.isEmpty {
+            return
+        }
+
         searchTask?.cancel()
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -182,55 +224,104 @@ final class CatalogStore: ObservableObject {
 
     func clearSessionCache() {
         pageCache.removeAll()
+        browseSnapshot = nil
         releases = []
         currentPage = 1
         totalPages = 1
+        lastRequestedQueryKey = nil
         try? FileManager.default.removeItem(at: cacheFileURL)
+    }
+
+    private func applyFirstPage(_ pageReleases: [ReleaseSummary], totalPages: Int) {
+        releases = pageReleases
+        self.totalPages = max(totalPages, 1)
+        currentPage = 2
+    }
+
+    private func restoreVisibleCatalogIfPossible() {
+        if let cached = cachedPage(1) {
+            applyFirstPage(cached.releases, totalPages: cached.totalPages)
+            lastRequestedQueryKey = cacheKey(page: 1)
+            return
+        }
+        if let snapshot = browseSnapshot, isFresh(snapshot) {
+            applyFirstPage(snapshot.releases, totalPages: snapshot.totalPages)
+            lastRequestedQueryKey = cacheKey(page: 1)
+        }
     }
 
     private func cacheKey(page: Int) -> String {
         let genres = selectedGenreIds.sorted().map(String.init).joined(separator: ",")
-        let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return "\(search)|\(genres)|\(page)"
-    }
-
-    private func cachedFirstPage() -> CatalogCacheEntry? {
-        cachedPage(1)
+        return "\(normalizedSearch)|\(genres)|\(page)"
     }
 
     private func cachedPage(_ page: Int) -> CatalogCacheEntry? {
-        guard let entry = pageCache[cacheKey(page: page)] else { return nil }
-        guard Date().timeIntervalSince(entry.cachedAt) <= cacheTTL else {
-            pageCache.removeValue(forKey: cacheKey(page: page))
-            persistCache()
+        guard let entry = pageCache[cacheKey(page: page)], isFresh(entry) else {
+            if pageCache[cacheKey(page: page)] != nil {
+                pageCache.removeValue(forKey: cacheKey(page: page))
+                persistCache()
+            }
             return nil
         }
         return entry
     }
 
+    private func isFresh(_ entry: CatalogCacheEntry) -> Bool {
+        Date().timeIntervalSince(entry.cachedAt) <= cacheTTL
+    }
+
     private func storeCache(page: Int, releases: [ReleaseSummary], totalPages: Int) {
-        pageCache[cacheKey(page: page)] = CatalogCacheEntry(
+        let entry = CatalogCacheEntry(
             releases: releases,
             totalPages: totalPages,
             cachedAt: Date()
         )
+        pageCache[cacheKey(page: page)] = entry
+        if page == 1 && !hasActiveFilters {
+            browseSnapshot = entry
+        }
         persistCache()
     }
 
     private func loadPersistedCache() {
-        guard let data = try? Data(contentsOf: cacheFileURL),
-              let decoded = try? JSONDecoder().decode(PersistedCatalogCache.self, from: data) else {
+        guard let data = try? Data(contentsOf: cacheFileURL) else { return }
+
+        if let decoded = try? decoder.decode(PersistedCatalogCache.self, from: data),
+           decoded.version == cacheVersion {
+            let now = Date()
+            pageCache = decoded.entries.filter { _, entry in
+                now.timeIntervalSince(entry.cachedAt) <= cacheTTL
+            }
+            if let snapshot = decoded.browseSnapshot, now.timeIntervalSince(snapshot.cachedAt) <= cacheTTL {
+                browseSnapshot = snapshot
+            }
             return
         }
-        let now = Date()
-        pageCache = decoded.entries.filter { _, entry in
-            now.timeIntervalSince(entry.cachedAt) <= cacheTTL
+
+        // Migrate from v1 (no version / no snapshot / different date strategy).
+        struct LegacyCache: Codable {
+            var entries: [String: CatalogCacheEntry]
+        }
+        let legacyDecoder = JSONDecoder()
+        if let legacy = try? legacyDecoder.decode(LegacyCache.self, from: data) {
+            let now = Date()
+            pageCache = legacy.entries.filter { _, entry in
+                now.timeIntervalSince(entry.cachedAt) <= cacheTTL
+            }
+            if let first = pageCache["||1"] {
+                browseSnapshot = first
+            }
+            persistCache()
         }
     }
 
     private func persistCache() {
-        let payload = PersistedCatalogCache(entries: pageCache)
-        guard let data = try? JSONEncoder().encode(payload) else { return }
+        let payload = PersistedCatalogCache(
+            version: cacheVersion,
+            entries: pageCache,
+            browseSnapshot: browseSnapshot
+        )
+        guard let data = try? encoder.encode(payload) else { return }
         try? data.write(to: cacheFileURL, options: .atomic)
     }
 

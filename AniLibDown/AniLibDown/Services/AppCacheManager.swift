@@ -20,7 +20,7 @@ enum AppCacheKind: String, CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .catalog:
-            return "Список релизов каталога (хранится на устройстве до 1 часа)"
+            return "Список релизов каталога (хранится на устройстве до 24 часов)"
         case .images:
             return "Постеры и аватары, загруженные из сети"
         case .watchProgress:
