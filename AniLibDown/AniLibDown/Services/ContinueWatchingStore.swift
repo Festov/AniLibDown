@@ -23,7 +23,7 @@ final class ContinueWatchingStore: ObservableObject {
 
     @Published private(set) var entries: [ContinueWatchingEntry] = []
 
-    /// Sideload не даёт App Groups — храним в стандартных UserDefaults.
+    /// Метаданные «Продолжить просмотр» в стандартных UserDefaults.
     private let metadataKey = "continueWatchingMetadata"
     private let defaults: UserDefaults
 

@@ -17,7 +17,6 @@ struct AniLibDownApp: App {
                 .environmentObject(downloadManager)
                 .task {
                     await ShikimoriAuthService.shared.restoreSession()
-                    await NotificationManager.shared.requestAuthorizationIfNeeded()
                     downloadManager.processDownloadQueue()
                 }
         }

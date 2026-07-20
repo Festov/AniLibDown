@@ -2,7 +2,7 @@ import Foundation
 
 enum ShikimoriConfig {
     static let baseURL = URL(string: "https://shikimori.io")!
-    static let userAgent = "AniLibDown/1.1.0 (iOS)"
+    static var userAgent: String { AppVersion.userAgent }
     static let redirectURI = "anilibdown://shikimori/callback"
     static let callbackScheme = "anilibdown"
     static let oauthScope = "user_rates"

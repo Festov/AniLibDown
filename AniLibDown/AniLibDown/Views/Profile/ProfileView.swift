@@ -25,7 +25,7 @@ struct ProfileView: View {
                 storageSection
                 aboutSection
             }
-            .navigationTitle("Профиль")
+            .navigationTitle(L10n.profile)
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -214,6 +214,7 @@ struct ProfileView: View {
             ShareLink(item: shikimoriExportDocument, preview: SharePreview("Shikimori Links")) {
                 Label("Экспорт привязок", systemImage: "square.and.arrow.up")
             }
+            .disabled(!canExportShikimoriLinks)
 
             Button {
                 showShikimoriImporter = true
@@ -246,10 +247,17 @@ struct ProfileView: View {
         }
     }
 
+    private var canExportShikimoriLinks: Bool {
+        !ShikimoriLinkStore.shared.links.isEmpty
+    }
+
     private var shikimoriExportDocument: URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("shikimori-links.json")
-        if let data = try? ShikimoriLinkStore.shared.exportJSON() {
-            try? data.write(to: url)
+        do {
+            let data = try ShikimoriLinkStore.shared.exportJSON()
+            try data.write(to: url, options: .atomic)
+        } catch {
+            ToastCenter.shared.show("Не удалось подготовить экспорт", isError: true)
         }
         return url
     }
@@ -296,7 +304,7 @@ struct ProfileView: View {
 
     private var aboutSection: some View {
         Section {
-            LabeledContent("Версия", value: AppSettings.appVersion)
+            LabeledContent("Версия", value: AppSettings.versionDisplay)
         } header: {
             Text("О приложении")
         }

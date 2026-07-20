@@ -57,11 +57,16 @@ struct ReleaseDetailView: View {
                     .padding()
                 }
             } else {
-                ContentUnavailableView(
-                    "Не удалось загрузить",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(viewModel.errorMessage ?? "Попробуйте позже")
-                )
+                ContentUnavailableView {
+                    Label("Не удалось загрузить", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(viewModel.errorMessage ?? "Попробуйте позже")
+                } actions: {
+                    Button("Повторить") {
+                        Task { await viewModel.load(id: releaseId) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
         .navigationTitle(viewModel.release?.name.main ?? "Аниме")
