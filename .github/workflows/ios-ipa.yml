@@ -29,24 +29,17 @@ jobs:
       - name: Run unit tests
         run: |
           set -o pipefail
-          DEST=$(
-            xcodebuild -project AniLibDown/AniLibDown.xcodeproj -scheme AniLibDown \
-              -showdestinations 2>/dev/null \
-              | rg -o 'platform:iOS Simulator,[^,]+,id:[A-F0-9-]+' \
-              | rg 'iPhone' \
-              | head -1 \
-              | sed 's/^/platform=iOS Simulator,/; s/platform:iOS Simulator,//' \
-              | sed 's/,id:/,id=/'
-          )
-          if [ -z "$DEST" ]; then
-            DEST='platform=iOS Simulator,name=iPhone 16'
+          # Prefer any available iPhone simulator on the runner
+          SIM_NAME=$(xcrun simctl list devices available | rg -o 'iPhone [^()]+\(' | head -1 | sed 's/ ($//' || true)
+          if [ -z "$SIM_NAME" ]; then
+            SIM_NAME="iPhone 16"
           fi
-          echo "Using destination: $DEST"
+          echo "Using simulator: $SIM_NAME"
           xcodebuild \
             -project AniLibDown/AniLibDown.xcodeproj \
             -scheme AniLibDown \
             -sdk iphonesimulator \
-            -destination "$DEST" \
+            -destination "platform=iOS Simulator,name=$SIM_NAME" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             test 2>&1 | tee test.log || {
