@@ -5,15 +5,17 @@ on:
   push:
     tags:
       - 'v*'
+      - 'release_*'
+      - 'update*'
 
 permissions:
   contents: write
 
 jobs:
-  build-ipa:
-    name: Собрать IPA для Sideloadly
+  test-and-build:
+    name: Тесты и сборка IPA
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -22,7 +24,31 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '16.4'
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project AniLibDown/AniLibDown.xcodeproj \
+            -scheme AniLibDown \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -configuration Debug \
+            test 2>&1 | tee test.log || {
+              echo "=== TEST FAILURES ==="
+              rg "error:|failed|TEST FAILED" test.log | head -80 || tail -n 120 test.log
+              exit 1
+            }
+
+      - name: SwiftLint (optional)
+        continue-on-error: true
+        run: |
+          if command -v swiftlint >/dev/null; then
+            swiftlint --config .swiftlint.yml
+          else
+            echo "SwiftLint not installed, skipping"
+          fi
 
       - name: Build for iPhone (без подписи)
         run: |
@@ -77,5 +103,7 @@ jobs:
           body: |
             Неподписанный IPA для установки через Sideloadly.
             Требуется Apple ID (на бесплатном ID срок ~7 дней).
+
+            См. [TESTING_CHECKLIST.md](https://github.com/${{ github.repository }}/blob/main/TESTING_CHECKLIST.md) для проверки.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
