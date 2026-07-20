@@ -15,6 +15,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     var localBookmark: Data?
     var progress: Double
     var state: DownloadState
+    var lastError: String?
     var createdAt: Date
 
     enum DownloadState: String, Codable {
@@ -68,6 +69,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         localBookmark: Data?,
         progress: Double,
         state: DownloadState,
+        lastError: String? = nil,
         createdAt: Date
     ) {
         self.id = id
@@ -83,6 +85,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         self.localBookmark = localBookmark
         self.progress = progress
         self.state = state
+        self.lastError = lastError
         self.createdAt = createdAt
     }
 
@@ -101,6 +104,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         localBookmark = try container.decodeIfPresent(Data.self, forKey: .localBookmark)
         progress = try container.decode(Double.self, forKey: .progress)
         state = try container.decode(DownloadState.self, forKey: .state)
+        lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 
@@ -119,12 +123,13 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(localBookmark, forKey: .localBookmark)
         try container.encode(progress, forKey: .progress)
         try container.encode(state, forKey: .state)
+        try container.encodeIfPresent(lastError, forKey: .lastError)
         try container.encode(createdAt, forKey: .createdAt)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeName, episodeOrdinal
-        case quality, remoteURL, posterPath, localBookmark, progress, state, createdAt
+        case quality, remoteURL, posterPath, localBookmark, progress, state, lastError, createdAt
     }
 }
 
@@ -337,6 +342,7 @@ final class DownloadManager: NSObject, ObservableObject {
             localBookmark: nil,
             progress: 0,
             state: .queued,
+            lastError: nil,
             createdAt: Date()
         )
         items.insert(placeholder, at: 0)
@@ -455,6 +461,66 @@ final class DownloadManager: NSObject, ObservableObject {
     func deleteCompleted(in group: DownloadReleaseGroup) {
         for item in group.items where item.state == .completed {
             delete(item: item)
+        }
+    }
+
+    func retry(item: DownloadItem) {
+        guard item.state == .failed else { return }
+        guard let releaseId = item.releaseId else { return }
+        guard let streamURL = URL(string: item.remoteURL) else { return }
+        let quality = VideoQuality(rawValue: item.quality) ?? .p720
+
+        removeDownloadEntry(item, markCanceled: false)
+
+        let placeholderId = UUID().uuidString
+        let placeholder = DownloadItem(
+            id: placeholderId,
+            episodeId: item.episodeId,
+            releaseId: releaseId,
+            releaseTitle: item.releaseTitle,
+            episodeTitle: item.episodeTitle,
+            episodeName: item.episodeName,
+            episodeOrdinal: item.episodeOrdinal,
+            quality: quality.rawValue,
+            remoteURL: streamURL.absoluteString,
+            posterPath: item.posterPath,
+            localBookmark: nil,
+            progress: 0,
+            state: .queued,
+            lastError: nil,
+            createdAt: Date()
+        )
+        items.insert(placeholder, at: 0)
+        saveIndex()
+
+        let asset = AVURLAsset(url: streamURL)
+        guard let task = session.makeAssetDownloadTask(
+            asset: asset,
+            assetTitle: "\(item.releaseTitle) - \(item.displayEpisodeTitle)",
+            assetArtworkData: nil,
+            options: [AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: preferredBitrate(for: quality)]
+        ) else {
+            if let index = items.firstIndex(where: { $0.id == placeholderId }) {
+                items[index].state = .failed
+                items[index].lastError = "Не удалось начать загрузку"
+            }
+            saveIndex()
+            return
+        }
+
+        let taskId = task.taskIdentifier.description
+        if let index = items.firstIndex(where: { $0.id == placeholderId }) {
+            items[index].id = taskId
+            items[index].state = .downloading
+        }
+        activeTasks[taskId] = task
+        saveIndex()
+        task.resume()
+    }
+
+    func retryFailed(in group: DownloadReleaseGroup) {
+        for item in group.items where item.state == .failed {
+            retry(item: item)
         }
     }
 
@@ -739,7 +805,10 @@ extension DownloadManager: AVAssetDownloadDelegate {
                     $0.state = .completed
                 }
             } else {
-                self.updateItem(id: id) { $0.state = .failed }
+                self.updateItem(id: id) {
+                    $0.state = .failed
+                    $0.lastError = "Не удалось сохранить файл"
+                }
             }
             self.activeTasks.removeValue(forKey: id)
         }
@@ -749,26 +818,67 @@ extension DownloadManager: AVAssetDownloadDelegate {
         Task { @MainActor in
             let id = task.taskIdentifier.description
             if let error {
-                let hadLocalFile = self.items.first(where: { $0.id == id })?.localBookmark != nil
+                // User cancel / system cancel: remove quietly, never show as a failed download.
+                if self.canceledTaskIDs.contains(id) || Self.isCancellationError(error) {
+                    self.canceledTaskIDs.remove(id)
+                    if let pendingURL = self.pendingDownloadURLs[id] {
+                        self.removeItemIfExists(at: pendingURL)
+                        self.pendingDownloadURLs.removeValue(forKey: id)
+                        self.savePendingURLs()
+                    }
+                    self.items.removeAll { $0.id == id }
+                    self.saveIndex()
+                    self.activeTasks.removeValue(forKey: id)
+                    self.purgeOrphanedDownloadCache()
+                    return
+                }
+
                 if let pendingURL = self.pendingDownloadURLs[id] {
                     self.removeItemIfExists(at: pendingURL)
                     self.pendingDownloadURLs.removeValue(forKey: id)
                     self.savePendingURLs()
                 }
 
-                if hadLocalFile {
+                let message = Self.userFacingDownloadError(error)
+                if self.items.contains(where: { $0.id == id }) {
                     self.updateItem(id: id) {
                         $0.state = .failed
                         $0.progress = 0
+                        $0.localBookmark = nil
+                        $0.lastError = message
                     }
-                } else {
-                    self.items.removeAll { $0.id == id }
-                    self.saveIndex()
                 }
                 self.activeTasks.removeValue(forKey: id)
-                _ = error.localizedDescription
                 self.purgeOrphanedDownloadCache()
             }
         }
+    }
+
+    private nonisolated static func isCancellationError(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        let message = error.localizedDescription.lowercased()
+        return message.contains("cancel") || message.contains("отмен")
+    }
+
+    private nonisolated static func userFacingDownloadError(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "Нет соединения с интернетом"
+            case .timedOut:
+                return "Время ожидания истекло"
+            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return "Не удалось подключиться к серверу"
+            default:
+                break
+            }
+        }
+        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? "Не удалось скачать серию" : message
     }
 }

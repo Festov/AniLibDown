@@ -2,6 +2,12 @@ name: Build IPA
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build-ipa:
@@ -61,3 +67,15 @@ jobs:
           path: dist/AniLibDown.ipa
           if-no-files-found: error
           retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/AniLibDown.ipa
+          generate_release_notes: true
+          body: |
+            Неподписанный IPA для установки через Sideloadly.
+            Требуется Apple ID (на бесплатном ID срок ~7 дней).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
