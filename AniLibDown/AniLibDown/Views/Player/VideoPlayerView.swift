@@ -1166,7 +1166,7 @@ struct VideoPlayerView: View {
         Task {
             await ShikimoriAuthService.shared.syncEpisodeCount(
                 animeId: link.animeId,
-                episodeOrdinal: currentEpisode.ordinal
+                episodeOrdinal: Int(currentEpisode.ordinal.rounded(.towardZero))
             )
         }
     }
