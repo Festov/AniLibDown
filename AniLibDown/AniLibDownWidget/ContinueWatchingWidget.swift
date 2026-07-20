@@ -65,7 +65,7 @@ struct ContinueWatchingWidgetView: View {
     }
 }
 
-@main
+// Add as a Widget Extension target in Xcode to enable. Not part of the app IPA target.
 struct ContinueWatchingWidget: Widget {
     let kind = "ContinueWatchingWidget"
 
