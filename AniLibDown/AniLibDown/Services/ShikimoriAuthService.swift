@@ -178,7 +178,14 @@ final class ShikimoriAuthService: ObservableObject {
         guard episodeOrdinal > 0 else { return }
         do {
             let token = try await accessToken()
-            let userId = profile?.id ?? (try await ShikimoriAPIClient.shared.whoami(accessToken: token)).id
+            let userId: Int
+            if let profile {
+                userId = profile.id
+            } else {
+                let user = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
+                profile = user
+                userId = user.id
+            }
             guard let existing = try await ShikimoriAPIClient.shared.userRate(
                 userId: userId,
                 animeId: animeId,
