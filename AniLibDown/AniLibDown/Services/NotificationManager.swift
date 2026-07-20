@@ -15,16 +15,19 @@ final class NotificationManager {
     }
 
     func notifyDownloadCompleted(releaseTitle: String, episodeTitle: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "Загрузка завершена"
-        content.body = "\(releaseTitle) — \(episodeTitle)"
-        content.sound = .default
+        Task {
+            await requestAuthorizationIfNeeded()
+            let content = UNMutableNotificationContent()
+            content.title = "Загрузка завершена"
+            content.body = "\(releaseTitle) — \(episodeTitle)"
+            content.sound = .default
 
-        let request = UNNotificationRequest(
-            identifier: "download-\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
+            let request = UNNotificationRequest(
+                identifier: "download-\(UUID().uuidString)",
+                content: content,
+                trigger: nil
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
     }
 }

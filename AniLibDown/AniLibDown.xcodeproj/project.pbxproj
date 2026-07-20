@@ -61,7 +61,8 @@
 		T1B006 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F006 /* CatalogStoreTests.swift */; };
 		T1B007 /* SearchHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F007 /* SearchHistoryStoreTests.swift */; };
 		T1B008 /* ShikimoriLinkStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F008 /* ShikimoriLinkStoreTests.swift */; };
-		/* End PBXBuildFile section */
+				V2B016 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F016 /* AppVersion.swift */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		C74F9B56F1BE4B4B85A99574 /* AniLibDown.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AniLibDown.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -121,7 +122,8 @@
 		T1F006 /* CatalogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CatalogStoreTests.swift"; sourceTree = "<group>"; };
 		T1F007 /* SearchHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SearchHistoryStoreTests.swift"; sourceTree = "<group>"; };
 		T1F008 /* ShikimoriLinkStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShikimoriLinkStoreTests.swift"; sourceTree = "<group>"; };
-				/* End PBXFileReference section */
+						V2F016 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppVersion.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0BD2C3FA890EFC011AA40390 /* Frameworks */ = {
@@ -175,6 +177,7 @@
 				F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */,
 				F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */,
 				F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */,
+			V2F016 /* AppVersion.swift */,
 			V2F001 /* AppLog.swift */,
 			V2F002 /* NetworkMonitor.swift */,
 			V2F003 /* DownloadSettings.swift */,
@@ -376,6 +379,7 @@
 				F1A2B3C4D5E60718293A4B66 /* ShikimoriAuthService.swift in Sources */,
 				F1A2B3C4D5E60718293A4B68 /* ShikimoriLinkStore.swift in Sources */,
 				F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */,
+				V2B016 /* AppVersion.swift in Sources */,
 				V2B001 /* AppLog.swift in Sources */,
 				V2B002 /* NetworkMonitor.swift in Sources */,
 				V2B003 /* DownloadSettings.swift in Sources */,

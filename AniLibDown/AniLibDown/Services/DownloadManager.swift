@@ -304,6 +304,22 @@ final class DownloadManager: NSObject, ObservableObject {
         return try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &isStale)
     }
 
+    /// Any completed offline quality for the episode (preferred order: requested, then highest).
+    func anyLocalPlaybackURL(for episodeId: String, preferred: VideoQuality? = nil) -> (url: URL, quality: VideoQuality)? {
+        let order: [VideoQuality]
+        if let preferred {
+            order = [preferred] + VideoQuality.allCases.filter { $0 != preferred }
+        } else {
+            order = [.p1080, .p720, .p480]
+        }
+        for quality in order {
+            if let url = localPlaybackURL(for: episodeId, quality: quality) {
+                return (url, quality)
+            }
+        }
+        return nil
+    }
+
     func enqueue(
         episode: Episode,
         releaseId: Int,
@@ -311,7 +327,10 @@ final class DownloadManager: NSObject, ObservableObject {
         quality: VideoQuality,
         posterPath: String? = nil
     ) {
-        guard let streamURL = quality.streamURL(for: episode) else { return }
+        guard let streamURL = quality.streamURL(for: episode) else {
+            ToastCenter.shared.show("Нет ссылки для качества \(quality.rawValue)", isError: true)
+            return
+        }
 
         if let reason = NetworkMonitor.shared.downloadBlockedReason {
             ToastCenter.shared.show(reason, isError: true)
@@ -820,7 +839,6 @@ extension DownloadManager: AVAssetDownloadDelegate {
                     $0.state = .completed
                 }
                 if let completedItem = self.items.first(where: { $0.id == id }) {
-                    Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
                     NotificationManager.shared.notifyDownloadCompleted(
                         releaseTitle: completedItem.releaseTitle,
                         episodeTitle: completedItem.displayEpisodeTitle

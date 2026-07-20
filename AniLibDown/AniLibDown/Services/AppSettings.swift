@@ -52,13 +52,11 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    static var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.0"
-    }
+    static var appVersion: String { AppVersion.short }
 
-    static var buildNumber: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    }
+    static var buildNumber: String { AppVersion.build }
+
+    static var versionDisplay: String { AppVersion.display }
 
     private init() {
         let raw = UserDefaults.standard.string(forKey: "appColorScheme") ?? AppColorScheme.system.rawValue

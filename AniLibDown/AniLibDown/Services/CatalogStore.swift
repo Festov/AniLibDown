@@ -77,7 +77,10 @@ final class CatalogStore: ObservableObject {
             genres = try await APIClient.shared.getCatalogGenres()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
-            // Optional for browsing.
+            // Optional for browsing — keep previous genres if any.
+            if genres.isEmpty {
+                AppLog.api.error("Genres load failed: \(error.localizedDescription)")
+            }
         }
     }
 

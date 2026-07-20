@@ -887,7 +887,14 @@ struct VideoPlayerView: View {
 
     private func loadEpisode(at index: Int, seekTo: Double? = nil, autoPlay: Bool = true) {
         let episode = session.episodes[index]
-        guard let url = playbackURL(for: episode) else { return }
+        guard let resolved = resolvePlayback(for: episode) else {
+            ToastCenter.shared.show("Нет доступного видео для этой серии", isError: true)
+            return
+        }
+        let url = resolved.url
+        if resolved.quality != currentQuality {
+            currentQuality = resolved.quality
+        }
 
         if let player {
             progress.detach(from: player)
@@ -1147,6 +1154,7 @@ struct VideoPlayerView: View {
             WatchProgressStore.shared.clearPosition(for: currentEpisode.id)
             syncShikimoriEpisodeIfNeeded()
         } else {
+            guard session.releaseId > 0 else { return }
             WatchProgressStore.shared.save(
                 position: progress.currentTime,
                 episodeId: currentEpisode.id,
@@ -1161,6 +1169,7 @@ struct VideoPlayerView: View {
 
     private func syncShikimoriEpisodeIfNeeded() {
         guard !didSyncShikimoriEpisode,
+              session.releaseId > 0,
               ShikimoriAuthService.shared.isAuthenticated,
               let link = ShikimoriLinkStore.shared.link(for: session.releaseId) else { return }
         didSyncShikimoriEpisode = true
@@ -1184,11 +1193,26 @@ struct VideoPlayerView: View {
         return String(format: "%d:%02d", minutes, secs)
     }
 
-    private func playbackURL(for episode: Episode) -> URL? {
-        if let offline = downloadManager.localPlaybackURL(for: episode.id, quality: currentQuality) {
+    private func resolvePlayback(for episode: Episode) -> (url: URL, quality: VideoQuality)? {
+        if session.preferOffline,
+           let offline = downloadManager.anyLocalPlaybackURL(for: episode.id, preferred: currentQuality) {
             return offline
         }
-        return currentQuality.streamURL(for: episode)
+        if let offline = downloadManager.localPlaybackURL(for: episode.id, quality: currentQuality) {
+            return (offline, currentQuality)
+        }
+        if let online = currentQuality.streamURL(for: episode) {
+            return (online, currentQuality)
+        }
+        if let fallback = episode.availableStreamQualities().first,
+           let online = fallback.streamURL(for: episode) {
+            return (online, fallback)
+        }
+        return downloadManager.anyLocalPlaybackURL(for: episode.id, preferred: currentQuality)
+    }
+
+    private func playbackURL(for episode: Episode) -> URL? {
+        resolvePlayback(for: episode)?.url
     }
 }
 
