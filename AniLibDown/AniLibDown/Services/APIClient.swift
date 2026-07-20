@@ -153,18 +153,23 @@ actor APIClient {
         page: Int,
         limit: Int = 20,
         search: String? = nil,
-        genreIds: [Int] = []
+        genreIds: [Int] = [],
+        sorting: CatalogSorting = .freshAtDesc,
+        year: Int? = nil
     ) async throws -> CatalogResponse {
         var query = [
             "page": String(page),
             "limit": String(limit),
-            "f[sorting]": "FRESH_AT_DESC"
+            "f[sorting]": sorting.rawValue
         ]
         if let search, !search.isEmpty {
             query["f[search]"] = search
         }
         if !genreIds.isEmpty {
             query["f[genres]"] = genreIds.map(String.init).joined(separator: ",")
+        }
+        if let year {
+            query["f[year]"] = String(year)
         }
         return try await request(path: "anime/catalog/releases", query: query)
     }
@@ -250,23 +255,63 @@ actor APIClient {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        if httpResponse.statusCode == 401, path != "accounts/users/auth/login" {
-            throw APIError.unauthorized
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let message = (try? decode(APIErrorResponse.self, from: data)).flatMap {
-                $0.message ?? $0.error
-            }
-            throw APIError.httpError(status: httpResponse.statusCode, message: message)
-        }
-
+        let data = try await performDataWithRetry(request: request, method: method)
         return data
+    }
+
+    private func performDataWithRetry(request: URLRequest, method: String) async throws -> Data {
+        let maxAttempts = method == "GET" ? 3 : 1
+        var lastError: Error?
+
+        for attempt in 0..<maxAttempts {
+            do {
+                let (data, response) = try await session.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+
+                let path = request.url?.path ?? ""
+                if httpResponse.statusCode == 401, !path.contains("auth/login") {
+                    throw APIError.unauthorized
+                }
+
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    let message = (try? decode(APIErrorResponse.self, from: data)).flatMap {
+                        $0.message ?? $0.error
+                    }
+                    throw APIError.httpError(status: httpResponse.statusCode, message: message)
+                }
+
+                return data
+            } catch {
+                lastError = error
+                let retriable = isRetriable(error)
+                guard retriable, attempt < maxAttempts - 1 else { throw error }
+                let delay = UInt64(pow(2.0, Double(attempt))) * 400_000_000
+                try? await Task.sleep(nanoseconds: delay)
+                AppLog.api.debug("Retry \(attempt + 1) for \(request.url?.absoluteString ?? "")")
+            }
+        }
+
+        throw lastError ?? APIError.invalidResponse
+    }
+
+    private func isRetriable(_ error: Error) -> Bool {
+        if let apiError = error as? APIError {
+            if case .httpError(let status, _) = apiError {
+                return status >= 500 || status == 429
+            }
+            return false
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost:
+                return true
+            default:
+                return false
+            }
+        }
+        return false
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {

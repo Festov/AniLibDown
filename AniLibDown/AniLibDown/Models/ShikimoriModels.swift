@@ -76,6 +76,7 @@ struct ShikimoriUserRate: Codable, Identifiable {
     let targetId: Int
     let targetType: String
     let status: String
+    let episodes: Int?
 
     var listStatus: ShikimoriListStatus? {
         ShikimoriListStatus(rawValue: status)
@@ -124,7 +125,13 @@ struct ShikimoriUserRateUpdatePayload: Encodable {
 }
 
 struct ShikimoriUserRateUpdateBody: Encodable {
-    let status: String
+    let status: String?
+    let episodes: Int?
+
+    init(status: String? = nil, episodes: Int? = nil) {
+        self.status = status
+        self.episodes = episodes
+    }
 }
 
 enum ShikimoriError: LocalizedError, Equatable {
