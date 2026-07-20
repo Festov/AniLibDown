@@ -11,12 +11,13 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if authService.isAuthenticated, let profile = authService.profile {
-                    authenticatedContent(profile: profile)
-                } else {
-                    guestContent
-                }
+            List {
+                accountSection
+                appearanceSection
+                playbackSection
+                shikimoriSection
+                storageSection
+                aboutSection
             }
             .navigationTitle("Профиль")
             .sheet(isPresented: $showLogin) {
@@ -40,84 +41,91 @@ struct ProfileView: View {
                 }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Загрузки серий не удаляются. Можно выбрать только нужный тип кеша.")
+                Text("Скачанные серии не удаляются. Можно очистить только выбранный тип кеша.")
             }
         }
     }
 
-    private var guestContent: some View {
-        List {
-            playbackSettingsSection
-            shikimoriSection
-            cacheSection
-            aboutSection
-
-            Section {
-                ContentUnavailableView {
-                    Label("Войдите в аккаунт", systemImage: "person.crop.circle.badge.questionmark")
-                } description: {
-                    Text("Авторизация нужна для коллекций и синхронизации с AniLiberty")
-                } actions: {
-                    Button("Войти") {
-                        showLogin = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            }
-        }
-    }
+    // MARK: - Account
 
     @ViewBuilder
-    private func authenticatedContent(profile: UserProfile) -> some View {
-        List {
+    private var accountSection: some View {
+        if authService.isAuthenticated, let profile = authService.profile {
             Section {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     profileAvatar(for: profile)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(profile.nickname)
                             .font(.headline)
                             .lineLimit(1)
                         if let login = profile.login, login != profile.nickname {
                             Text("@\(login)")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
+                        Text("AniLiberty")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
 
                     Spacer(minLength: 8)
-
-                    Button("Выйти", role: .destructive) {
-                        Task { await authService.logout() }
-                    }
-                    .font(.subheadline)
                 }
-                .padding(.vertical, 2)
-            }
+                .padding(.vertical, 4)
 
-            Section("Оформление") {
-                Picker("Тема", selection: $appSettings.colorSchemePreference) {
-                    ForEach(AppColorScheme.allCases) { scheme in
-                        Text(scheme.title).tag(scheme)
-                    }
+                Button("Выйти из аккаунта", role: .destructive) {
+                    Task { await authService.logout() }
                 }
-                .pickerStyle(.segmented)
-
-                Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
+            } header: {
+                Text("Аккаунт AniLiberty")
+            } footer: {
+                Text("Нужен для коллекций и синхронизации списков с сайтом.")
             }
+        } else {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Вы не вошли в аккаунт", systemImage: "person.crop.circle.badge.questionmark")
+                        .font(.headline)
 
-            playbackSettingsSection
-            shikimoriSection
-            cacheSection
-            aboutSection
+                    Text("Войдите, чтобы пользоваться коллекциями AniLiberty на этом устройстве.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Button("Войти") {
+                        showLogin = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(.vertical, 4)
+            } header: {
+                Text("Аккаунт AniLiberty")
+            }
         }
     }
 
-    private var playbackSettingsSection: some View {
-        Section("Просмотр и загрузки") {
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        Section {
+            Picker("Тема", selection: $appSettings.colorSchemePreference) {
+                ForEach(AppColorScheme.allCases) { scheme in
+                    Text(scheme.title).tag(scheme)
+                }
+            }
+
+            Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
+        } header: {
+            Text("Оформление")
+        } footer: {
+            Text("Тема меняет светлый/тёмный вид приложения. Заставка показывается при каждом запуске.")
+        }
+    }
+
+    // MARK: - Playback
+
+    private var playbackSection: some View {
+        Section {
             Picker("Качество по умолчанию", selection: $appSettings.defaultVideoQuality) {
                 ForEach(VideoQuality.allCases) { quality in
                     Text(quality.rawValue).tag(quality)
@@ -129,19 +137,97 @@ struct ProfileView: View {
                     Text(rate.title).tag(rate)
                 }
             }
+        } header: {
+            Text("Просмотр")
+        } footer: {
+            Text("Качество по умолчанию используется при старте серии. В плеере качество можно сменить отдельно. Ускорение срабатывает при удержании правой половины экрана.")
         }
     }
 
-    private var aboutSection: some View {
+    // MARK: - Shikimori
+
+    private var shikimoriSection: some View {
         Section {
-            Text("Версия \(AppSettings.appVersion)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .multilineTextAlignment(.center)
-                .listRowBackground(Color.clear)
+            Toggle("Блок Shikimori в карточке аниме", isOn: $appSettings.showShikimoriOnReleaseCard)
+
+            if !ShikimoriConfig.isConfigured {
+                Text(ShikimoriConfig.configurationHint)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if shikimoriAuth.isAuthenticated, let profile = shikimoriAuth.profile {
+                HStack {
+                    Label(profile.nickname, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Отключить") {
+                        shikimoriAuth.disconnect()
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                }
+            } else {
+                Button {
+                    Task { await shikimoriAuth.connect() }
+                } label: {
+                    if shikimoriAuth.isLoading {
+                        HStack {
+                            ProgressView()
+                            Text("Подключение…")
+                        }
+                    } else {
+                        Text("Подключить Shikimori")
+                    }
+                }
+                .disabled(shikimoriAuth.isLoading)
+            }
+
+            if let error = shikimoriAuth.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("Shikimori")
+        } footer: {
+            Text("Позволяет ставить статус списка (смотрю, просмотрено и т.д.) из карточки аниме. Привязки хранятся только на телефоне и сбрасываются при переустановке.")
         }
     }
+
+    // MARK: - Storage
+
+    private var storageSection: some View {
+        Section {
+            ForEach(AppCacheKind.allCases) { kind in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(kind.title)
+                    Text(kind.detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
+
+            Button("Очистить кеш…", role: .destructive) {
+                showCacheConfirmation = true
+            }
+        } header: {
+            Text("Память и кеш")
+        } footer: {
+            Text("Скачанные серии очищаются во вкладке «Загрузки», не здесь.")
+        }
+    }
+
+    // MARK: - About
+
+    private var aboutSection: some View {
+        Section {
+            LabeledContent("Версия", value: AppSettings.appVersion)
+        } header: {
+            Text("О приложении")
+        }
+    }
+
+    // MARK: - Avatar
 
     @ViewBuilder
     private func profileAvatar(for profile: UserProfile) -> some View {
@@ -161,7 +247,7 @@ struct ProfileView: View {
                     avatarFallback
                 }
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 56, height: 56)
             .clipShape(Circle())
         } else {
             avatarFallback
@@ -171,79 +257,7 @@ struct ProfileView: View {
     private var avatarFallback: some View {
         Image(systemName: "person.circle.fill")
             .resizable()
-            .frame(width: 48, height: 48)
+            .frame(width: 56, height: 56)
             .foregroundStyle(.secondary)
-    }
-
-    private var cacheSection: some View {
-        Section("Память") {
-            ForEach(AppCacheKind.allCases) { kind in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(kind.title)
-                        .font(.subheadline)
-                    Text(kind.detail)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Button("Очистить кеш…", role: .destructive) {
-                showCacheConfirmation = true
-            }
-        }
-    }
-
-    private var shikimoriSection: some View {
-        Section {
-            Toggle("Показывать Shikimori", isOn: $appSettings.showShikimoriOnReleaseCard)
-
-            if !ShikimoriConfig.isConfigured {
-                Text(ShikimoriConfig.configurationHint)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else if shikimoriAuth.isAuthenticated, let profile = shikimoriAuth.profile {
-                HStack {
-                    Label(profile.nickname, systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Отключить", role: .destructive) {
-                        shikimoriAuth.disconnect()
-                    }
-                    .font(.subheadline)
-                }
-
-                Text("В карточке релиза можно привязать тайтл и ставить статусы: смотрю, просмотрено, брошено и др.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("Отмечайте статус просмотра на Shikimori прямо из карточки аниме.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    Task { await shikimoriAuth.connect() }
-                } label: {
-                    if shikimoriAuth.isLoading {
-                        HStack {
-                            ProgressView()
-                            Text("Подключение...")
-                        }
-                    } else {
-                        Text("Подключить Shikimori")
-                    }
-                }
-                .disabled(shikimoriAuth.isLoading)
-            }
-
-            if let error = shikimoriAuth.errorMessage {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
-        } header: {
-            Text("Shikimori")
-        } footer: {
-            Text("Привязки Shikimori хранятся локально на телефоне. Если переустановить приложение, привязки слетят.")
-        }
     }
 }

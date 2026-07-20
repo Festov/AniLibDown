@@ -17,6 +17,9 @@ enum APIError: LocalizedError {
         case .emptyResponse:
             return "Сервер вернул пустой ответ"
         case .httpError(let status, let message):
+            if let friendly = Self.friendlyServerMessage(message, status: status) {
+                return friendly
+            }
             if let message, !message.isEmpty {
                 return message
             }
@@ -29,6 +32,16 @@ enum APIError: LocalizedError {
         case .unauthorized:
             return "Требуется авторизация"
         }
+    }
+
+    private static func friendlyServerMessage(_ message: String?, status: Int) -> String? {
+        let lower = (message ?? "").lowercased()
+        if status == 404
+            || lower.contains("no query results for model")
+            || lower.contains("not found") {
+            return "Тайтл недоступен. Возможно, нужен VPN или релиз временно недоступен."
+        }
+        return nil
     }
 
     private static func describe(_ error: DecodingError) -> String {
@@ -134,10 +147,6 @@ actor APIClient {
 
     func getProfile() async throws -> UserProfile {
         try await request(path: "accounts/users/me/profile", authorized: true)
-    }
-
-    func getLatestReleases(limit: Int = 20) async throws -> [ReleaseLatest] {
-        try await request(path: "anime/releases/latest", query: ["limit": String(limit)])
     }
 
     func getCatalog(

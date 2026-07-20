@@ -241,6 +241,8 @@ struct ReleaseRowView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(subtitle)")
     }
 }
 
