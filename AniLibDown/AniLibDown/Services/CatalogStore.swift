@@ -25,6 +25,8 @@ final class CatalogStore: ObservableObject {
     @Published var isLoadingMore = false
     @Published var errorMessage: String?
     @Published var searchText = ""
+    @Published var sorting: CatalogSorting = .freshAtDesc
+    @Published var filterYear: Int?
 
     private var currentPage = 1
     private var totalPages = 1
@@ -57,7 +59,7 @@ final class CatalogStore: ObservableObject {
     var canLoadMore: Bool { currentPage < totalPages }
 
     var hasActiveFilters: Bool {
-        !normalizedSearch.isEmpty || !selectedGenreIds.isEmpty
+        !normalizedSearch.isEmpty || !selectedGenreIds.isEmpty || filterYear != nil || sorting != .freshAtDesc
     }
 
     private var normalizedSearch: String {
@@ -75,7 +77,10 @@ final class CatalogStore: ObservableObject {
             genres = try await APIClient.shared.getCatalogGenres()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
-            // Optional for browsing.
+            // Optional for browsing — keep previous genres if any.
+            if genres.isEmpty {
+                AppLog.api.error("Genres load failed: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -90,10 +95,15 @@ final class CatalogStore: ObservableObject {
                 page: 1,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,
-                genreIds: Array(selectedGenreIds)
+                genreIds: Array(selectedGenreIds),
+                sorting: sorting,
+                year: filterYear
             )
             applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
+            if !normalizedSearch.isEmpty {
+                SearchHistoryStore.shared.record(normalizedSearch)
+            }
         } catch {
             if !isIgnorable(error) {
                 errorMessage = error.localizedDescription
@@ -136,10 +146,15 @@ final class CatalogStore: ObservableObject {
                 page: 1,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,
-                genreIds: Array(selectedGenreIds)
+                genreIds: Array(selectedGenreIds),
+                sorting: sorting,
+                year: filterYear
             )
             applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
+            if !normalizedSearch.isEmpty {
+                SearchHistoryStore.shared.record(normalizedSearch)
+            }
             lastRequestedQueryKey = queryKey
         } catch {
             if !isIgnorable(error) {
@@ -174,7 +189,9 @@ final class CatalogStore: ObservableObject {
                 page: currentPage,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,
-                genreIds: Array(selectedGenreIds)
+                genreIds: Array(selectedGenreIds),
+                sorting: sorting,
+                year: filterYear
             )
             releases.append(contentsOf: response.data)
             totalPages = max(response.meta.pagination.totalPages, 1)
@@ -222,6 +239,18 @@ final class CatalogStore: ObservableObject {
         applyFilters()
     }
 
+    func applySorting(_ newSorting: CatalogSorting) {
+        guard sorting != newSorting else { return }
+        sorting = newSorting
+        applyFilters()
+    }
+
+    func applyYearFilter(_ year: Int?) {
+        guard filterYear != year else { return }
+        filterYear = year
+        applyFilters()
+    }
+
     func clearSessionCache() {
         pageCache.removeAll()
         browseSnapshot = nil
@@ -252,7 +281,8 @@ final class CatalogStore: ObservableObject {
 
     private func cacheKey(page: Int) -> String {
         let genres = selectedGenreIds.sorted().map(String.init).joined(separator: ",")
-        return "\(normalizedSearch)|\(genres)|\(page)"
+        let year = filterYear.map(String.init) ?? ""
+        return "\(normalizedSearch)|\(genres)|\(sorting.rawValue)|\(year)|\(page)"
     }
 
     private func cachedPage(_ page: Int) -> CatalogCacheEntry? {

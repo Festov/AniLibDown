@@ -6,6 +6,10 @@ struct AniLibDownApp: App {
     @StateObject private var authService = AuthService.shared
     @StateObject private var downloadManager = DownloadManager.shared
 
+    init() {
+        _ = NetworkMonitor.shared
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -13,6 +17,7 @@ struct AniLibDownApp: App {
                 .environmentObject(downloadManager)
                 .task {
                     await ShikimoriAuthService.shared.restoreSession()
+                    downloadManager.processDownloadQueue()
                 }
         }
     }

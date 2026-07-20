@@ -26,7 +26,15 @@ final class WatchProgressStore {
         loadLastEpisodes()[String(releaseId)]
     }
 
-    func save(position: Double, episodeId: String, releaseId: Int) {
+    func save(
+        position: Double,
+        episodeId: String,
+        releaseId: Int,
+        releaseTitle: String? = nil,
+        posterPath: String? = nil,
+        episodeTitle: String? = nil,
+        duration: Int? = nil
+    ) {
         guard position > 5 else { return }
 
         var progress = loadProgress()
@@ -40,12 +48,37 @@ final class WatchProgressStore {
         var lastEpisodes = loadLastEpisodes()
         lastEpisodes[String(releaseId)] = episodeId
         defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+
+        if let releaseTitle, let episodeTitle {
+            ContinueWatchingStore.shared.updateMetadata(
+                releaseId: releaseId,
+                releaseTitle: releaseTitle,
+                posterPath: posterPath,
+                episodeId: episodeId,
+                episodeTitle: episodeTitle,
+                duration: duration
+            )
+        } else {
+            ContinueWatchingStore.shared.reload()
+        }
     }
 
     func clearPosition(for episodeId: String) {
         var progress = loadProgress()
         progress.removeValue(forKey: episodeId)
         storeProgress(progress)
+
+        // Drop continue-watching card if this was the last episode for a release.
+        var lastEpisodes = loadLastEpisodes()
+        let affected = lastEpisodes.filter { $0.value == episodeId }.map(\.key)
+        for key in affected {
+            lastEpisodes.removeValue(forKey: key)
+            if let releaseId = Int(key) {
+                ContinueWatchingStore.shared.remove(releaseId: releaseId)
+            }
+        }
+        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+        ContinueWatchingStore.shared.reload()
     }
 
     func progressFraction(for episodeId: String, duration: Int?) -> Double {
@@ -60,6 +93,11 @@ final class WatchProgressStore {
     func clearAll() {
         defaults.removeObject(forKey: progressKey)
         defaults.removeObject(forKey: lastEpisodeKey)
+        ContinueWatchingStore.shared.reload()
+    }
+
+    func allLastEpisodes() -> [String: String] {
+        loadLastEpisodes()
     }
 
     private func loadProgress() -> [String: WatchProgress] {
