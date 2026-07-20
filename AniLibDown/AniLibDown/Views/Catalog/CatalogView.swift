@@ -20,11 +20,21 @@ struct CatalogView: View {
                     }
                     .listStyle(.plain)
                 } else if store.releases.isEmpty {
-                    ContentUnavailableView(
-                        emptyTitle,
-                        systemImage: "books.vertical",
-                        description: Text(emptyDescription)
-                    )
+                    ScrollView {
+                        ContentUnavailableView {
+                            Label(emptyTitle, systemImage: emptySystemImage)
+                        } description: {
+                            Text(emptyDescription)
+                        } actions: {
+                            if store.errorMessage != nil {
+                                Button("Повторить") {
+                                    Task { await store.loadInitial(force: true) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 420)
+                    }
                 } else {
                     List {
                         if store.searchText.isEmpty {
@@ -45,6 +55,8 @@ struct CatalogView: View {
                                         store.searchText = query
                                         store.scheduleSearch()
                                     }
+                                    .accessibilityLabel("Поиск: \(query)")
+                                    .accessibilityHint("Свайп влево для удаления")
                                 }
                                 .onDelete { indexSet in
                                     indexSet.map { searchHistory.queries[$0] }.forEach(searchHistory.remove)
@@ -157,7 +169,17 @@ struct CatalogView: View {
     }
 
     private var emptyTitle: String {
-        store.hasActiveFilters || store.errorMessage != nil ? "Ничего не найдено" : "Каталог пуст"
+        if store.errorMessage != nil, !store.hasActiveFilters {
+            return "Не удалось загрузить"
+        }
+        if store.hasActiveFilters || store.errorMessage != nil {
+            return "Ничего не найдено"
+        }
+        return "Каталог пуст"
+    }
+
+    private var emptySystemImage: String {
+        store.errorMessage != nil && !store.hasActiveFilters ? "wifi.exclamationmark" : "books.vertical"
     }
 
     private var emptyDescription: String {
@@ -223,6 +245,7 @@ private struct GenreFilterView: View {
                                 }
                             }
                             .accessibilityLabel(genre.name)
+                            .accessibilityAddTraits(selectedGenreIds.contains(genre.id) ? .isSelected : [])
                         }
                     }
                     .listStyle(.plain)
@@ -274,10 +297,11 @@ private struct CatalogFiltersView: View {
                     TextField("Например, 2024", text: $yearText)
                         .keyboardType(.numberPad)
                     Button("Применить год") {
-                        let year = Int(yearText.trimmingCharacters(in: .whitespaces))
+                        guard let year = validatedYear else { return }
                         onApplyYear(year)
                         dismiss()
                     }
+                    .disabled(validatedYear == nil)
                     if filterYear != nil {
                         Button("Сбросить год", role: .destructive) {
                             yearText = ""
@@ -301,5 +325,13 @@ private struct CatalogFiltersView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+
+    private var validatedYear: Int? {
+        let trimmed = yearText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let year = Int(trimmed) else { return nil }
+        let maxYear = Calendar.current.component(.year, from: Date()) + 1
+        guard (1960...maxYear).contains(year) else { return nil }
+        return year
     }
 }

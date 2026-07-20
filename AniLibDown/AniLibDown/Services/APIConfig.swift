@@ -3,7 +3,7 @@ import Foundation
 enum APIConfig {
     static let baseURL = URL(string: "https://aniliberty.top/api/v1")!
     static let mediaBaseURL = URL(string: "https://aniliberty.top")!
-    static let userAgent = "AniLibDown/1.1.0 (iOS)"
+    static var userAgent: String { AppVersion.userAgent }
 
     static func mediaURL(for path: String?) -> URL? {
         guard let path, !path.isEmpty else { return nil }
