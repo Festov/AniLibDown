@@ -45,6 +45,10 @@ swiftlint
 
 Поддерживаемые теги: `v*`, `release_*`, `update*`
 
+## Виджет
+
+Виджет в текущей Sideloadly-сборке **недоступен**: для него нужен отдельный Widget Extension target в Xcode, App Groups и платная подпись Apple Developer. Код виджета убран из репозитория, чтобы не создавать ложных ожиданий.
+
 ## TestFlight (опционально)
 
 Для публикации в TestFlight нужен платный Apple Developer Program:
@@ -54,10 +58,6 @@ swiftlint
 3. Добавьте тестировщиков в App Store Connect
 
 Sideload через GitHub Releases остаётся основным способом для бесплатного Apple ID.
-
-## Виджет
-
-Виджет «Продолжить просмотр» находится в `AniLibDownWidget/`. Для локальной сборки добавьте Widget Extension target в Xcode и укажите App Group `group.top.aniliberty.AniLibDown` (см. `AniLibDown.entitlements`).
 
 ## Чек-лист тестирования
 

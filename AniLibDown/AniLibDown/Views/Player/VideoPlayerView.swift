@@ -456,7 +456,7 @@ struct VideoPlayerView: View {
             }
             .accessibilityLabel("Настройки плеера")
 
-            if pipController.isPictureInPicturePossible {
+            if AVPictureInPictureController.isPictureInPictureSupported() {
                 Button {
                     pipController.togglePictureInPicture()
                     scheduleHideControls()
@@ -1152,6 +1152,7 @@ struct VideoPlayerView: View {
                 episodeId: currentEpisode.id,
                 releaseId: session.releaseId,
                 releaseTitle: session.releaseTitle,
+                posterPath: session.posterPath,
                 episodeTitle: currentEpisode.displayTitle,
                 duration: currentEpisode.duration
             )

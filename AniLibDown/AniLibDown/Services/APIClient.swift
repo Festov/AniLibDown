@@ -169,7 +169,8 @@ actor APIClient {
             query["f[genres]"] = genreIds.map(String.init).joined(separator: ",")
         }
         if let year {
-            query["f[year]"] = String(year)
+            query["f[years][from_year]"] = String(year)
+            query["f[years][to_year]"] = String(year)
         }
         return try await request(path: "anime/catalog/releases", query: query)
     }

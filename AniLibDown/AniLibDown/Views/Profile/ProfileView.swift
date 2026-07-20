@@ -215,8 +215,10 @@ struct ProfileView: View {
                 Label("Экспорт привязок", systemImage: "square.and.arrow.up")
             }
 
-            Button("Импорт привязок") {
+            Button {
                 showShikimoriImporter = true
+            } label: {
+                Label("Импорт привязок", systemImage: "square.and.arrow.down")
             }
 
             if let shikimoriImportResult {
