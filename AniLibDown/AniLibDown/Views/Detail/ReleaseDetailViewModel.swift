@@ -116,4 +116,18 @@ final class ReleaseDetailViewModel: ObservableObject {
             ToastCenter.shared.show(error.localizedDescription, isError: true)
         }
     }
+
+    func setCollectionStatus(_ type: CollectionType?, releaseId: Int) async {
+        isUpdatingCollection = true
+        collectionError = nil
+        defer { isUpdatingCollection = false }
+
+        do {
+            try await CollectionStatusStore.shared.setStatus(releaseId: releaseId, type: type)
+            collectionStatus = type
+        } catch {
+            collectionError = error.localizedDescription
+            ToastCenter.shared.show(error.localizedDescription, isError: true)
+        }
+    }
 }
