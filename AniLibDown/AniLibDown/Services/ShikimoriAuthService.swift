@@ -185,15 +185,14 @@ final class ShikimoriAuthService: ObservableObject {
                 accessToken: token
             ) else { return }
 
-            let episodeCount = Int(episodeOrdinal.rounded(.towardZero))
-            guard episodeCount > (existing.episodes ?? 0) else { return }
+            guard episodeOrdinal > (existing.episodes ?? 0) else { return }
 
             _ = try await ShikimoriAPIClient.shared.updateUserRateEpisodes(
                 rateId: existing.id,
-                episodes: episodeCount,
+                episodes: episodeOrdinal,
                 accessToken: token
             )
-            AppLog.shikimori.info("Synced episode \(episodeCount) for anime \(animeId)")
+            AppLog.shikimori.info("Synced episode \(episodeOrdinal) for anime \(animeId)")
         } catch {
             AppLog.shikimori.error("Episode sync failed: \(error.localizedDescription)")
         }

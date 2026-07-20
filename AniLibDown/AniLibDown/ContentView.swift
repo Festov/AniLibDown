@@ -91,9 +91,15 @@ struct ContentView: View {
 
     private var iPadLayout: some View {
         NavigationSplitView {
-            List(AppTab.allCases, selection: $selectedTab) { tab in
-                Label(tab.title, systemImage: tab.icon)
-                    .tag(tab)
+            List {
+                ForEach(AppTab.allCases) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        Label(tab.title, systemImage: tab.icon)
+                            .foregroundStyle(selectedTab == tab ? Color.accentColor : .primary)
+                    }
+                }
             }
             .navigationTitle("AniLibDown")
         } detail: {
