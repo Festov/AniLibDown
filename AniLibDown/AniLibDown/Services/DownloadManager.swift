@@ -352,22 +352,58 @@ final class DownloadManager: NSObject, ObservableObject {
         }
         saveIndex()
 
+        if let reason = NetworkMonitor.shared.downloadBlockedReason {
+            updateItem(id: placeholderId) {
+                $0.state = .queued
+                $0.lastError = reason
+            }
+            ToastCenter.shared.show(reason, isError: true)
+            return
+        }
+
+        processDownloadQueue()
+    }
+
+    func processDownloadQueue() {
+        guard NetworkMonitor.shared.canDownload else { return }
+
+        let limit = DownloadSettings.shared.maxConcurrentDownloads
+        while activeTasks.count < limit {
+            guard let index = items.firstIndex(where: { $0.state == .queued }) else { break }
+            startQueuedDownload(at: index)
+        }
+    }
+
+    private func startQueuedDownload(at index: Int) {
+        let item = items[index]
+        guard let streamURL = URL(string: item.remoteURL) else {
+            updateItem(id: item.id) {
+                $0.state = .failed
+                $0.lastError = "Некорректный URL"
+            }
+            return
+        }
+
+        let quality = VideoQuality(rawValue: item.quality) ?? .p720
         let asset = AVURLAsset(url: streamURL)
         guard let task = session.makeAssetDownloadTask(
             asset: asset,
-            assetTitle: "\(releaseTitle) - \(episode.displayTitle)",
+            assetTitle: "\(item.releaseTitle) - \(item.displayEpisodeTitle)",
             assetArtworkData: nil,
             options: [AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: preferredBitrate(for: quality)]
         ) else {
-            items.removeAll { $0.id == placeholderId }
-            saveIndex()
+            updateItem(id: item.id) {
+                $0.state = .failed
+                $0.lastError = "Не удалось начать загрузку"
+            }
             return
         }
 
         let taskId = task.taskIdentifier.description
-        if let index = items.firstIndex(where: { $0.id == placeholderId }) {
-            items[index].id = taskId
-            items[index].state = .downloading
+        if let currentIndex = items.firstIndex(where: { $0.id == item.id }) {
+            items[currentIndex].id = taskId
+            items[currentIndex].state = .downloading
+            items[currentIndex].lastError = nil
         }
         activeTasks[taskId] = task
         saveIndex()
@@ -492,30 +528,7 @@ final class DownloadManager: NSObject, ObservableObject {
         )
         items.insert(placeholder, at: 0)
         saveIndex()
-
-        let asset = AVURLAsset(url: streamURL)
-        guard let task = session.makeAssetDownloadTask(
-            asset: asset,
-            assetTitle: "\(item.releaseTitle) - \(item.displayEpisodeTitle)",
-            assetArtworkData: nil,
-            options: [AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: preferredBitrate(for: quality)]
-        ) else {
-            if let index = items.firstIndex(where: { $0.id == placeholderId }) {
-                items[index].state = .failed
-                items[index].lastError = "Не удалось начать загрузку"
-            }
-            saveIndex()
-            return
-        }
-
-        let taskId = task.taskIdentifier.description
-        if let index = items.firstIndex(where: { $0.id == placeholderId }) {
-            items[index].id = taskId
-            items[index].state = .downloading
-        }
-        activeTasks[taskId] = task
-        saveIndex()
-        task.resume()
+        processDownloadQueue()
     }
 
     func retryFailed(in group: DownloadReleaseGroup) {
@@ -804,6 +817,13 @@ extension DownloadManager: AVAssetDownloadDelegate {
                     $0.progress = 1
                     $0.state = .completed
                 }
+                if let completedItem = self.items.first(where: { $0.id == id }) {
+                    Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
+                    NotificationManager.shared.notifyDownloadCompleted(
+                        releaseTitle: completedItem.releaseTitle,
+                        episodeTitle: completedItem.displayEpisodeTitle
+                    )
+                }
             } else {
                 self.updateItem(id: id) {
                     $0.state = .failed
@@ -811,6 +831,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
                 }
             }
             self.activeTasks.removeValue(forKey: id)
+            self.processDownloadQueue()
         }
     }
 
@@ -851,6 +872,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
                 self.activeTasks.removeValue(forKey: id)
                 self.purgeOrphanedDownloadCache()
             }
+            self.processDownloadQueue()
         }
     }
 

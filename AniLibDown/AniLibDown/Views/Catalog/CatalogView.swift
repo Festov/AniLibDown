@@ -2,7 +2,10 @@ import SwiftUI
 
 struct CatalogView: View {
     @ObservedObject private var store = CatalogStore.shared
+    @ObservedObject private var searchHistory = SearchHistoryStore.shared
+    @ObservedObject private var continueWatching = ContinueWatchingStore.shared
     @State private var showGenreFilter = false
+    @State private var showCatalogFilters = false
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
@@ -24,6 +27,31 @@ struct CatalogView: View {
                     )
                 } else {
                     List {
+                        if store.searchText.isEmpty {
+                            Section {
+                                ContinueWatchingSection { entry in
+                                    navigationPath.append(entry.releaseId)
+                                }
+                            }
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        }
+
+                        if store.searchText.isEmpty, !searchHistory.queries.isEmpty {
+                            Section(L10n.searchHistory) {
+                                ForEach(searchHistory.queries, id: \.self) { query in
+                                    Button(query) {
+                                        store.searchText = query
+                                        store.scheduleSearch()
+                                    }
+                                }
+                                .onDelete { indexSet in
+                                    indexSet.map { searchHistory.queries[$0] }.forEach(searchHistory.remove)
+                                }
+                            }
+                        }
+
                         ForEach(store.releases) { release in
                             NavigationLink(value: release.id) {
                                 ReleaseRowView(
@@ -59,7 +87,7 @@ struct CatalogView: View {
                     }
                 }
             }
-            .navigationTitle("Каталог")
+            .navigationTitle(L10n.catalog)
             .searchable(text: $store.searchText, prompt: "Поиск аниме")
             .onChange(of: store.searchText) { _, _ in
                 store.scheduleSearch()
@@ -67,9 +95,16 @@ struct CatalogView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
+                        showCatalogFilters = true
+                    } label: {
+                        Label("Фильтры", systemImage: hasAdvancedFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
                         showGenreFilter = true
                     } label: {
-                        Label("Жанры", systemImage: store.selectedGenreIds.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                        Label("Жанры", systemImage: store.selectedGenreIds.isEmpty ? "tag" : "tag.fill")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -88,15 +123,25 @@ struct CatalogView: View {
                     onClear: store.clearGenreFilters
                 )
             }
+            .sheet(isPresented: $showCatalogFilters) {
+                CatalogFiltersView(
+                    sorting: store.sorting,
+                    filterYear: store.filterYear,
+                    onApplySorting: store.applySorting,
+                    onApplyYear: store.applyYearFilter
+                )
+            }
             .navigationDestination(for: Int.self) { releaseId in
                 ReleaseDetailView(releaseId: releaseId)
             }
             .refreshable {
                 await store.refresh()
+                continueWatching.reload()
             }
             .task {
                 await store.loadGenresIfNeeded()
                 await store.loadInitialIfNeeded()
+                continueWatching.reload()
             }
             .overlay(alignment: .top) {
                 if let error = store.errorMessage, !store.releases.isEmpty {
@@ -105,6 +150,10 @@ struct CatalogView: View {
                 }
             }
         }
+    }
+
+    private var hasAdvancedFilters: Bool {
+        store.sorting != .freshAtDesc || store.filterYear != nil
     }
 
     private var emptyTitle: String {
@@ -116,7 +165,7 @@ struct CatalogView: View {
             return error
         }
         if store.hasActiveFilters {
-            return "Попробуйте изменить поиск или сбросить жанры"
+            return "Попробуйте изменить поиск или сбросить фильтры"
         }
         return "Потяните вниз для обновления"
     }
@@ -135,6 +184,7 @@ struct CatalogView: View {
             }
         } catch {
             store.errorMessage = error.localizedDescription
+            ToastCenter.shared.show(error.localizedDescription, isError: true)
         }
     }
 }
@@ -172,6 +222,7 @@ private struct GenreFilterView: View {
                                     }
                                 }
                             }
+                            .accessibilityLabel(genre.name)
                         }
                     }
                     .listStyle(.plain)
@@ -191,5 +242,62 @@ private struct GenreFilterView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+private struct CatalogFiltersView: View {
+    let sorting: CatalogSorting
+    let filterYear: Int?
+    let onApplySorting: (CatalogSorting) -> Void
+    let onApplyYear: (Int?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var yearText: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Сортировка") {
+                    Picker("Сортировка", selection: Binding(
+                        get: { sorting },
+                        set: { onApplySorting($0) }
+                    )) {
+                        ForEach(CatalogSorting.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                Section("Год выпуска") {
+                    TextField("Например, 2024", text: $yearText)
+                        .keyboardType(.numberPad)
+                    Button("Применить год") {
+                        let year = Int(yearText.trimmingCharacters(in: .whitespaces))
+                        onApplyYear(year)
+                    }
+                    if filterYear != nil {
+                        Button("Сбросить год", role: .destructive) {
+                            yearText = ""
+                            onApplyYear(nil)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Фильтры")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Готово") { dismiss() }
+                }
+            }
+            .onAppear {
+                if let filterYear {
+                    yearText = String(filterYear)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }

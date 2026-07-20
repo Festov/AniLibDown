@@ -174,6 +174,31 @@ final class ShikimoriAuthService: ObservableObject {
         )
     }
 
+    func syncEpisodeCount(animeId: Int, episodeOrdinal: Int) async {
+        guard episodeOrdinal > 0 else { return }
+        do {
+            let token = try await accessToken()
+            let userId = profile?.id ?? (try await ShikimoriAPIClient.shared.whoami(accessToken: token)).id
+            guard let existing = try await ShikimoriAPIClient.shared.userRate(
+                userId: userId,
+                animeId: animeId,
+                accessToken: token
+            ) else { return }
+
+            let episodeCount = Int(episodeOrdinal.rounded(.towardZero))
+            guard episodeCount > (existing.episodes ?? 0) else { return }
+
+            _ = try await ShikimoriAPIClient.shared.updateUserRateEpisodes(
+                rateId: existing.id,
+                episodes: episodeCount,
+                accessToken: token
+            )
+            AppLog.shikimori.info("Synced episode \(episodeCount) for anime \(animeId)")
+        } catch {
+            AppLog.shikimori.error("Episode sync failed: \(error.localizedDescription)")
+        }
+    }
+
     private func validAccessTokenProfile() async throws -> ShikimoriUserProfile {
         guard let token = KeychainHelper.loadShikimoriAccessToken() else {
             throw ShikimoriError.notAuthenticated

@@ -54,6 +54,22 @@ struct AnimeGenre: Codable, Hashable, Identifiable {
     let name: String
 }
 
+enum CatalogSorting: String, CaseIterable, Identifiable, Codable {
+    case freshAtDesc = "FRESH_AT_DESC"
+    case yearDesc = "YEAR_DESC"
+    case yearAsc = "YEAR_ASC"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .freshAtDesc: return "Сначала новые"
+        case .yearDesc: return "Год: по убыванию"
+        case .yearAsc: return "Год: по возрастанию"
+        }
+    }
+}
+
 struct EpisodeSkip: Codable, Hashable {
     let start: Int?
     let stop: Int?
