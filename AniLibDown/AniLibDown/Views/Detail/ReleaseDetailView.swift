@@ -443,7 +443,8 @@ struct ReleaseDetailView: View {
             startEpisodeId: episode.id,
             quality: selectedQuality,
             preferOffline: true,
-            episodesTotal: release.episodesTotal
+            episodesTotal: release.episodesTotal,
+            posterPath: release.poster?.displayURL
         )
     }
 

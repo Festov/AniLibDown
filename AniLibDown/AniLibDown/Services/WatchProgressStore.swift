@@ -67,6 +67,18 @@ final class WatchProgressStore {
         var progress = loadProgress()
         progress.removeValue(forKey: episodeId)
         storeProgress(progress)
+
+        // Drop continue-watching card if this was the last episode for a release.
+        var lastEpisodes = loadLastEpisodes()
+        let affected = lastEpisodes.filter { $0.value == episodeId }.map(\.key)
+        for key in affected {
+            lastEpisodes.removeValue(forKey: key)
+            if let releaseId = Int(key) {
+                ContinueWatchingStore.shared.remove(releaseId: releaseId)
+            }
+        }
+        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+        ContinueWatchingStore.shared.reload()
     }
 
     func progressFraction(for episodeId: String, duration: Int?) -> Double {

@@ -276,11 +276,13 @@ private struct CatalogFiltersView: View {
                     Button("Применить год") {
                         let year = Int(yearText.trimmingCharacters(in: .whitespaces))
                         onApplyYear(year)
+                        dismiss()
                     }
                     if filterYear != nil {
                         Button("Сбросить год", role: .destructive) {
                             yearText = ""
                             onApplyYear(nil)
+                            dismiss()
                         }
                     }
                 }
