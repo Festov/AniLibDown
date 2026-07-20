@@ -313,6 +313,11 @@ final class DownloadManager: NSObject, ObservableObject {
     ) {
         guard let streamURL = quality.streamURL(for: episode) else { return }
 
+        if let reason = NetworkMonitor.shared.downloadBlockedReason {
+            ToastCenter.shared.show(reason, isError: true)
+            return
+        }
+
         items.removeAll {
             $0.episodeId == episode.id &&
             $0.quality == quality.rawValue &&
@@ -351,16 +356,6 @@ final class DownloadManager: NSObject, ObservableObject {
             cachePosterLocally(path: posterPath, releaseId: releaseId)
         }
         saveIndex()
-
-        if let reason = NetworkMonitor.shared.downloadBlockedReason {
-            updateItem(id: placeholderId) {
-                $0.state = .queued
-                $0.lastError = reason
-            }
-            ToastCenter.shared.show(reason, isError: true)
-            return
-        }
-
         processDownloadQueue()
     }
 
@@ -460,7 +455,8 @@ final class DownloadManager: NSObject, ObservableObject {
             startEpisodeId: startEpisodeId,
             quality: preferredQuality,
             preferOffline: true,
-            episodesTotal: episodes.count
+            episodesTotal: episodes.count,
+            posterPath: group.posterPath
         )
     }
 
@@ -504,6 +500,12 @@ final class DownloadManager: NSObject, ObservableObject {
         guard item.state == .failed else { return }
         guard let releaseId = item.releaseId else { return }
         guard let streamURL = URL(string: item.remoteURL) else { return }
+
+        if let reason = NetworkMonitor.shared.downloadBlockedReason {
+            ToastCenter.shared.show(reason, isError: true)
+            return
+        }
+
         let quality = VideoQuality(rawValue: item.quality) ?? .p720
 
         removeDownloadEntry(item, markCanceled: false)

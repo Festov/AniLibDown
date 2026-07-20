@@ -61,8 +61,7 @@
 		T1B006 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F006 /* CatalogStoreTests.swift */; };
 		T1B007 /* SearchHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F007 /* SearchHistoryStoreTests.swift */; };
 		T1B008 /* ShikimoriLinkStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F008 /* ShikimoriLinkStoreTests.swift */; };
-		V2B015 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = V2F015 /* Localizable.strings */; };
-/* End PBXBuildFile section */
+		/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		C74F9B56F1BE4B4B85A99574 /* AniLibDown.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AniLibDown.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -122,9 +121,7 @@
 		T1F006 /* CatalogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CatalogStoreTests.swift"; sourceTree = "<group>"; };
 		T1F007 /* SearchHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SearchHistoryStoreTests.swift"; sourceTree = "<group>"; };
 		T1F008 /* ShikimoriLinkStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShikimoriLinkStoreTests.swift"; sourceTree = "<group>"; };
-		V2F015 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
-		V2G015 /* en.lproj */ = {isa = PBXGroup; children = (V2F015 /* Localizable.strings */); name = en.lproj; path = en.lproj; sourceTree = "<group>"; };
-/* End PBXFileReference section */
+				/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0BD2C3FA890EFC011AA40390 /* Frameworks */ = {
@@ -178,7 +175,6 @@
 				F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */,
 				F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */,
 				F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */,
-				V2G015 /* en.lproj */,
 			V2F001 /* AppLog.swift */,
 			V2F002 /* NetworkMonitor.swift */,
 			V2F003 /* DownloadSettings.swift */,
@@ -313,7 +309,6 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				ru,
-				en,
 				Base,
 			);
 			mainGroup = 04B81222C328A0302780C1C6 /* */;
@@ -333,7 +328,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				7473FB92539D73ABE2977E4C /* Assets.xcassets in Resources */,
-				V2B015 /* Localizable.strings in Resources */,
 				F1A2B3C4D5E60718293A4B6C /* ShikimoriSecrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

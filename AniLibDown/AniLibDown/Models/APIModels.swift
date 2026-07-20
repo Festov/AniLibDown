@@ -484,6 +484,7 @@ struct PlayerSession: Identifiable {
     let quality: VideoQuality
     let preferOffline: Bool
     let episodesTotal: Int?
+    let posterPath: String?
 
     var startIndex: Int {
         episodes.firstIndex(where: { $0.id == startEpisodeId }) ?? 0
