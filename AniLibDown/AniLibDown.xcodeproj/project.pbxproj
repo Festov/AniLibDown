@@ -12,7 +12,6 @@
 		9ADB2B09516814BCC5B70A14 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BEC7490BB236F88A384D67 /* ProfileView.swift */; };
 		1897B79A8AE1A6B2DF8F8630 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */; };
 		1836311D6991F858AD83D6D9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */; };
-		2B309A817A50BCE55A6ECA33 /* LatestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F0E0D222A020A50D4AF210D /* LatestView.swift */; };
 		6837C48C4EBC81ACE1D27874 /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */; };
 		E5480594966857B836DE1CEB /* ReleaseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4725FFC840C7005115EACA69 /* ReleaseDetailView.swift */; };
 		46B491019A1663FA376D296E /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE17FB4D4221487B09CE3D80 /* DownloadsView.swift */; };
@@ -39,6 +38,11 @@
 		A4B5C6D7E8F9012345678A01 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A11 /* CatalogStore.swift */; };
 		A4B5C6D7E8F9012345678A02 /* AppCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A12 /* AppCacheManager.swift */; };
 		A4B5C6D7E8F9012345678A03 /* CollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A13 /* CollectionView.swift */; };
+
+		T1B001 /* ReleaseFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F001 /* ReleaseFormattingTests.swift */; };
+		T1B002 /* VideoQualityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F002 /* VideoQualityTests.swift */; };
+		T1B003 /* WatchProgressStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F003 /* WatchProgressStoreTests.swift */; };
+		T1B004 /* DownloadReleaseGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F004 /* DownloadReleaseGroupTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,7 +53,6 @@
 		C0BEC7490BB236F88A384D67 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Profile/ProfileView.swift"; sourceTree = "<group>"; };
 		E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/VideoPlayerView.swift"; sourceTree = "<group>"; };
 		68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Auth/LoginView.swift"; sourceTree = "<group>"; };
-		1F0E0D222A020A50D4AF210D /* LatestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Latest/LatestView.swift"; sourceTree = "<group>"; };
 		41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Catalog/CatalogView.swift"; sourceTree = "<group>"; };
 		4725FFC840C7005115EACA69 /* ReleaseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseDetailView.swift"; sourceTree = "<group>"; };
 		DE17FB4D4221487B09CE3D80 /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Downloads/DownloadsView.swift"; sourceTree = "<group>"; };
@@ -76,10 +79,24 @@
 		A4B5C6D7E8F9012345678A11 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/CatalogStore.swift"; sourceTree = "<group>"; };
 		A4B5C6D7E8F9012345678A12 /* AppCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppCacheManager.swift"; sourceTree = "<group>"; };
 		A4B5C6D7E8F9012345678A13 /* CollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Collection/CollectionView.swift"; sourceTree = "<group>"; };
+
+		T1P001 /* AniLibDownTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AniLibDownTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		T1F001 /* ReleaseFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseFormattingTests.swift; sourceTree = "<group>"; };
+		T1F002 /* VideoQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoQualityTests.swift; sourceTree = "<group>"; };
+		T1F003 /* WatchProgressStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProgressStoreTests.swift; sourceTree = "<group>"; };
+		T1F004 /* DownloadReleaseGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadReleaseGroupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0BD2C3FA890EFC011AA40390 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		T1FW01 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -98,7 +115,6 @@
 				C0BEC7490BB236F88A384D67 /* ProfileView.swift */,
 				E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */,
 				68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */,
-				1F0E0D222A020A50D4AF210D /* LatestView.swift */,
 				A4B5C6D7E8F9012345678A13 /* CollectionView.swift */,
 				41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */,
 				4725FFC840C7005115EACA69 /* ReleaseDetailView.swift */,
@@ -133,14 +149,27 @@
 			isa = PBXGroup;
 			children = (
 				C74F9B56F1BE4B4B85A99574 /* AniLibDown.app */,
+				T1P001 /* AniLibDownTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		T1G001 /* AniLibDownTests */ = {
+			isa = PBXGroup;
+			children = (
+				T1F001 /* ReleaseFormattingTests.swift */,
+				T1F002 /* VideoQualityTests.swift */,
+				T1F003 /* WatchProgressStoreTests.swift */,
+				T1F004 /* DownloadReleaseGroupTests.swift */,
+			);
+			path = AniLibDownTests;
 			sourceTree = "<group>";
 		};
 		04B81222C328A0302780C1C6 /* */ = {
 			isa = PBXGroup;
 			children = (
 				12A1E1A32F4DBA4452C4A6DA /* AniLibDown */,
+				T1G001 /* AniLibDownTests */,
 				58C354143DC8782A1C1590EB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -163,7 +192,45 @@
 			productReference = C74F9B56F1BE4B4B85A99574 /* AniLibDown.app */;
 			productType = "com.apple.product-type.application";
 		};
+
+		T1T001 /* AniLibDownTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = T1C001 /* Build configuration list for PBXNativeTarget "AniLibDownTests" */;
+			buildPhases = (
+				T1S001 /* Sources */,
+				T1FW01 /* Frameworks */,
+				T1R001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T1D001 /* PBXTargetDependency */,
+			);
+			name = AniLibDownTests;
+			productName = AniLibDownTests;
+			productReference = T1P001 /* AniLibDownTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+
+/* Begin PBXContainerItemProxy section */
+		T1X001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1CE0842C2259CD0A5D4D7781 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2AF46B5ACD9689FDF564AF37;
+			remoteInfo = AniLibDown;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		T1D001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2AF46B5ACD9689FDF564AF37 /* AniLibDown */;
+			targetProxy = T1X001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		1CE0842C2259CD0A5D4D7781 /* Project object */ = {
@@ -175,6 +242,10 @@
 				TargetAttributes = {
 					2AF46B5ACD9689FDF564AF37 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					T1T001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 2AF46B5ACD9689FDF564AF37;
 					};
 				};
 			};
@@ -192,6 +263,7 @@
 			projectRoot = "";
 			targets = (
 				2AF46B5ACD9689FDF564AF37 /* AniLibDown */,
+				T1T001 /* AniLibDownTests */,
 			);
 		};
 /* End PBXProject section */
@@ -203,6 +275,14 @@
 			files = (
 				7473FB92539D73ABE2977E4C /* Assets.xcassets in Resources */,
 				F1A2B3C4D5E60718293A4B6C /* ShikimoriSecrets.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		T1R001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,7 +299,6 @@
 				9ADB2B09516814BCC5B70A14 /* ProfileView.swift in Sources */,
 				1897B79A8AE1A6B2DF8F8630 /* VideoPlayerView.swift in Sources */,
 				1836311D6991F858AD83D6D9 /* LoginView.swift in Sources */,
-				2B309A817A50BCE55A6ECA33 /* LatestView.swift in Sources */,
 				A4B5C6D7E8F9012345678A03 /* CollectionView.swift in Sources */,
 				6837C48C4EBC81ACE1D27874 /* CatalogView.swift in Sources */,
 				E5480594966857B836DE1CEB /* ReleaseDetailView.swift in Sources */,
@@ -244,6 +323,18 @@
 				F1A2B3C4D5E60718293A4B68 /* ShikimoriLinkStore.swift in Sources */,
 				F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */,
 				0CC3481B9534AD62C2AA379D /* APIModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		T1S001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				T1B001 /* ReleaseFormattingTests.swift in Sources */,
+				T1B002 /* VideoQualityTests.swift in Sources */,
+				T1B003 /* WatchProgressStoreTests.swift in Sources */,
+				T1B004 /* DownloadReleaseGroupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,6 +377,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ENABLE_TESTABILITY = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -340,6 +432,45 @@
 			};
 			name = Release;
 		};
+
+		T1CFG1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDownTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AniLibDown.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AniLibDown";
+			};
+			name = Debug;
+		};
+		T1CFG2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDownTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AniLibDown.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AniLibDown";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -357,6 +488,16 @@
 			buildConfigurations = (
 				AE3E174D6CC94368D9402D18 /* Debug */,
 				0145BCC33B991D649E85629D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		T1C001 /* Build configuration list for PBXNativeTarget "AniLibDownTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				T1CFG1 /* Debug */,
+				T1CFG2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -208,6 +208,7 @@ struct VideoPlayerView: View {
 
     @StateObject private var progress = PlaybackProgress()
     @State private var currentIndex: Int
+    @State private var currentQuality: VideoQuality
     @State private var player: AVPlayer?
     @State private var showEpisodeList = false
     @State private var showSettings = false
@@ -235,10 +236,21 @@ struct VideoPlayerView: View {
     init(session: PlayerSession) {
         self.session = session
         _currentIndex = State(initialValue: session.startIndex)
+        _currentQuality = State(initialValue: session.quality)
     }
 
     private var currentEpisode: Episode {
         session.episodes[currentIndex]
+    }
+
+    private var availableQualities: [VideoQuality] {
+        VideoQuality.allCases.filter { quality in
+            if session.preferOffline,
+               downloadManager.isDownloaded(episodeId: currentEpisode.id, quality: quality) {
+                return true
+            }
+            return quality.streamURL(for: currentEpisode) != nil
+        }
     }
 
     private var displayedTime: Double {
@@ -274,6 +286,7 @@ struct VideoPlayerView: View {
                 onLongPressRightEnded: { endFastForward() }
             )
             .ignoresSafeArea()
+            .accessibilityHidden(true)
 
             controlsOverlay
                 .opacity(controlsVisible ? 1 : 0)
@@ -328,8 +341,13 @@ struct VideoPlayerView: View {
         .animation(overlayAnimation, value: skipPrompt)
         .animation(overlayAnimation, value: isOrientationTransitioning)
         .sheet(isPresented: $showSettings) {
-            PlayerSettingsSheet()
-                .presentationDetents([.medium])
+            PlayerSettingsSheet(
+                currentQuality: $currentQuality,
+                availableQualities: availableQualities
+            ) { quality in
+                switchQuality(to: quality)
+            }
+            .presentationDetents([.medium, .large])
         }
         .onAppear {
             AudioSessionConfigurator.activatePlayback()
@@ -389,6 +407,7 @@ struct VideoPlayerView: View {
                     .font(.title3)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel(showEpisodeList ? "Скрыть список серий" : "Список серий")
 
             VStack(spacing: 2) {
                 Text(session.releaseTitle)
@@ -407,6 +426,8 @@ struct VideoPlayerView: View {
             }
             .frame(maxWidth: .infinity)
             .allowsHitTesting(false)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(session.releaseTitle), \(currentEpisode.playerEpisodeTitle), серия \(currentIndex + 1) из \(session.totalEpisodes), \(currentQuality.rawValue)")
 
             Button {
                 showSettings = true
@@ -416,9 +437,11 @@ struct VideoPlayerView: View {
                     .font(.title3)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Настройки плеера")
 
             Button("Закрыть") { closePlayer() }
                 .font(.subheadline.weight(.semibold))
+                .accessibilityLabel("Закрыть плеер")
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
@@ -435,7 +458,11 @@ struct VideoPlayerView: View {
 
     private var centerControls: some View {
         HStack(spacing: 48) {
-            episodeButton(systemName: "backward.fill", enabled: currentIndex > 0) {
+            episodeButton(
+                systemName: "backward.fill",
+                enabled: currentIndex > 0,
+                accessibilityLabel: "Предыдущая серия"
+            ) {
                 switchToEpisode(at: currentIndex - 1)
             }
 
@@ -448,8 +475,13 @@ struct VideoPlayerView: View {
                     .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(progress.isPlaying ? "Пауза" : "Воспроизведение")
 
-            episodeButton(systemName: "forward.fill", enabled: currentIndex < session.episodes.count - 1) {
+            episodeButton(
+                systemName: "forward.fill",
+                enabled: currentIndex < session.episodes.count - 1,
+                accessibilityLabel: "Следующая серия"
+            ) {
                 switchToEpisode(at: currentIndex + 1)
             }
         }
@@ -480,6 +512,8 @@ struct VideoPlayerView: View {
                     }
                 )
                 .tint(.white)
+                .accessibilityLabel("Позиция воспроизведения")
+                .accessibilityValue(formatTime(displayedTime))
 
                 Button {
                     showRemainingTime.toggle()
@@ -490,6 +524,8 @@ struct VideoPlayerView: View {
                         .frame(width: 52, alignment: .trailing)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(showRemainingTime ? "Оставшееся время" : "Длительность")
+                .accessibilityHint("Переключить отображение времени")
             }
         }
         .foregroundStyle(.white)
@@ -548,6 +584,8 @@ struct VideoPlayerView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Не пропускать")
+        .accessibilityHint("Отменить автопропуск опенинга или эндинга")
     }
 
     private var episodeListPanel: some View {
@@ -608,6 +646,7 @@ struct VideoPlayerView: View {
                             .padding(.horizontal)
                             .padding(.vertical, 10)
                         }
+                        .accessibilityLabel(index == currentIndex ? "\(episode.displayTitle), сейчас играет" : episode.displayTitle)
                         Divider().overlay(.white.opacity(0.15))
                     }
                 }
@@ -624,7 +663,12 @@ struct VideoPlayerView: View {
         }
     }
 
-    private func episodeButton(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func episodeButton(
+        systemName: String,
+        enabled: Bool,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: {
             action()
             scheduleHideControls()
@@ -639,6 +683,7 @@ struct VideoPlayerView: View {
         .opacity(enabled ? 1 : 0.35)
         .buttonStyle(.plain)
         .foregroundStyle(.white)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func toggleControls() {
@@ -726,19 +771,19 @@ struct VideoPlayerView: View {
         scrubTime = clamped
     }
 
-    private func restorePlaybackPosition(_ seconds: Double, on player: AVPlayer) {
-        guard seconds > 5 else { return }
+    private func restorePlaybackPosition(_ seconds: Double, on player: AVPlayer, force: Bool = false) {
+        guard force || seconds > 5 else { return }
 
         let performSeek = {
             let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .invalid)
             let clamped = duration.isFinite && duration > 0 ? min(seconds, duration) : seconds
-            let target = CMTime(seconds: clamped, preferredTimescale: 600)
+            let target = CMTime(seconds: max(clamped, 0), preferredTimescale: 600)
             player.seek(to: target)
             if duration.isFinite, duration > 0 {
                 progress.duration = duration
             }
-            progress.currentTime = clamped
-            scrubTime = clamped
+            progress.currentTime = max(clamped, 0)
+            scrubTime = max(clamped, 0)
         }
 
         let duration = CMTimeGetSeconds(player.currentItem?.duration ?? .invalid)
@@ -766,7 +811,37 @@ struct VideoPlayerView: View {
         guard session.episodes.indices.contains(index), index != currentIndex else { return }
         saveWatchProgress()
         currentIndex = index
+        if let preferred = preferredQuality(for: session.episodes[index]) {
+            currentQuality = preferred
+        }
         loadEpisode(at: index)
+    }
+
+    private func switchQuality(to quality: VideoQuality) {
+        guard quality != currentQuality else { return }
+        guard availableQualities.contains(quality) || quality.streamURL(for: currentEpisode) != nil
+                || downloadManager.isDownloaded(episodeId: currentEpisode.id, quality: quality) else {
+            return
+        }
+        let savedTime = progress.currentTime
+        let wasPlaying = progress.isPlaying
+        saveWatchProgress()
+        currentQuality = quality
+        loadEpisode(at: currentIndex, seekTo: savedTime, autoPlay: wasPlaying)
+    }
+
+    private func preferredQuality(for episode: Episode) -> VideoQuality? {
+        if session.preferOffline,
+           downloadManager.isDownloaded(episodeId: episode.id, quality: currentQuality) {
+            return currentQuality
+        }
+        if currentQuality.streamURL(for: episode) != nil {
+            return currentQuality
+        }
+        return episode.availableStreamQualities().first
+            ?? VideoQuality.allCases.first {
+                downloadManager.isDownloaded(episodeId: episode.id, quality: $0)
+            }
     }
 
     private func closePlayer() {
@@ -775,7 +850,7 @@ struct VideoPlayerView: View {
         }
     }
 
-    private func loadEpisode(at index: Int) {
+    private func loadEpisode(at index: Int, seekTo: Double? = nil, autoPlay: Bool = true) {
         let episode = session.episodes[index]
         guard let url = playbackURL(for: episode) else { return }
 
@@ -786,7 +861,7 @@ struct VideoPlayerView: View {
         resetSkipState()
         didTriggerAutoNext = false
 
-        let savedPosition = WatchProgressStore.shared.position(for: episode.id) ?? 0
+        let savedPosition = seekTo ?? (WatchProgressStore.shared.position(for: episode.id) ?? 0)
 
         player?.pause()
         let item = AVPlayerItem(url: url)
@@ -809,22 +884,33 @@ struct VideoPlayerView: View {
             player.replaceCurrentItem(with: item)
             progress.observe(player: player) { isScrubbing }
             configureSkipObserver(for: player, episode: episode)
-            if savedPosition > 5 {
-                restorePlaybackPosition(savedPosition, on: player)
+            if savedPosition > 5 || seekTo != nil {
+                restorePlaybackPosition(max(savedPosition, 0), on: player, force: seekTo != nil)
             }
-            player.rate = normalPlaybackRate
-            player.play()
+            if autoPlay {
+                player.rate = normalPlaybackRate
+                player.play()
+                progress.isPlaying = true
+            } else {
+                player.pause()
+                progress.isPlaying = false
+            }
         } else {
             let newPlayer = AVPlayer(playerItem: item)
             player = newPlayer
             progress.observe(player: newPlayer) { isScrubbing }
             configureSkipObserver(for: newPlayer, episode: episode)
-            if savedPosition > 5 {
-                restorePlaybackPosition(savedPosition, on: newPlayer)
+            if savedPosition > 5 || seekTo != nil {
+                restorePlaybackPosition(max(savedPosition, 0), on: newPlayer, force: seekTo != nil)
             }
-            newPlayer.play()
+            if autoPlay {
+                newPlayer.play()
+                progress.isPlaying = true
+            } else {
+                newPlayer.pause()
+                progress.isPlaying = false
+            }
         }
-        progress.isPlaying = true
         scheduleProgressSaving()
     }
 
@@ -1013,17 +1099,20 @@ struct VideoPlayerView: View {
     }
 
     private func playbackURL(for episode: Episode) -> URL? {
-        if session.preferOffline,
-           let offline = downloadManager.localPlaybackURL(for: episode.id, quality: session.quality) {
+        if let offline = downloadManager.localPlaybackURL(for: episode.id, quality: currentQuality) {
             return offline
         }
-        return session.quality.streamURL(for: episode)
+        return currentQuality.streamURL(for: episode)
     }
 }
 
 // MARK: - Player settings sheet
 
 private struct PlayerSettingsSheet: View {
+    @Binding var currentQuality: VideoQuality
+    let availableQualities: [VideoQuality]
+    let onQualityChange: (VideoQuality) -> Void
+
     @ObservedObject private var settings = PlayerSettings.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -1031,6 +1120,21 @@ private struct PlayerSettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    if !availableQualities.isEmpty {
+                        Picker(
+                            "Качество",
+                            selection: Binding(
+                                get: { currentQuality },
+                                set: { onQualityChange($0) }
+                            )
+                        ) {
+                            ForEach(availableQualities) { quality in
+                                Text(quality.rawValue).tag(quality)
+                            }
+                        }
+                        .accessibilityLabel("Качество видео")
+                    }
+
                     Picker("Шаг перемотки", selection: $settings.seekInterval) {
                         ForEach(SeekInterval.allCases) { interval in
                             Text(interval.title).tag(interval)

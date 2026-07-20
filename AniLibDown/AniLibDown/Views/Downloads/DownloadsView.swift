@@ -28,7 +28,17 @@ struct DownloadsView: View {
                                 } label: {
                                     Label("Удалить", systemImage: "trash")
                                 }
+
+                                if group.failedCount > 0 {
+                                    Button {
+                                        downloadManager.retryFailed(in: group)
+                                    } label: {
+                                        Label("Повторить", systemImage: "arrow.clockwise")
+                                    }
+                                    .tint(.orange)
+                                }
                             }
+                            .accessibilityHint(group.failedCount > 0 ? "Свайп влево: повторить ошибки или удалить" : "Свайп влево: удалить")
                         }
                     }
                     .listStyle(.plain)
@@ -78,11 +88,13 @@ private struct DownloadGroupRow: View {
                     PosterImage(path: posterPath, cornerRadius: 8)
                         .frame(width: 48, height: 68)
                         .clipped()
+                        .accessibilityHidden(true)
                 } else {
                     Image(systemName: "film.stack")
                         .font(.title2)
                         .foregroundStyle(.blue)
                         .frame(width: 48, height: 68)
+                        .accessibilityHidden(true)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -92,7 +104,7 @@ private struct DownloadGroupRow: View {
                         .multilineTextAlignment(.leading)
                     Text(subtitle)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(group.failedCount > 0 ? .orange : .secondary)
                 }
 
                 Spacer()
@@ -101,12 +113,16 @@ private struct DownloadGroupRow: View {
                     Image(systemName: "play.circle.fill")
                         .font(.title2)
                         .foregroundStyle(Color.accentColor)
+                        .accessibilityHidden(true)
                 }
             }
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
         .disabled(group.completedCount == 0)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(group.releaseTitle), \(subtitle)")
+        .accessibilityHint(group.completedCount > 0 ? "Воспроизвести скачанные серии" : "Нет готовых серий для просмотра")
     }
 
     private var subtitle: String {
@@ -116,6 +132,9 @@ private struct DownloadGroupRow: View {
         }
         if group.activeCount > 0 {
             parts.append("загружается: \(group.activeCount)")
+        }
+        if group.failedCount > 0 {
+            parts.append("ошибок: \(group.failedCount)")
         }
         return parts.joined(separator: " • ")
     }
