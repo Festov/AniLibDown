@@ -141,7 +141,7 @@ struct CollectionView: View {
                     guestContent
                 }
             }
-            .navigationTitle("Коллекция")
+            .navigationTitle(L10n.collection)
             .navigationDestination(for: Int.self) { releaseId in
                 ReleaseDetailView(releaseId: releaseId)
             }
@@ -166,6 +166,7 @@ struct CollectionView: View {
         } actions: {
             Button("Войти") { showLogin = true }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Войти в аккаунт AniLiberty")
         }
     }
 
@@ -186,6 +187,7 @@ struct CollectionView: View {
             .font(.caption)
             .padding(.horizontal)
             .padding(.vertical, 8)
+            .accessibilityLabel("Тип коллекции")
 
             Group {
                 if (store.isLoading || store.isRefreshing) && store.releases.isEmpty {
@@ -198,11 +200,21 @@ struct CollectionView: View {
                     .listStyle(.plain)
                 } else if store.releases.isEmpty {
                     ScrollView {
-                        ContentUnavailableView(
-                            "Коллекция пуста",
-                            systemImage: "heart",
-                            description: Text(store.errorMessage ?? "Добавьте аниме из карточки релиза")
-                        )
+                        ContentUnavailableView {
+                            Label(
+                                store.errorMessage == nil ? "Коллекция пуста" : "Не удалось загрузить",
+                                systemImage: store.errorMessage == nil ? "heart" : "wifi.exclamationmark"
+                            )
+                        } description: {
+                            Text(store.errorMessage ?? "Добавьте аниме из карточки релиза")
+                        } actions: {
+                            if store.errorMessage != nil {
+                                Button("Повторить") {
+                                    Task { await store.refresh(type: store.selectedType) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
                         .frame(maxWidth: .infinity, minHeight: 360)
                     }
                 } else {
@@ -239,6 +251,12 @@ struct CollectionView: View {
                                 .padding(10)
                                 .background(.ultraThinMaterial)
                                 .clipShape(Capsule())
+                        }
+                    }
+                    .overlay(alignment: .top) {
+                        if let error = store.errorMessage, !store.releases.isEmpty {
+                            ErrorBanner(message: error)
+                                .padding()
                         }
                     }
                 }

@@ -43,6 +43,25 @@
 		T1B002 /* VideoQualityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F002 /* VideoQualityTests.swift */; };
 		T1B003 /* WatchProgressStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F003 /* WatchProgressStoreTests.swift */; };
 		T1B004 /* DownloadReleaseGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F004 /* DownloadReleaseGroupTests.swift */; };
+		V2B001 /* AppLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F001 /* AppLog.swift */; };
+		V2B002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F002 /* NetworkMonitor.swift */; };
+		V2B003 /* DownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F003 /* DownloadSettings.swift */; };
+		V2B004 /* SearchHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F004 /* SearchHistoryStore.swift */; };
+		V2B005 /* ContinueWatchingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F005 /* ContinueWatchingStore.swift */; };
+		V2B006 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F006 /* NotificationManager.swift */; };
+		V2B007 /* APIClientProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F007 /* APIClientProtocol.swift */; };
+		V2B008 /* AppStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F008 /* AppStrings.swift */; };
+		V2B009 /* ToastPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F009 /* ToastPresenter.swift */; };
+		V2B010 /* PlayerPiPController.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F010 /* PlayerPiPController.swift */; };
+		V2B011 /* ReleaseDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F011 /* ReleaseDetailViewModel.swift */; };
+		V2B012 /* EpisodeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F012 /* EpisodeRow.swift */; };
+		V2B013 /* ShikimoriReleaseSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F013 /* ShikimoriReleaseSection.swift */; };
+		V2B014 /* ContinueWatchingSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F014 /* ContinueWatchingSection.swift */; };
+		T1B005 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F005 /* APIClientTests.swift */; };
+		T1B006 /* CatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F006 /* CatalogStoreTests.swift */; };
+		T1B007 /* SearchHistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F007 /* SearchHistoryStoreTests.swift */; };
+		T1B008 /* ShikimoriLinkStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F008 /* ShikimoriLinkStoreTests.swift */; };
+				V2B016 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F016 /* AppVersion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -85,6 +104,25 @@
 		T1F002 /* VideoQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoQualityTests.swift; sourceTree = "<group>"; };
 		T1F003 /* WatchProgressStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProgressStoreTests.swift; sourceTree = "<group>"; };
 		T1F004 /* DownloadReleaseGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadReleaseGroupTests.swift; sourceTree = "<group>"; };
+		V2F001 /* AppLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppLog.swift"; sourceTree = "<group>"; };
+		V2F002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/NetworkMonitor.swift"; sourceTree = "<group>"; };
+		V2F003 /* DownloadSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadSettings.swift"; sourceTree = "<group>"; };
+		V2F004 /* SearchHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/SearchHistoryStore.swift"; sourceTree = "<group>"; };
+		V2F005 /* ContinueWatchingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/ContinueWatchingStore.swift"; sourceTree = "<group>"; };
+		V2F006 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/NotificationManager.swift"; sourceTree = "<group>"; };
+		V2F007 /* APIClientProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/APIClientProtocol.swift"; sourceTree = "<group>"; };
+		V2F008 /* AppStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppStrings.swift"; sourceTree = "<group>"; };
+		V2F009 /* ToastPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Components/ToastPresenter.swift"; sourceTree = "<group>"; };
+		V2F010 /* PlayerPiPController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerPiPController.swift"; sourceTree = "<group>"; };
+		V2F011 /* ReleaseDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseDetailViewModel.swift"; sourceTree = "<group>"; };
+		V2F012 /* EpisodeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/EpisodeRow.swift"; sourceTree = "<group>"; };
+		V2F013 /* ShikimoriReleaseSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ShikimoriReleaseSection.swift"; sourceTree = "<group>"; };
+		V2F014 /* ContinueWatchingSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Catalog/ContinueWatchingSection.swift"; sourceTree = "<group>"; };
+		T1F005 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClientTests.swift"; sourceTree = "<group>"; };
+		T1F006 /* CatalogStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CatalogStoreTests.swift"; sourceTree = "<group>"; };
+		T1F007 /* SearchHistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SearchHistoryStoreTests.swift"; sourceTree = "<group>"; };
+		T1F008 /* ShikimoriLinkStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShikimoriLinkStoreTests.swift"; sourceTree = "<group>"; };
+						V2F016 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/AppVersion.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,7 +177,22 @@
 				F1A2B3C4D5E60718293A4B67 /* ShikimoriAuthService.swift */,
 				F1A2B3C4D5E60718293A4B69 /* ShikimoriLinkStore.swift */,
 				F1A2B3C4D5E60718293A4B6D /* ShikimoriSecrets.plist */,
-				2A5DFCE5A0C71DFFA92CD420 /* APIModels.swift */,
+			V2F016 /* AppVersion.swift */,
+			V2F001 /* AppLog.swift */,
+			V2F002 /* NetworkMonitor.swift */,
+			V2F003 /* DownloadSettings.swift */,
+			V2F004 /* SearchHistoryStore.swift */,
+			V2F005 /* ContinueWatchingStore.swift */,
+			V2F006 /* NotificationManager.swift */,
+			V2F007 /* APIClientProtocol.swift */,
+			V2F008 /* AppStrings.swift */,
+			V2F009 /* ToastPresenter.swift */,
+			V2F010 /* PlayerPiPController.swift */,
+			V2F011 /* ReleaseDetailViewModel.swift */,
+			V2F012 /* EpisodeRow.swift */,
+			V2F013 /* ShikimoriReleaseSection.swift */,
+			V2F014 /* ContinueWatchingSection.swift */,
+			2A5DFCE5A0C71DFFA92CD420 /* APIModels.swift */,
 				D4E50EBC37FA17E4DE51630C /* Assets.xcassets */,
 			);
 			path = AniLibDown;
@@ -160,6 +213,10 @@
 				T1F001 /* ReleaseFormattingTests.swift */,
 				T1F002 /* VideoQualityTests.swift */,
 				T1F003 /* WatchProgressStoreTests.swift */,
+				T1F005 /* APIClientTests.swift */,
+				T1F006 /* CatalogStoreTests.swift */,
+				T1F007 /* SearchHistoryStoreTests.swift */,
+				T1F008 /* ShikimoriLinkStoreTests.swift */,
 				T1F004 /* DownloadReleaseGroupTests.swift */,
 			);
 			path = AniLibDownTests;
@@ -322,6 +379,21 @@
 				F1A2B3C4D5E60718293A4B66 /* ShikimoriAuthService.swift in Sources */,
 				F1A2B3C4D5E60718293A4B68 /* ShikimoriLinkStore.swift in Sources */,
 				F1A2B3C4D5E60718293A4B6A /* ShikimoriLinkSearchView.swift in Sources */,
+				V2B016 /* AppVersion.swift in Sources */,
+				V2B001 /* AppLog.swift in Sources */,
+				V2B002 /* NetworkMonitor.swift in Sources */,
+				V2B003 /* DownloadSettings.swift in Sources */,
+				V2B004 /* SearchHistoryStore.swift in Sources */,
+				V2B005 /* ContinueWatchingStore.swift in Sources */,
+				V2B006 /* NotificationManager.swift in Sources */,
+				V2B007 /* APIClientProtocol.swift in Sources */,
+				V2B008 /* AppStrings.swift in Sources */,
+				V2B009 /* ToastPresenter.swift in Sources */,
+				V2B010 /* PlayerPiPController.swift in Sources */,
+				V2B011 /* ReleaseDetailViewModel.swift in Sources */,
+				V2B012 /* EpisodeRow.swift in Sources */,
+				V2B013 /* ShikimoriReleaseSection.swift in Sources */,
+				V2B014 /* ContinueWatchingSection.swift in Sources */,
 				0CC3481B9534AD62C2AA379D /* APIModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -334,6 +406,10 @@
 				T1B001 /* ReleaseFormattingTests.swift in Sources */,
 				T1B002 /* VideoQualityTests.swift in Sources */,
 				T1B003 /* WatchProgressStoreTests.swift in Sources */,
+				T1B005 /* APIClientTests.swift in Sources */,
+				T1B006 /* CatalogStoreTests.swift in Sources */,
+				T1B007 /* SearchHistoryStoreTests.swift in Sources */,
+				T1B008 /* ShikimoriLinkStoreTests.swift in Sources */,
 				T1B004 /* DownloadReleaseGroupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -394,7 +470,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDown;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -423,7 +499,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDown;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -442,7 +518,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDownTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -461,7 +537,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.aniliberty.AniLibDownTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

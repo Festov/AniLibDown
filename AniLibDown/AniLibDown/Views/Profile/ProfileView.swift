@@ -1,13 +1,18 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var playerSettings = PlayerSettings.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
+    @ObservedObject private var downloadSettings = DownloadSettings.shared
     @State private var showLogin = false
     @State private var showCacheConfirmation = false
+    @State private var showShikimoriImporter = false
+    @State private var shikimoriExportURL: URL?
+    @State private var shikimoriImportResult: String?
 
     var body: some View {
         NavigationStack {
@@ -15,11 +20,12 @@ struct ProfileView: View {
                 accountSection
                 appearanceSection
                 playbackSection
+                downloadsSection
                 shikimoriSection
                 storageSection
                 aboutSection
             }
-            .navigationTitle("Профиль")
+            .navigationTitle(L10n.profile)
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -144,6 +150,24 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Downloads
+
+    private var downloadsSection: some View {
+        Section {
+            Toggle("Загрузки только по Wi‑Fi", isOn: $downloadSettings.wifiOnlyDownloads)
+
+            Picker("Параллельные загрузки", selection: $downloadSettings.maxConcurrentDownloads) {
+                ForEach(DownloadSettings.concurrentOptions, id: \.self) { count in
+                    Text("\(count)").tag(count)
+                }
+            }
+        } header: {
+            Text("Загрузки")
+        } footer: {
+            Text("При подключении к Wi‑Fi очередь загрузок продолжится автоматически.")
+        }
+    }
+
     // MARK: - Shikimori
 
     private var shikimoriSection: some View {
@@ -186,10 +210,69 @@ struct ProfileView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+
+            ShareLink(item: shikimoriExportDocument, preview: SharePreview("Shikimori Links")) {
+                Label("Экспорт привязок", systemImage: "square.and.arrow.up")
+            }
+            .disabled(!canExportShikimoriLinks)
+
+            Button {
+                showShikimoriImporter = true
+            } label: {
+                Label("Импорт привязок", systemImage: "square.and.arrow.down")
+            }
+
+            if let shikimoriImportResult {
+                Text(shikimoriImportResult)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         } header: {
             Text("Shikimori")
         } footer: {
-            Text("Позволяет ставить статус списка (смотрю, просмотрено и т.д.) из карточки аниме. Привязки хранятся только на телефоне и сбрасываются при переустановке.")
+            Text("Позволяет ставить статус списка и синхронизировать серии из карточки аниме. Экспорт сохраняет привязки в JSON.")
+        }
+        .fileImporter(
+            isPresented: $showShikimoriImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                importShikimoriLinks(from: url)
+            case .failure(let error):
+                shikimoriImportResult = error.localizedDescription
+            }
+        }
+    }
+
+    private var canExportShikimoriLinks: Bool {
+        !ShikimoriLinkStore.shared.links.isEmpty
+    }
+
+    private var shikimoriExportDocument: URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("shikimori-links.json")
+        do {
+            let data = try ShikimoriLinkStore.shared.exportJSON()
+            try data.write(to: url, options: .atomic)
+        } catch {
+            ToastCenter.shared.show("Не удалось подготовить экспорт", isError: true)
+        }
+        return url
+    }
+
+    private func importShikimoriLinks(from url: URL) {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            let count = try ShikimoriLinkStore.shared.importJSON(data, merge: true)
+            shikimoriImportResult = "Импортировано привязок: \(count)"
+            ToastCenter.shared.show("Импортировано: \(count)")
+        } catch {
+            shikimoriImportResult = error.localizedDescription
+            ToastCenter.shared.show(error.localizedDescription, isError: true)
         }
     }
 
@@ -221,7 +304,7 @@ struct ProfileView: View {
 
     private var aboutSection: some View {
         Section {
-            LabeledContent("Версия", value: AppSettings.appVersion)
+            LabeledContent("Версия", value: AppSettings.versionDisplay)
         } header: {
             Text("О приложении")
         }

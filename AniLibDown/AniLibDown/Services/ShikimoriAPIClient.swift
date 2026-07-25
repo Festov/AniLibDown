@@ -83,6 +83,22 @@ actor ShikimoriAPIClient {
         )
     }
 
+    func updateUserRateEpisodes(
+        rateId: Int,
+        episodes: Int,
+        accessToken: String
+    ) async throws -> ShikimoriUserRate {
+        let payload = ShikimoriUserRateUpdatePayload(
+            userRate: ShikimoriUserRateUpdateBody(episodes: episodes)
+        )
+        return try await authorizedRequest(
+            path: "/api/v2/user_rates/\(rateId)",
+            method: "PATCH",
+            accessToken: accessToken,
+            body: payload
+        )
+    }
+
     func exchangeAuthorizationCode(_ code: String) async throws -> ShikimoriTokenResponse {
         try await tokenRequest(fields: [
             ("grant_type", "authorization_code"),
