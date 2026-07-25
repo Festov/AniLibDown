@@ -44,12 +44,14 @@ struct DownloadsView: View {
                     .listStyle(.plain)
                 }
             }
-            .navigationTitle("Загрузки")
+            .navigationTitle(L10n.downloads)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Очистить кеш", systemImage: "trash") {
                         showPurgeConfirmation = true
                     }
+                    .disabled(downloadManager.groupedReleases.isEmpty)
+                    .accessibilityLabel("Очистить кеш загрузок")
                 }
             }
             .confirmationDialog(

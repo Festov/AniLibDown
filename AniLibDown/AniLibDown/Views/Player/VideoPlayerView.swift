@@ -27,15 +27,22 @@ private final class PlayerContainerView: UIView {
 
 private struct PlayerLayerView: UIViewRepresentable {
     let player: AVPlayer
+    var onLayerReady: ((AVPlayerLayer) -> Void)?
 
     func makeUIView(context: Context) -> PlayerContainerView {
         let view = PlayerContainerView()
         view.player = player
+        DispatchQueue.main.async {
+            onLayerReady?(view.playerLayer)
+        }
         return view
     }
 
     func updateUIView(_ uiView: PlayerContainerView, context: Context) {
         uiView.player = player
+        DispatchQueue.main.async {
+            onLayerReady?(uiView.playerLayer)
+        }
     }
 }
 
@@ -205,6 +212,7 @@ struct VideoPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var downloadManager: DownloadManager
     @ObservedObject private var playerSettings = PlayerSettings.shared
+    @StateObject private var pipController = PlayerPiPController()
 
     @StateObject private var progress = PlaybackProgress()
     @State private var currentIndex: Int
@@ -232,6 +240,9 @@ struct VideoPlayerView: View {
     @State private var skipPromptProgress: CGFloat = 0
     @State private var skipPromptTask: Task<Void, Never>?
     @State private var declinedSkipSegments: Set<String> = []
+    @State private var subtitleOptions: [AVMediaSelectionOption] = []
+    @State private var selectedSubtitleOption: AVMediaSelectionOption?
+    @State private var didSyncShikimoriEpisode = false
 
     init(session: PlayerSession) {
         self.session = session
@@ -270,7 +281,9 @@ struct VideoPlayerView: View {
             Color.black.ignoresSafeArea()
 
             if let player {
-                PlayerLayerView(player: player)
+                PlayerLayerView(player: player) { layer in
+                    pipController.attach(to: layer)
+                }
                     .ignoresSafeArea()
                     .opacity(playerOpacity)
             } else {
@@ -343,10 +356,14 @@ struct VideoPlayerView: View {
         .sheet(isPresented: $showSettings) {
             PlayerSettingsSheet(
                 currentQuality: $currentQuality,
-                availableQualities: availableQualities
-            ) { quality in
-                switchQuality(to: quality)
-            }
+                availableQualities: availableQualities,
+                subtitleOptions: subtitleOptions,
+                selectedSubtitleOption: $selectedSubtitleOption,
+                onQualityChange: { quality in
+                    switchQuality(to: quality)
+                },
+                onSubtitleChange: applySubtitleOption
+            )
             .presentationDetents([.medium, .large])
         }
         .onAppear {
@@ -438,6 +455,24 @@ struct VideoPlayerView: View {
                     .frame(width: 44, height: 44)
             }
             .accessibilityLabel("Настройки плеера")
+
+            if AVPictureInPictureController.isPictureInPictureSupported() {
+                Button {
+                    pipController.togglePictureInPicture()
+                    scheduleHideControls()
+                } label: {
+                    Image(systemName: pipController.isPictureInPictureActive ? "pip.exit" : "pip.enter")
+                        .font(.title3)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Картинка в картинке")
+            }
+
+            if let player {
+                AirPlayRoutePicker()
+                    .frame(width: 44, height: 44)
+                    .accessibilityLabel("AirPlay")
+            }
 
             Button("Закрыть") { closePlayer() }
                 .font(.subheadline.weight(.semibold))
@@ -852,7 +887,14 @@ struct VideoPlayerView: View {
 
     private func loadEpisode(at index: Int, seekTo: Double? = nil, autoPlay: Bool = true) {
         let episode = session.episodes[index]
-        guard let url = playbackURL(for: episode) else { return }
+        guard let resolved = resolvePlayback(for: episode) else {
+            ToastCenter.shared.show("Нет доступного видео для этой серии", isError: true)
+            return
+        }
+        let url = resolved.url
+        if resolved.quality != currentQuality {
+            currentQuality = resolved.quality
+        }
 
         if let player {
             progress.detach(from: player)
@@ -881,6 +923,7 @@ struct VideoPlayerView: View {
         }
 
         if let player {
+            player.allowsExternalPlayback = true
             player.replaceCurrentItem(with: item)
             progress.observe(player: player) { isScrubbing }
             configureSkipObserver(for: player, episode: episode)
@@ -897,6 +940,8 @@ struct VideoPlayerView: View {
             }
         } else {
             let newPlayer = AVPlayer(playerItem: item)
+            newPlayer.allowsExternalPlayback = true
+            newPlayer.usesExternalPlaybackWhileExternalScreenIsActive = true
             player = newPlayer
             progress.observe(player: newPlayer) { isScrubbing }
             configureSkipObserver(for: newPlayer, episode: episode)
@@ -911,7 +956,37 @@ struct VideoPlayerView: View {
                 progress.isPlaying = false
             }
         }
+        loadSubtitleOptions(for: item)
+        didSyncShikimoriEpisode = false
         scheduleProgressSaving()
+    }
+
+    private func loadSubtitleOptions(for item: AVPlayerItem) {
+        Task {
+            guard let group = try? await item.asset.loadMediaSelectionGroup(for: .legible) else {
+                await MainActor.run {
+                    subtitleOptions = []
+                    selectedSubtitleOption = nil
+                }
+                return
+            }
+            let options = group.options
+            await MainActor.run {
+                subtitleOptions = options
+                selectedSubtitleOption = item.currentMediaSelection.selectedMediaOption(in: group)
+            }
+        }
+    }
+
+    private func applySubtitleOption(_ option: AVMediaSelectionOption?) {
+        guard let player, let item = player.currentItem else { return }
+        Task {
+            guard let group = try? await item.asset.loadMediaSelectionGroup(for: .legible) else { return }
+            await MainActor.run {
+                item.select(option, in: group)
+                selectedSubtitleOption = option
+            }
+        }
     }
 
     private func configureSkipObserver(for player: AVPlayer, episode: Episode) {
@@ -1077,11 +1152,31 @@ struct VideoPlayerView: View {
         let nearEnd = progress.duration > 0 && progress.currentTime >= progress.duration - 10
         if nearEnd {
             WatchProgressStore.shared.clearPosition(for: currentEpisode.id)
+            syncShikimoriEpisodeIfNeeded()
         } else {
+            guard session.releaseId > 0 else { return }
             WatchProgressStore.shared.save(
                 position: progress.currentTime,
                 episodeId: currentEpisode.id,
-                releaseId: session.releaseId
+                releaseId: session.releaseId,
+                releaseTitle: session.releaseTitle,
+                posterPath: session.posterPath,
+                episodeTitle: currentEpisode.displayTitle,
+                duration: currentEpisode.duration
+            )
+        }
+    }
+
+    private func syncShikimoriEpisodeIfNeeded() {
+        guard !didSyncShikimoriEpisode,
+              session.releaseId > 0,
+              ShikimoriAuthService.shared.isAuthenticated,
+              let link = ShikimoriLinkStore.shared.link(for: session.releaseId) else { return }
+        didSyncShikimoriEpisode = true
+        Task {
+            await ShikimoriAuthService.shared.syncEpisodeCount(
+                animeId: link.animeId,
+                episodeOrdinal: Int(currentEpisode.ordinal.rounded(.towardZero))
             )
         }
     }
@@ -1098,11 +1193,26 @@ struct VideoPlayerView: View {
         return String(format: "%d:%02d", minutes, secs)
     }
 
-    private func playbackURL(for episode: Episode) -> URL? {
-        if let offline = downloadManager.localPlaybackURL(for: episode.id, quality: currentQuality) {
+    private func resolvePlayback(for episode: Episode) -> (url: URL, quality: VideoQuality)? {
+        if session.preferOffline,
+           let offline = downloadManager.anyLocalPlaybackURL(for: episode.id, preferred: currentQuality) {
             return offline
         }
-        return currentQuality.streamURL(for: episode)
+        if let offline = downloadManager.localPlaybackURL(for: episode.id, quality: currentQuality) {
+            return (offline, currentQuality)
+        }
+        if let online = currentQuality.streamURL(for: episode) {
+            return (online, currentQuality)
+        }
+        if let fallback = episode.availableStreamQualities().first,
+           let online = fallback.streamURL(for: episode) {
+            return (online, fallback)
+        }
+        return downloadManager.anyLocalPlaybackURL(for: episode.id, preferred: currentQuality)
+    }
+
+    private func playbackURL(for episode: Episode) -> URL? {
+        resolvePlayback(for: episode)?.url
     }
 }
 
@@ -1111,7 +1221,10 @@ struct VideoPlayerView: View {
 private struct PlayerSettingsSheet: View {
     @Binding var currentQuality: VideoQuality
     let availableQualities: [VideoQuality]
+    let subtitleOptions: [AVMediaSelectionOption]
+    @Binding var selectedSubtitleOption: AVMediaSelectionOption?
     let onQualityChange: (VideoQuality) -> Void
+    let onSubtitleChange: (AVMediaSelectionOption?) -> Void
 
     @ObservedObject private var settings = PlayerSettings.shared
     @Environment(\.dismiss) private var dismiss
@@ -1133,6 +1246,21 @@ private struct PlayerSettingsSheet: View {
                             }
                         }
                         .accessibilityLabel("Качество видео")
+                    }
+
+                    if !subtitleOptions.isEmpty {
+                        Picker(
+                            "Субтитры",
+                            selection: Binding(
+                                get: { selectedSubtitleOption },
+                                set: { onSubtitleChange($0) }
+                            )
+                        ) {
+                            Text("Выкл").tag(Optional<AVMediaSelectionOption>.none)
+                            ForEach(subtitleOptions, id: \.self) { option in
+                                Text(option.displayName).tag(Optional(option))
+                            }
+                        }
                     }
 
                     Picker("Шаг перемотки", selection: $settings.seekInterval) {
@@ -1160,4 +1288,15 @@ private struct PlayerSettingsSheet: View {
             }
         }
     }
+}
+
+private struct AirPlayRoutePicker: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let view = AVRoutePickerView()
+        view.tintColor = .white
+        view.activeTintColor = .white
+        return view
+    }
+
+    func updateUIView(_ uiView: AVRoutePickerView, context: Context) {}
 }

@@ -1,0 +1,22 @@
+disabled_rules:
+  - trailing_whitespace
+  - todo
+opt_in_rules:
+  - empty_count
+  - explicit_init
+line_length:
+  warning: 140
+  error: 200
+file_length:
+  warning: 900
+  error: 1400
+type_body_length:
+  warning: 400
+  error: 800
+function_body_length:
+  warning: 80
+  error: 140
+excluded:
+  - DerivedData
+  - dist
+  - build

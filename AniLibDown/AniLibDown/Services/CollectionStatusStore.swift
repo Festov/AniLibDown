@@ -22,7 +22,8 @@ final class CollectionStatusStore: ObservableObject {
             }
             memberships = map
         } catch {
-            memberships = [:]
+            // Keep last-known memberships on transient network errors.
+            AppLog.api.error("Collection status refresh failed: \(error.localizedDescription)")
         }
     }
 
