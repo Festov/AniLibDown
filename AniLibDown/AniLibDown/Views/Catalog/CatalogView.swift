@@ -48,22 +48,6 @@ struct CatalogView: View {
                             .listRowBackground(Color.clear)
                         }
 
-                        if store.searchText.isEmpty, !searchHistory.queries.isEmpty {
-                            Section(L10n.searchHistory) {
-                                ForEach(searchHistory.queries, id: \.self) { query in
-                                    Button(query) {
-                                        store.searchText = query
-                                        store.scheduleSearch()
-                                    }
-                                    .accessibilityLabel("Поиск: \(query)")
-                                    .accessibilityHint("Свайп влево для удаления")
-                                }
-                                .onDelete { indexSet in
-                                    indexSet.map { searchHistory.queries[$0] }.forEach(searchHistory.remove)
-                                }
-                            }
-                        }
-
                         ForEach(store.releases) { release in
                             NavigationLink(value: release.id) {
                                 ReleaseRowView(
@@ -101,6 +85,17 @@ struct CatalogView: View {
             }
             .navigationTitle(L10n.catalog)
             .searchable(text: $store.searchText, prompt: "Поиск аниме")
+            .searchSuggestions {
+                if !searchHistory.queries.isEmpty {
+                    Section(L10n.searchHistory) {
+                        ForEach(searchHistory.queries, id: \.self) { query in
+                            Text(query)
+                                .searchCompletion(query)
+                                .accessibilityLabel("Поиск: \(query)")
+                        }
+                    }
+                }
+            }
             .onChange(of: store.searchText) { _, _ in
                 store.scheduleSearch()
             }
