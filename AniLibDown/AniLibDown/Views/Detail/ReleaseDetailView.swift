@@ -262,12 +262,18 @@ struct ReleaseDetailView: View {
     private func episodeAlertButton(for release: ReleaseDetail) -> some View {
         let subscribed = episodeAlerts.isSubscribed(releaseId: release.id)
         Button {
-            let seed = release.episodes.max(by: { $0.ordinal < $1.ordinal })?.id
+            let latest = release.episodes.max(by: { $0.ordinal < $1.ordinal })
+            let seed = latest?.id
+            let nextNumber: Int? = {
+                guard let latest else { return 1 }
+                return Int(latest.ordinal.rounded(.towardZero)) + 1
+            }()
             episodeAlerts.toggleSubscription(
                 releaseId: release.id,
                 title: release.name.main,
                 posterPath: release.poster?.displayURL,
                 publishDay: release.publishDay,
+                nextEpisodeNumber: nextNumber,
                 seedEpisodeId: seed
             )
             if !subscribed {

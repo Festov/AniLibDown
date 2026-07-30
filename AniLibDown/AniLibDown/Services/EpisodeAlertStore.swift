@@ -8,6 +8,7 @@ struct EpisodeAlertSubscription: Codable, Hashable, Identifiable {
     let posterPath: String?
     let publishDayValue: Int?
     let publishDayTitle: String?
+    var nextEpisodeNumber: Int?
 }
 
 @MainActor
@@ -42,6 +43,7 @@ final class EpisodeAlertStore: ObservableObject {
                 title: item.release.name.main,
                 posterPath: item.release.poster?.displayURL,
                 publishDay: item.release.publishDay,
+                nextEpisodeNumber: item.nextReleaseEpisodeNumber,
                 seedEpisodeId: item.publishedReleaseEpisode?.id
             )
         }
@@ -52,6 +54,7 @@ final class EpisodeAlertStore: ObservableObject {
         title: String,
         posterPath: String?,
         publishDay: PublishDay?,
+        nextEpisodeNumber: Int? = nil,
         seedEpisodeId: String? = nil
     ) {
         if isSubscribed(releaseId: releaseId) {
@@ -62,6 +65,7 @@ final class EpisodeAlertStore: ObservableObject {
                 title: title,
                 posterPath: posterPath,
                 publishDay: publishDay,
+                nextEpisodeNumber: nextEpisodeNumber,
                 seedEpisodeId: seedEpisodeId
             )
         }
@@ -72,6 +76,7 @@ final class EpisodeAlertStore: ObservableObject {
         title: String,
         posterPath: String?,
         publishDay: PublishDay?,
+        nextEpisodeNumber: Int?,
         seedEpisodeId: String?
     ) {
         guard !isSubscribed(releaseId: releaseId) else { return }
@@ -81,7 +86,8 @@ final class EpisodeAlertStore: ObservableObject {
             title: title,
             posterPath: posterPath,
             publishDayValue: publishDay?.value,
-            publishDayTitle: publishDay?.description
+            publishDayTitle: publishDay?.description,
+            nextEpisodeNumber: nextEpisodeNumber
         )
         subscriptions.append(entry)
         subscriptions.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
@@ -128,6 +134,7 @@ final class EpisodeAlertStore: ObservableObject {
         do {
             let schedule = try await APIClient.shared.getScheduleNow()
             let relevant = relevantItems(from: schedule)
+            let didUpdateNumbers = updateNextEpisodeNumbers(from: schedule)
 
             if !UserDefaults.standard.bool(forKey: Keys.seeded) {
                 for item in relevant {
@@ -137,6 +144,9 @@ final class EpisodeAlertStore: ObservableObject {
                 }
                 UserDefaults.standard.set(true, forKey: Keys.seeded)
                 persist()
+                if didUpdateNumbers {
+                    await rescheduleReminders()
+                }
                 return
             }
 
@@ -147,19 +157,51 @@ final class EpisodeAlertStore: ObservableObject {
 
                 await NotificationManager.shared.notifyNewEpisode(
                     releaseTitle: item.release.name.main,
-                    episodeTitle: episode.displayTitle,
+                    episodeNumber: episode.ordinalFormatted,
                     releaseId: item.release.id
                 )
                 lastNotifiedEpisodeIds[item.release.id] = episode.id
+                if let index = subscriptions.firstIndex(where: { $0.releaseId == item.release.id }) {
+                    let next = item.nextReleaseEpisodeNumber
+                        ?? Int(episode.ordinal.rounded(.towardZero)) + 1
+                    if subscriptions[index].nextEpisodeNumber != next {
+                        subscriptions[index].nextEpisodeNumber = next
+                    }
+                }
                 didNotify = true
             }
 
-            if didNotify {
+            if didNotify || didUpdateNumbers {
                 persist()
+            }
+            if didUpdateNumbers {
+                await rescheduleReminders()
             }
         } catch {
             AppLog.api.error("Episode alert check failed: \(error.localizedDescription)")
         }
+    }
+
+    @discardableResult
+    private func updateNextEpisodeNumbers(from schedule: ScheduleNowResponse) -> Bool {
+        var byId: [Int: Int] = [:]
+        for item in schedule.allItems {
+            if let next = item.nextReleaseEpisodeNumber {
+                byId[item.release.id] = next
+            } else if let published = item.publishedReleaseEpisode {
+                byId[item.release.id] = Int(published.ordinal.rounded(.towardZero)) + 1
+            }
+        }
+
+        var changed = false
+        for index in subscriptions.indices {
+            guard let next = byId[subscriptions[index].releaseId] else { continue }
+            if subscriptions[index].nextEpisodeNumber != next {
+                subscriptions[index].nextEpisodeNumber = next
+                changed = true
+            }
+        }
+        return changed
     }
 
     private func relevantItems(from schedule: ScheduleNowResponse) -> [ScheduleItem] {
