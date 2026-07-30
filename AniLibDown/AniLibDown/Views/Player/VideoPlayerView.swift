@@ -326,14 +326,15 @@ struct VideoPlayerView: View {
             if isFastForwarding {
                 VStack {
                     Label(playerSettings.holdSpeedRate.title, systemImage: "forward.fill")
-                        .font(.title2.weight(.bold))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(.black.opacity(0.6))
+                        .font(.caption.weight(.semibold))
+                        .imageScale(.small)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.black.opacity(0.55))
                         .clipShape(Capsule())
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
-                        .padding(.top, 72)
+                        .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
+                        .padding(.top, 64)
                     Spacer()
                 }
                 .transition(.opacity.combined(with: .scale))
