@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AppTab: String, CaseIterable, Identifiable, Hashable {
     case catalog
+    case schedule
     case collection
     case downloads
     case profile
@@ -11,6 +12,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .catalog: return L10n.catalog
+        case .schedule: return L10n.schedule
         case .collection: return L10n.collection
         case .downloads: return L10n.downloads
         case .profile: return L10n.profile
@@ -20,6 +22,7 @@ enum AppTab: String, CaseIterable, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .catalog: return "books.vertical"
+        case .schedule: return "calendar"
         case .collection: return "heart.text.square"
         case .downloads: return "arrow.down.circle"
         case .profile: return "person.circle"
@@ -65,6 +68,7 @@ struct ContentView: View {
             await authService.restoreSession()
             await CollectionStatusStore.shared.refresh()
             ContinueWatchingStore.shared.reload()
+            await EpisodeAlertStore.shared.checkForNewEpisodes()
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             Task { await CollectionStatusStore.shared.refresh() }
@@ -76,6 +80,7 @@ struct ContentView: View {
             if newPhase == .active {
                 Task { await authService.refreshSessionIfNeeded() }
                 downloadManager.processDownloadQueue()
+                Task { await EpisodeAlertStore.shared.checkForNewEpisodes() }
             }
         }
     }
@@ -83,6 +88,7 @@ struct ContentView: View {
     private var phoneLayout: some View {
         TabView {
             tabRoot(.catalog) { CatalogView() }
+            tabRoot(.schedule) { ScheduleView() }
             tabRoot(.collection) { CollectionView() }
             tabRoot(.downloads) { DownloadsView() }
             tabRoot(.profile) { ProfileView() }
@@ -105,6 +111,7 @@ struct ContentView: View {
         } detail: {
             switch selectedTab {
             case .catalog: CatalogView()
+            case .schedule: ScheduleView()
             case .collection: CollectionView()
             case .downloads: DownloadsView()
             case .profile: ProfileView()
