@@ -763,7 +763,9 @@ struct VideoPlayerView: View {
         isFastForwarding = true
         player.rate = playerSettings.holdSpeedRate.rawValue
         progress.isPlaying = true
-        withAnimation(overlayAnimation) { controlsVisible = true }
+        hideControlsTask?.cancel()
+        // Only the speed badge should show — keep player chrome hidden.
+        withAnimation(overlayAnimation) { controlsVisible = false }
     }
 
     private func endFastForward() {
