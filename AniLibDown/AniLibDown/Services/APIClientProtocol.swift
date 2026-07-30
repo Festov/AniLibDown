@@ -17,6 +17,8 @@ protocol APIClientProtocol: Actor {
     func getRelease(idOrAlias: String) async throws -> ReleaseDetail
     func getRandomReleases(limit: Int) async throws -> [ReleaseSummary]
     func getFranchises(forReleaseId releaseId: Int) async throws -> [Franchise]
+    func getScheduleNow() async throws -> ScheduleNowResponse
+    func getScheduleWeek() async throws -> [ScheduleItem]
     func getCollection(type: CollectionType, page: Int, limit: Int) async throws -> CollectionResponse
     func getCollectionIds() async throws -> [CollectionMembership]
     func addToCollection(releaseId: Int, type: CollectionType) async throws

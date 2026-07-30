@@ -52,6 +52,33 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var episodeNotificationsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(episodeNotificationsEnabled, forKey: "episodeNotificationsEnabled")
+            Task { await EpisodeAlertStore.shared.rescheduleReminders() }
+        }
+    }
+
+    @Published var publishDayRemindersEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(publishDayRemindersEnabled, forKey: "publishDayRemindersEnabled")
+            Task { await EpisodeAlertStore.shared.rescheduleReminders() }
+        }
+    }
+
+    @Published var notifyWatchingCollection: Bool {
+        didSet {
+            UserDefaults.standard.set(notifyWatchingCollection, forKey: "notifyWatchingCollection")
+        }
+    }
+
+    @Published var publishDayReminderHour: Int {
+        didSet {
+            UserDefaults.standard.set(publishDayReminderHour, forKey: "publishDayReminderHour")
+            Task { await EpisodeAlertStore.shared.rescheduleReminders() }
+        }
+    }
+
     static var appVersion: String { AppVersion.short }
 
     static var buildNumber: String { AppVersion.build }
@@ -73,5 +100,23 @@ final class AppSettings: ObservableObject {
         }
         let qualityRaw = UserDefaults.standard.string(forKey: "defaultVideoQuality") ?? VideoQuality.p720.rawValue
         defaultVideoQuality = VideoQuality(rawValue: qualityRaw) ?? .p720
+
+        if UserDefaults.standard.object(forKey: "episodeNotificationsEnabled") == nil {
+            episodeNotificationsEnabled = false
+        } else {
+            episodeNotificationsEnabled = UserDefaults.standard.bool(forKey: "episodeNotificationsEnabled")
+        }
+        if UserDefaults.standard.object(forKey: "publishDayRemindersEnabled") == nil {
+            publishDayRemindersEnabled = true
+        } else {
+            publishDayRemindersEnabled = UserDefaults.standard.bool(forKey: "publishDayRemindersEnabled")
+        }
+        if UserDefaults.standard.object(forKey: "notifyWatchingCollection") == nil {
+            notifyWatchingCollection = true
+        } else {
+            notifyWatchingCollection = UserDefaults.standard.bool(forKey: "notifyWatchingCollection")
+        }
+        let hour = UserDefaults.standard.object(forKey: "publishDayReminderHour") as? Int
+        publishDayReminderHour = min(max(hour ?? 20, 0), 23)
     }
 }
