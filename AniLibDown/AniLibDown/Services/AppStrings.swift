@@ -2,6 +2,7 @@ import Foundation
 
 enum L10n {
     static let catalog = "Каталог"
+    static let schedule = "Расписание"
     static let collection = "Коллекция"
     static let downloads = "Загрузки"
     static let profile = "Профиль"

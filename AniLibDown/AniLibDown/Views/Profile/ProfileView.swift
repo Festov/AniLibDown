@@ -6,6 +6,7 @@ struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var playerSettings = PlayerSettings.shared
+    @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @ObservedObject private var downloadSettings = DownloadSettings.shared
     @State private var showLogin = false
@@ -19,6 +20,7 @@ struct ProfileView: View {
             List {
                 accountSection
                 appearanceSection
+                notificationsSection
                 playbackSection
                 downloadsSection
                 shikimoriSection
@@ -125,6 +127,58 @@ struct ProfileView: View {
             Text("Оформление")
         } footer: {
             Text("Тема меняет светлый/тёмный вид приложения. Заставка показывается при каждом запуске.")
+        }
+    }
+
+    // MARK: - Notifications
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle("Уведомления о сериях", isOn: $appSettings.episodeNotificationsEnabled)
+                .onChange(of: appSettings.episodeNotificationsEnabled) { _, enabled in
+                    if enabled {
+                        Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
+                    }
+                }
+
+            Toggle("Напоминание в день выхода", isOn: $appSettings.publishDayRemindersEnabled)
+                .disabled(!appSettings.episodeNotificationsEnabled)
+
+            Toggle("Учитывать «Смотрю»", isOn: $appSettings.notifyWatchingCollection)
+                .disabled(!appSettings.episodeNotificationsEnabled)
+
+            Picker("Время напоминания", selection: $appSettings.publishDayReminderHour) {
+                ForEach(Array(8...23), id: \.self) { hour in
+                    Text(String(format: "%02d:00", hour)).tag(hour)
+                }
+            }
+            .disabled(!appSettings.episodeNotificationsEnabled || !appSettings.publishDayRemindersEnabled)
+
+            if !episodeAlerts.subscriptions.isEmpty {
+                ForEach(episodeAlerts.subscriptions) { entry in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.title)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                            if let day = entry.publishDayTitle {
+                                Text(day)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Button("Убрать") {
+                            episodeAlerts.unsubscribe(releaseId: entry.releaseId)
+                        }
+                        .font(.caption)
+                    }
+                }
+            }
+        } header: {
+            Text("Уведомления")
+        } footer: {
+            Text("Локальные уведомления работают и через Sideloadly. «Новая серия» проверяется при открытии приложения. Напоминание в день выхода ставится по расписанию AniLiberty без интернета.")
         }
     }
 
