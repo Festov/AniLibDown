@@ -31,16 +31,16 @@ final class NotificationManager {
         }
     }
 
-    func notifyNewEpisode(releaseTitle: String, episodeTitle: String, releaseId: Int) async {
+    func notifyNewEpisode(releaseTitle: String, episodeNumber: String, releaseId: Int) async {
         await requestAuthorizationIfNeeded()
         let content = UNMutableNotificationContent()
-        content.title = "Новая серия"
-        content.body = "\(releaseTitle) — \(episodeTitle)"
+        content.title = "Сегодня новая серия!"
+        content.body = episodeNotificationBody(title: releaseTitle, episodeNumber: episodeNumber)
         content.sound = .default
         content.userInfo = ["releaseId": releaseId]
 
         let request = UNNotificationRequest(
-            identifier: "episode-\(releaseId)-\(episodeTitle.hashValue)",
+            identifier: "episode-\(releaseId)-\(episodeNumber)",
             content: content,
             trigger: nil
         )
@@ -74,9 +74,12 @@ final class NotificationManager {
                   (1...7).contains(dayValue) else { continue }
 
             let content = UNMutableNotificationContent()
-            content.title = "День выхода серии"
-            let dayTitle = subscription.publishDayTitle ?? "сегодня"
-            content.body = "\(subscription.title) — обычно выходит в \(dayTitle.lowercased())"
+            content.title = "Сегодня новая серия!"
+            if let number = subscription.nextEpisodeNumber {
+                content.body = episodeNotificationBody(title: subscription.title, episodeNumber: String(number))
+            } else {
+                content.body = "\(subscription.title). Бегом смотреть!"
+            }
             content.sound = .default
             content.userInfo = ["releaseId": subscription.releaseId]
 
@@ -93,6 +96,10 @@ final class NotificationManager {
             )
             try? await center.add(request)
         }
+    }
+
+    private func episodeNotificationBody(title: String, episodeNumber: String) -> String {
+        "\(title) - \(episodeNumber). Бегом смотреть!"
     }
 
     private func publishDayIdentifier(_ releaseId: Int) -> String {
