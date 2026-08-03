@@ -318,7 +318,10 @@ struct ReleaseDetailView: View {
                         NavigationLink(value: item.releaseId) {
                             ReleaseRowView(
                                 title: summary.name.main,
-                                subtitle: ReleaseFormatting.yearString(summary.year),
+                                subtitle: ReleaseFormatting.listSubtitle(
+                                    isOngoing: summary.isOngoing,
+                                    ReleaseFormatting.yearString(summary.year)
+                                ),
                                 posterPath: summary.poster?.displayURL
                             )
                         }
