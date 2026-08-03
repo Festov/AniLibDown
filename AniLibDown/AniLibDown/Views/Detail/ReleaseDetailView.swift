@@ -364,10 +364,10 @@ struct ReleaseDetailView: View {
                             ReleaseRowView(
                                 title: summary.name.main,
                                 subtitle: ReleaseFormatting.listSubtitle(
-                                    isOngoing: summary.isOngoing,
                                     ReleaseFormatting.yearString(summary.year)
                                 ),
-                                posterPath: summary.poster?.displayURL
+                                posterPath: summary.poster?.displayURL,
+                                isOngoing: summary.isOngoing
                             )
                         }
                         .buttonStyle(.plain)

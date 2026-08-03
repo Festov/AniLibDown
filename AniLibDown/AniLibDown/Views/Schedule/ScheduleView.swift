@@ -99,7 +99,8 @@ struct ScheduleView: View {
                             ReleaseRowView(
                                 title: item.release.name.main,
                                 subtitle: item.subtitle,
-                                posterPath: item.release.poster?.displayURL
+                                posterPath: item.release.poster?.displayURL,
+                                isOngoing: item.release.isOngoing
                             )
                         }
                         subscriptionButton(for: item)

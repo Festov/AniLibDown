@@ -224,10 +224,10 @@ struct CollectionView: View {
                                 ReleaseRowView(
                                     title: release.name.main,
                                     subtitle: ReleaseFormatting.listSubtitle(
-                                        isOngoing: release.isOngoing,
                                         ReleaseFormatting.yearString(release.year)
                                     ),
-                                    posterPath: release.poster?.displayURL
+                                    posterPath: release.poster?.displayURL,
+                                    isOngoing: release.isOngoing
                                 )
                             }
                             .onAppear {
