@@ -223,7 +223,10 @@ struct CollectionView: View {
                             NavigationLink(value: release.id) {
                                 ReleaseRowView(
                                     title: release.name.main,
-                                    subtitle: ReleaseFormatting.yearString(release.year),
+                                    subtitle: ReleaseFormatting.listSubtitle(
+                                        isOngoing: release.isOngoing,
+                                        ReleaseFormatting.yearString(release.year)
+                                    ),
                                     posterPath: release.poster?.displayURL
                                 )
                             }

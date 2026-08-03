@@ -55,4 +55,28 @@ final class ReleaseFormattingTests: XCTestCase {
             .upcoming
         )
     }
+
+    func testOngoingListLabel() {
+        XCTAssertEqual(ReleaseFormatting.ongoingListLabel(isOngoing: true), "Онгоинг")
+        XCTAssertEqual(ReleaseFormatting.ongoingListLabel(isOngoing: false), "")
+    }
+
+    func testListSubtitleIncludesOngoingOnlyWhenTrue() {
+        XCTAssertEqual(
+            ReleaseFormatting.listSubtitle(isOngoing: true, "TV", "2024", "Экшен"),
+            "TV • 2024 • Экшен • Онгоинг"
+        )
+        XCTAssertEqual(
+            ReleaseFormatting.listSubtitle(isOngoing: false, "TV", "2024", "Экшен"),
+            "TV • 2024 • Экшен"
+        )
+        XCTAssertEqual(
+            ReleaseFormatting.listSubtitle(isOngoing: true, "2024"),
+            "2024 • Онгоинг"
+        )
+        XCTAssertEqual(
+            ReleaseFormatting.listSubtitle(isOngoing: false, "2024"),
+            "2024"
+        )
+    }
 }
