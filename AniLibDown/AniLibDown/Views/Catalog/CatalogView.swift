@@ -190,7 +190,12 @@ struct CatalogView: View {
     private func subtitle(for release: ReleaseSummary) -> String {
         let genres = release.genres?.map(\.name).prefix(2).joined(separator: ", ") ?? ""
         let type = release.type?.description ?? ""
-        return [type, ReleaseFormatting.yearString(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
+        return ReleaseFormatting.listSubtitle(
+            isOngoing: release.isOngoing,
+            type,
+            ReleaseFormatting.yearString(release.year),
+            genres
+        )
     }
 
     private func openRandomRelease() async {

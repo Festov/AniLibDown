@@ -123,6 +123,17 @@ enum ReleaseFormatting {
         return .upcoming
     }
 
+    /// In anime lists: show "Онгоинг" only when `isOngoing` is true; otherwise nothing.
+    static func ongoingListLabel(isOngoing: Bool) -> String {
+        isOngoing ? BroadcastStatus.ongoing.title : ""
+    }
+
+    static func listSubtitle(isOngoing: Bool, _ parts: String...) -> String {
+        (parts + [ongoingListLabel(isOngoing: isOngoing)])
+            .filter { !$0.isEmpty }
+            .joined(separator: " • ")
+    }
+
     static func displayEpisodeOrdinal(_ ordinal: Double) -> String {
         guard ordinal > 0 else { return "—" }
         if ordinal < 1 { return "1" }
