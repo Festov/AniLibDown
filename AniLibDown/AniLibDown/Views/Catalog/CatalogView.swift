@@ -53,7 +53,8 @@ struct CatalogView: View {
                                 ReleaseRowView(
                                     title: release.name.main,
                                     subtitle: subtitle(for: release),
-                                    posterPath: release.poster?.displayURL
+                                    posterPath: release.poster?.displayURL,
+                                    isOngoing: release.isOngoing
                                 )
                             }
                             .onAppear {
@@ -191,7 +192,6 @@ struct CatalogView: View {
         let genres = release.genres?.map(\.name).prefix(2).joined(separator: ", ") ?? ""
         let type = release.type?.description ?? ""
         return ReleaseFormatting.listSubtitle(
-            isOngoing: release.isOngoing,
             type,
             ReleaseFormatting.yearString(release.year),
             genres
