@@ -213,10 +213,23 @@ struct PosterFullscreenView: View {
     }
 }
 
+struct OngoingBadge: View {
+    var body: some View {
+        Text(BroadcastStatus.ongoing.title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(Color.orange)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.orange.opacity(0.18), in: Capsule())
+            .accessibilityHidden(true)
+    }
+}
+
 struct ReleaseRowView: View {
     let title: String
     let subtitle: String
     let posterPath: String?
+    var isOngoing: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -230,19 +243,32 @@ struct ReleaseRowView: View {
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(alignment: .center, spacing: 6) {
+                    if isOngoing {
+                        OngoingBadge()
+                    }
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(subtitle)")
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        let ongoing = ReleaseFormatting.ongoingListLabel(isOngoing: isOngoing)
+        return [title, ongoing, subtitle].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 
