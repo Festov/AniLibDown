@@ -123,6 +123,15 @@ enum ReleaseFormatting {
         return .upcoming
     }
 
+    /// Label for the list badge / VoiceOver; empty when not ongoing.
+    static func ongoingListLabel(isOngoing: Bool) -> String {
+        isOngoing ? BroadcastStatus.ongoing.title : ""
+    }
+
+    static func listSubtitle(_ parts: String...) -> String {
+        parts.filter { !$0.isEmpty }.joined(separator: " • ")
+    }
+
     static func displayEpisodeOrdinal(_ ordinal: Double) -> String {
         guard ordinal > 0 else { return "—" }
         if ordinal < 1 { return "1" }
@@ -135,6 +144,17 @@ enum ReleaseFormatting {
 }
 
 // MARK: - Release
+
+struct PublishDay: Codable, Hashable {
+    /// AniLiberty: 1 = понедельник … 7 = воскресенье.
+    let value: Int
+    let description: String
+
+    /// Calendar weekday (Gregorian): 1 = воскресенье … 7 = суббота.
+    var calendarWeekday: Int {
+        value == 7 ? 1 : value + 1
+    }
+}
 
 struct ReleaseSummary: Codable, Identifiable, Hashable {
     let id: Int
@@ -150,10 +170,11 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
     let description: String?
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
+    let publishDay: PublishDay?
 
     enum CodingKeys: String, CodingKey {
         case id, type, year, name, alias, season, poster
-        case isOngoing, isInProduction, ageRating, description, episodesTotal, genres
+        case isOngoing, isInProduction, ageRating, description, episodesTotal, genres, publishDay
     }
 
     init(from decoder: Decoder) throws {
@@ -171,6 +192,7 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
         genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+        publishDay = try container.decodeIfPresent(PublishDay.self, forKey: .publishDay)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -188,6 +210,41 @@ struct ReleaseSummary: Codable, Identifiable, Hashable {
         try container.encodeIfPresent(description, forKey: .description)
         try container.encodeIfPresent(episodesTotal, forKey: .episodesTotal)
         try container.encodeIfPresent(genres, forKey: .genres)
+        try container.encodeIfPresent(publishDay, forKey: .publishDay)
+    }
+}
+
+// MARK: - Schedule
+
+struct ScheduleItem: Codable, Identifiable, Hashable {
+    var id: Int { release.id }
+
+    let release: ReleaseSummary
+    let fullSeasonIsReleased: Bool?
+    let publishedReleaseEpisode: Episode?
+    let nextReleaseEpisodeNumber: Int?
+
+    var subtitle: String {
+        if let episode = publishedReleaseEpisode {
+            return "Вышла серия \(ReleaseFormatting.displayEpisodeOrdinal(episode.ordinal))"
+        }
+        if let next = nextReleaseEpisodeNumber {
+            return "Следующая: \(next)"
+        }
+        if let day = release.publishDay?.description {
+            return day
+        }
+        return "Релиз"
+    }
+}
+
+struct ScheduleNowResponse: Codable {
+    let yesterday: [ScheduleItem]
+    let today: [ScheduleItem]
+    let tomorrow: [ScheduleItem]
+
+    var allItems: [ScheduleItem] {
+        yesterday + today + tomorrow
     }
 }
 
@@ -205,6 +262,7 @@ struct ReleaseDetail: Codable, Identifiable {
     let description: String?
     let episodesTotal: Int?
     let genres: [AnimeGenre]?
+    let publishDay: PublishDay?
     let episodes: [Episode]
 
     init(from decoder: Decoder) throws {
@@ -222,6 +280,7 @@ struct ReleaseDetail: Codable, Identifiable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
         genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
+        publishDay = try container.decodeIfPresent(PublishDay.self, forKey: .publishDay)
         episodes = try container.decode([Episode].self, forKey: .episodes)
     }
 }

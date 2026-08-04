@@ -191,6 +191,14 @@ actor APIClient {
         try await request(path: "anime/franchises/release/\(releaseId)")
     }
 
+    func getScheduleNow() async throws -> ScheduleNowResponse {
+        try await request(path: "anime/schedule/now")
+    }
+
+    func getScheduleWeek() async throws -> [ScheduleItem] {
+        try await request(path: "anime/schedule/week")
+    }
+
     func getCollection(type: CollectionType, page: Int, limit: Int = 20) async throws -> CollectionResponse {
         try await request(
             path: "accounts/users/me/collections/releases",

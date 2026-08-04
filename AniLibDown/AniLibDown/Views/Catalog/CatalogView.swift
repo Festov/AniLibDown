@@ -48,28 +48,13 @@ struct CatalogView: View {
                             .listRowBackground(Color.clear)
                         }
 
-                        if store.searchText.isEmpty, !searchHistory.queries.isEmpty {
-                            Section(L10n.searchHistory) {
-                                ForEach(searchHistory.queries, id: \.self) { query in
-                                    Button(query) {
-                                        store.searchText = query
-                                        store.scheduleSearch()
-                                    }
-                                    .accessibilityLabel("Поиск: \(query)")
-                                    .accessibilityHint("Свайп влево для удаления")
-                                }
-                                .onDelete { indexSet in
-                                    indexSet.map { searchHistory.queries[$0] }.forEach(searchHistory.remove)
-                                }
-                            }
-                        }
-
                         ForEach(store.releases) { release in
                             NavigationLink(value: release.id) {
                                 ReleaseRowView(
                                     title: release.name.main,
                                     subtitle: subtitle(for: release),
-                                    posterPath: release.poster?.displayURL
+                                    posterPath: release.poster?.displayURL,
+                                    isOngoing: release.isOngoing
                                 )
                             }
                             .onAppear {
@@ -101,6 +86,17 @@ struct CatalogView: View {
             }
             .navigationTitle(L10n.catalog)
             .searchable(text: $store.searchText, prompt: "Поиск аниме")
+            .searchSuggestions {
+                if !searchHistory.queries.isEmpty {
+                    Section(L10n.searchHistory) {
+                        ForEach(searchHistory.queries, id: \.self) { query in
+                            Text(query)
+                                .searchCompletion(query)
+                                .accessibilityLabel("Поиск: \(query)")
+                        }
+                    }
+                }
+            }
             .onChange(of: store.searchText) { _, _ in
                 store.scheduleSearch()
             }
@@ -195,7 +191,11 @@ struct CatalogView: View {
     private func subtitle(for release: ReleaseSummary) -> String {
         let genres = release.genres?.map(\.name).prefix(2).joined(separator: ", ") ?? ""
         let type = release.type?.description ?? ""
-        return [type, ReleaseFormatting.yearString(release.year), genres].filter { !$0.isEmpty }.joined(separator: " • ")
+        return ReleaseFormatting.listSubtitle(
+            type,
+            ReleaseFormatting.yearString(release.year),
+            genres
+        )
     }
 
     private func openRandomRelease() async {

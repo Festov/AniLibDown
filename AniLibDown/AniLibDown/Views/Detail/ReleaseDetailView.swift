@@ -6,6 +6,7 @@ struct ReleaseDetailView: View {
     @StateObject private var viewModel = ReleaseDetailViewModel()
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
+    @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var playerSession: PlayerSession?
@@ -207,6 +208,11 @@ struct ReleaseDetailView: View {
                 Text("\(aired) / \(total) \(ReleaseFormatting.episodesWord(for: total))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let day = release.publishDay {
+                    Text("Выходит: \(day.description)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -248,6 +254,45 @@ struct ReleaseDetailView: View {
                 .tint(Color.accentColor)
             }
         }
+
+        episodeAlertButton(for: release)
+    }
+
+    @ViewBuilder
+    private func episodeAlertButton(for release: ReleaseDetail) -> some View {
+        let subscribed = episodeAlerts.isSubscribed(releaseId: release.id)
+        Button {
+            let latest = release.episodes.max(by: { $0.ordinal < $1.ordinal })
+            let seed = latest?.id
+            let nextNumber: Int? = {
+                guard let latest else { return 1 }
+                return Int(latest.ordinal.rounded(.towardZero)) + 1
+            }()
+            episodeAlerts.toggleSubscription(
+                releaseId: release.id,
+                title: release.name.main,
+                posterPath: release.poster?.displayURL,
+                publishDay: release.publishDay,
+                nextEpisodeNumber: nextNumber,
+                seedEpisodeId: seed
+            )
+            if !subscribed {
+                appSettings.episodeNotificationsEnabled = true
+                Task {
+                    await NotificationManager.shared.requestAuthorizationIfNeeded()
+                    await episodeAlerts.rescheduleReminders()
+                }
+            }
+        } label: {
+            Label(
+                subscribed ? "Уведомления включены" : "Напомнить о сериях",
+                systemImage: subscribed ? "bell.fill" : "bell"
+            )
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+        }
+        .buttonStyle(.bordered)
     }
 
     @ViewBuilder
@@ -318,8 +363,11 @@ struct ReleaseDetailView: View {
                         NavigationLink(value: item.releaseId) {
                             ReleaseRowView(
                                 title: summary.name.main,
-                                subtitle: ReleaseFormatting.yearString(summary.year),
-                                posterPath: summary.poster?.displayURL
+                                subtitle: ReleaseFormatting.listSubtitle(
+                                    ReleaseFormatting.yearString(summary.year)
+                                ),
+                                posterPath: summary.poster?.displayURL,
+                                isOngoing: summary.isOngoing
                             )
                         }
                         .buttonStyle(.plain)
