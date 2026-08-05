@@ -63,7 +63,7 @@ actor MockAPIClient: APIClientProtocol {
     }
 
     func getScheduleNow() async throws -> ScheduleNowResponse {
-        ScheduleNowResponse(today: [], yesterday: [], tomorrow: [])
+        ScheduleNowResponse(yesterday: [], today: [], tomorrow: [])
     }
 
     func getScheduleWeek() async throws -> [ScheduleItem] {
