@@ -8,14 +8,10 @@ struct ReleaseDetailView: View {
     @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
-    @EnvironmentObject private var downloadManager: DownloadManager
     @State private var playerSession: PlayerSession?
-    @State private var selectedEpisodeRangeIndex = 0
     @State private var showShikimoriSearch = false
     @State private var showPosterFullscreen = false
     @State private var showLogin = false
-
-    private let episodeRangeSize = 50
 
     private var selectedQuality: VideoQuality {
         appSettings.defaultVideoQuality
@@ -28,7 +24,6 @@ struct ReleaseDetailView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         headerSkeleton
                         descriptionSkeleton
-                        episodesSkeleton
                     }
                     .padding()
                 }
@@ -36,7 +31,7 @@ struct ReleaseDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         header(for: release)
-                        actionButtonsRow(for: release)
+                        actionButtons(for: release)
                         if let error = viewModel.collectionError {
                             Text(error)
                                 .font(.caption)
@@ -52,8 +47,6 @@ struct ReleaseDetailView: View {
                         }
                         descriptionSection(for: release)
                         relatedSection(currentReleaseId: release.id)
-                        downloadAllButton(for: release)
-                        episodesSection(for: release)
                     }
                     .padding()
                 }
@@ -151,22 +144,6 @@ struct ReleaseDetailView: View {
         }
     }
 
-    private var episodesSkeleton: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.gray.opacity(0.22))
-                .frame(width: 70, height: 20)
-                .skeletonShimmer()
-
-            ForEach(0..<4, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.gray.opacity(0.14))
-                    .frame(height: 52)
-                    .skeletonShimmer()
-            }
-        }
-    }
-
     @ViewBuilder
     private func header(for release: ReleaseDetail) -> some View {
         HStack(alignment: .top, spacing: 16) {
@@ -208,7 +185,8 @@ struct ReleaseDetailView: View {
                 Text("\(aired) / \(total) \(ReleaseFormatting.episodesWord(for: total))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                if let day = release.publishDay {
+                // Only for titles AniLiberty is still releasing (including late dubs).
+                if release.isOngoing, let day = release.publishDay {
                     Text("Выходит: \(day.description)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -218,34 +196,61 @@ struct ReleaseDetailView: View {
     }
 
     @ViewBuilder
-    private func actionButtonsRow(for release: ReleaseDetail) -> some View {
+    private func actionButtons(for release: ReleaseDetail) -> some View {
         let resumeEpisode = resumeEpisode(for: release)
 
-        HStack(spacing: 10) {
-            Button {
-                if let episode = resumeEpisode {
-                    play(episode: episode, release: release)
-                }
-            } label: {
-                Label(
-                    resumeEpisode != nil ? "Смотреть" : "Смотреть с начала",
-                    systemImage: "play.fill"
-                )
-                .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
-            .disabled(release.episodes.isEmpty)
-
-            if authService.isAuthenticated {
-                collectionMenuButton(for: release)
-            } else {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 Button {
-                    showLogin = true
+                    if let episode = resumeEpisode {
+                        play(episode: episode, release: release)
+                    }
                 } label: {
-                    Label("Коллекции", systemImage: "heart")
+                    Label(
+                        resumeEpisode != nil ? "Смотреть" : "Смотреть с начала",
+                        systemImage: "play.fill"
+                    )
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+                .disabled(release.episodes.isEmpty)
+
+                if authService.isAuthenticated {
+                    collectionMenuButton(for: release)
+                } else {
+                    Button {
+                        showLogin = true
+                    } label: {
+                        Label("Коллекции", systemImage: "heart")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
+                }
+            }
+
+            HStack(spacing: 10) {
+                NavigationLink {
+                    ReleaseEpisodesView(release: release)
+                } label: {
+                    Label("Все серии", systemImage: "list.bullet")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+                .disabled(release.episodes.isEmpty)
+
+                NavigationLink {
+                    ReleaseTeamView(releaseId: release.id, initialMembers: release.members)
+                } label: {
+                    Label("Команда", systemImage: "person.3.fill")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
@@ -253,9 +258,17 @@ struct ReleaseDetailView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color.accentColor)
             }
-        }
 
-        episodeAlertButton(for: release)
+            if shouldShowEpisodeAlertButton(for: release) {
+                episodeAlertButton(for: release)
+            }
+        }
+    }
+
+    /// Reminders make sense while AniLiberty still releases episodes (including late dubs).
+    /// Keep the control if the user is already subscribed, so they can turn it off.
+    private func shouldShowEpisodeAlertButton(for release: ReleaseDetail) -> Bool {
+        release.isOngoing || episodeAlerts.isSubscribed(releaseId: release.id)
     }
 
     @ViewBuilder
@@ -396,90 +409,6 @@ struct ReleaseDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func downloadAllButton(for release: ReleaseDetail) -> some View {
-        let downloadable = release.episodes.filter { selectedQuality.streamURL(for: $0) != nil }
-        if !downloadable.isEmpty {
-            Button {
-                downloadManager.enqueueAll(
-                    episodes: downloadable,
-                    releaseId: release.id,
-                    releaseTitle: release.name.main,
-                    quality: selectedQuality,
-                    posterPath: release.poster?.displayURL
-                )
-            } label: {
-                Label(
-                    "Скачать все серии (\(downloadable.count))",
-                    systemImage: "arrow.down.circle.fill"
-                )
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentColor)
-        }
-    }
-
-    @ViewBuilder
-    private func episodesSection(for release: ReleaseDetail) -> some View {
-        let ranges = episodeRanges(for: release.episodes.count)
-        let visibleEpisodes = episodes(in: release.episodes, rangeIndex: selectedEpisodeRangeIndex, ranges: ranges)
-
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Серии")
-                .font(.headline)
-
-            if ranges.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(ranges.enumerated()), id: \.offset) { index, range in
-                            Button(range.label) {
-                                selectedEpisodeRangeIndex = index
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(selectedEpisodeRangeIndex == index ? Color.accentColor : .secondary)
-                        }
-                    }
-                }
-            }
-
-            ForEach(visibleEpisodes) { episode in
-                EpisodeRow(
-                    episode: episode,
-                    quality: selectedQuality,
-                    releaseId: release.id,
-                    releaseTitle: release.name.main,
-                    onPlay: { play(episode: episode, release: release) },
-                    onDownload: {
-                        downloadManager.enqueue(
-                            episode: episode,
-                            releaseId: release.id,
-                            releaseTitle: release.name.main,
-                            quality: selectedQuality,
-                            posterPath: release.poster?.displayURL
-                        )
-                    },
-                    onCancelDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.cancel(item: item)
-                        }
-                    },
-                    onDeleteDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.delete(item: item)
-                        }
-                    },
-                    onRetryDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.retry(item: item)
-                        }
-                    }
-                )
-            }
-        }
-    }
-
     private func play(episode: Episode, release: ReleaseDetail) {
         ContinueWatchingStore.shared.updateMetadata(
             releaseId: release.id,
@@ -499,36 +428,5 @@ struct ReleaseDetailView: View {
             episodesTotal: release.episodesTotal,
             posterPath: release.poster?.displayURL
         )
-    }
-
-    private struct EpisodeRange {
-        let start: Int
-        let end: Int
-
-        var label: String { "\(start)-\(end)" }
-    }
-
-    private func episodeRanges(for count: Int) -> [EpisodeRange] {
-        guard count > 100 else {
-            return count > 0 ? [EpisodeRange(start: 1, end: count)] : []
-        }
-
-        var ranges: [EpisodeRange] = []
-        var start = 1
-        while start <= count {
-            let end = min(start + episodeRangeSize - 1, count)
-            ranges.append(EpisodeRange(start: start, end: end))
-            start = end + 1
-        }
-        return ranges
-    }
-
-    private func episodes(in allEpisodes: [Episode], rangeIndex: Int, ranges: [EpisodeRange]) -> [Episode] {
-        guard ranges.indices.contains(rangeIndex) else { return allEpisodes }
-        let range = ranges[rangeIndex]
-        return allEpisodes.filter { episode in
-            let number = Int(episode.ordinal.rounded(.towardZero))
-            return number >= range.start && number <= range.end
-        }
     }
 }

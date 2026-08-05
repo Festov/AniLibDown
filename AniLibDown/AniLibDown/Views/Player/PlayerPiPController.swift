@@ -3,30 +3,20 @@ import UIKit
 
 @MainActor
 final class PlayerPiPController: NSObject, ObservableObject {
-    @Published private(set) var isPictureInPicturePossible = false
     @Published private(set) var isPictureInPictureActive = false
 
     private var pipController: AVPictureInPictureController?
-    private var possibleObservation: NSKeyValueObservation?
 
     func attach(to playerLayer: AVPlayerLayer) {
         guard AVPictureInPictureController.isPictureInPictureSupported() else {
-            isPictureInPicturePossible = false
             return
         }
 
         if pipController?.playerLayer === playerLayer { return }
 
-        possibleObservation?.invalidate()
         pipController = AVPictureInPictureController(playerLayer: playerLayer)
         pipController?.delegate = self
         pipController?.canStartPictureInPictureAutomaticallyFromInline = false
-
-        possibleObservation = pipController?.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { [weak self] controller, _ in
-            Task { @MainActor in
-                self?.isPictureInPicturePossible = controller.isPictureInPicturePossible
-            }
-        }
     }
 
     func togglePictureInPicture() {

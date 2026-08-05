@@ -53,18 +53,6 @@ final class CollectionStore: ObservableObject {
         await loadInitial(type: type, refreshing: false)
     }
 
-    func load(type: CollectionType, force: Bool = false, refreshing: Bool = false) async {
-        if force {
-            caches.removeValue(forKey: type)
-            if selectedType == type {
-                releases = []
-            }
-            await loadInitial(type: type, refreshing: refreshing)
-            return
-        }
-        await selectType(type)
-    }
-
     func loadMore() async {
         guard !isLoadingMore, !isLoading, !isRefreshing, canLoadMore else { return }
         guard var cache = caches[selectedType] else { return }

@@ -61,7 +61,10 @@ final class ScheduleStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            async let near = APIClient.shared.getScheduleNow()
+            if force {
+                ScheduleNowCache.invalidate()
+            }
+            async let near = ScheduleNowCache.get(force: force)
             async let week = APIClient.shared.getScheduleWeek()
             let (nearResult, weekResult) = try await (near, week)
             nearSchedule = nearResult

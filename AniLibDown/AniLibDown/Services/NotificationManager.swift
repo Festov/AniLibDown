@@ -84,7 +84,7 @@ final class NotificationManager {
             content.userInfo = ["releaseId": subscription.releaseId]
 
             var components = DateComponents()
-            components.weekday = dayValue == 7 ? 1 : dayValue + 1
+            components.weekday = PublishDay.calendarWeekday(fromAniLibertyDay: dayValue)
             components.hour = clampedHour
             components.minute = 0
 
