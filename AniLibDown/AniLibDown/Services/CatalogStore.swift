@@ -28,6 +28,7 @@ final class CatalogStore: ObservableObject {
     @Published var sorting: CatalogSorting = .freshAtDesc
     @Published var filterYear: Int?
 
+    private let api: any APIClientProtocol
     private var currentPage = 1
     private var totalPages = 1
     private var searchTask: Task<Void, Never>?
@@ -66,7 +67,8 @@ final class CatalogStore: ObservableObject {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private init() {
+    init(api: any APIClientProtocol = APIClient.shared) {
+        self.api = api
         loadPersistedCache()
         restoreVisibleCatalogIfPossible()
     }
@@ -74,7 +76,7 @@ final class CatalogStore: ObservableObject {
     func loadGenresIfNeeded() async {
         guard genres.isEmpty else { return }
         do {
-            genres = try await APIClient.shared.getCatalogGenres()
+            genres = try await api.getCatalogGenres()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
             // Optional for browsing — keep previous genres if any.
@@ -91,7 +93,7 @@ final class CatalogStore: ObservableObject {
         defer { isRefreshing = false }
 
         do {
-            let response = try await APIClient.shared.getCatalog(
+            let response = try await api.getCatalog(
                 page: 1,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,
@@ -142,7 +144,7 @@ final class CatalogStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let response = try await APIClient.shared.getCatalog(
+            let response = try await api.getCatalog(
                 page: 1,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,
@@ -185,7 +187,7 @@ final class CatalogStore: ObservableObject {
         defer { isLoadingMore = false }
 
         do {
-            let response = try await APIClient.shared.getCatalog(
+            let response = try await api.getCatalog(
                 page: currentPage,
                 limit: 20,
                 search: normalizedSearch.isEmpty ? nil : normalizedSearch,

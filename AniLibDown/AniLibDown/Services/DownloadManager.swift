@@ -641,6 +641,11 @@ final class DownloadManager: NSObject, ObservableObject {
 
     private func updateProgress(id: String, progress: Double) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        let previous = items[index].progress
+        // Avoid republishing for sub-percent noise while still updating UI about every 1%.
+        if abs(previous - progress) < 0.01, progress < 0.999 {
+            return
+        }
         items[index].progress = progress
         let now = Date()
         if let last = lastProgressPersistAt, now.timeIntervalSince(last) < progressPersistInterval {
