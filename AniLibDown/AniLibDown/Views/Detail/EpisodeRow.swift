@@ -1,21 +1,15 @@
 import SwiftUI
 
-struct EpisodeRow: View {
+struct EpisodeRow: View, Equatable {
     let episode: Episode
     let quality: VideoQuality
-    let releaseId: Int
-    let releaseTitle: String
+    let downloadItem: DownloadItem?
+    let watchProgress: Double
     let onPlay: () -> Void
     let onDownload: () -> Void
     let onCancelDownload: () -> Void
     let onDeleteDownload: () -> Void
     let onRetryDownload: () -> Void
-
-    @EnvironmentObject private var downloadManager: DownloadManager
-
-    private var downloadItem: DownloadItem? {
-        downloadManager.downloadItem(for: episode.id, quality: quality)
-    }
 
     private var downloadState: DownloadItem.DownloadState? {
         downloadItem?.state
@@ -26,7 +20,7 @@ struct EpisodeRow: View {
     }
 
     private var isDownloaded: Bool {
-        downloadManager.isDownloaded(episodeId: episode.id, quality: quality)
+        downloadState == .completed
     }
 
     private var isDownloading: Bool {
@@ -39,6 +33,13 @@ struct EpisodeRow: View {
 
     private var canPlay: Bool {
         quality.streamURL(for: episode) != nil || isDownloaded
+    }
+
+    static func == (lhs: EpisodeRow, rhs: EpisodeRow) -> Bool {
+        lhs.episode.id == rhs.episode.id
+            && lhs.quality == rhs.quality
+            && lhs.downloadItem == rhs.downloadItem
+            && abs(lhs.watchProgress - rhs.watchProgress) < 0.001
     }
 
     var body: some View {
@@ -147,10 +148,6 @@ struct EpisodeRow: View {
             .disabled(quality.streamURL(for: episode) == nil)
             .accessibilityLabel("Скачать серию")
         }
-    }
-
-    private var watchProgress: Double {
-        WatchProgressStore.shared.progressFraction(for: episode.id, duration: episode.duration)
     }
 
     private func durationString(_ seconds: Int?) -> String {

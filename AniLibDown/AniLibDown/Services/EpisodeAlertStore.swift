@@ -132,7 +132,7 @@ final class EpisodeAlertStore: ObservableObject {
         defer { isChecking = false }
 
         do {
-            let schedule = try await APIClient.shared.getScheduleNow()
+            let schedule = try await ScheduleNowCache.get()
             let relevant = relevantItems(from: schedule)
             let didUpdateNumbers = updateNextEpisodeNumbers(from: schedule)
 

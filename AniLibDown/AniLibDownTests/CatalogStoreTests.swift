@@ -20,4 +20,13 @@ final class CatalogStoreTests: XCTestCase {
         store.applyYearFilter(nil)
         XCTAssertNil(store.filterYear)
     }
+
+    func testLoadInitialUsesInjectedAPIClient() async {
+        let mock = MockAPIClient()
+        let store = CatalogStore(api: mock)
+        await store.loadInitial(force: true)
+        let calls = await mock.catalogCallCount
+        XCTAssertEqual(calls, 1)
+        XCTAssertNil(store.errorMessage)
+    }
 }

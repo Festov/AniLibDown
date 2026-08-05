@@ -144,6 +144,8 @@ final class DownloadManager: NSObject, ObservableObject {
     private var pendingDownloadURLs: [String: URL] = [:]
     private var canceledTaskIDs: Set<String> = []
     private var hasRestoredPendingTasks = false
+    private var lastProgressPersistAt: Date?
+    private let progressPersistInterval: TimeInterval = 1.0
     private let storageURL: URL
     private let indexURL: URL
     private let pendingURLsIndexURL: URL
@@ -509,12 +511,6 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    func deleteCompleted(in group: DownloadReleaseGroup) {
-        for item in group.items where item.state == .completed {
-            delete(item: item)
-        }
-    }
-
     func retry(item: DownloadItem) {
         guard item.state == .failed else { return }
         guard let releaseId = item.releaseId else { return }
@@ -635,9 +631,27 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    private func updateItem(id: String, update: (inout DownloadItem) -> Void) {
+    private func updateItem(id: String, persist: Bool = true, update: (inout DownloadItem) -> Void) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         update(&items[index])
+        if persist {
+            saveIndex()
+        }
+    }
+
+    private func updateProgress(id: String, progress: Double) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        let previous = items[index].progress
+        // Avoid republishing for sub-percent noise while still updating UI about every 1%.
+        if abs(previous - progress) < 0.01, progress < 0.999 {
+            return
+        }
+        items[index].progress = progress
+        let now = Date()
+        if let last = lastProgressPersistAt, now.timeIntervalSince(last) < progressPersistInterval {
+            return
+        }
+        lastProgressPersistAt = now
         saveIndex()
     }
 
@@ -810,7 +824,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
 
         Task { @MainActor in
             let id = assetDownloadTask.taskIdentifier.description
-            self.updateItem(id: id) { $0.progress = progress }
+            self.updateProgress(id: id, progress: progress)
         }
     }
 

@@ -152,6 +152,10 @@ struct PublishDay: Codable, Hashable {
 
     /// Calendar weekday (Gregorian): 1 = воскресенье … 7 = суббота.
     var calendarWeekday: Int {
+        Self.calendarWeekday(fromAniLibertyDay: value)
+    }
+
+    static func calendarWeekday(fromAniLibertyDay value: Int) -> Int {
         value == 7 ? 1 : value + 1
     }
 }
@@ -264,6 +268,13 @@ struct ReleaseDetail: Codable, Identifiable {
     let genres: [AnimeGenre]?
     let publishDay: PublishDay?
     let episodes: [Episode]
+    let members: [ReleaseMember]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, type, year, name, alias, season, poster
+        case isOngoing, isInProduction, ageRating, description
+        case episodesTotal, genres, publishDay, episodes, members
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -281,7 +292,61 @@ struct ReleaseDetail: Codable, Identifiable {
         episodesTotal = try container.decodeIfPresent(Int.self, forKey: .episodesTotal)
         genres = try container.decodeIfPresent([AnimeGenre].self, forKey: .genres)
         publishDay = try container.decodeIfPresent(PublishDay.self, forKey: .publishDay)
-        episodes = try container.decode([Episode].self, forKey: .episodes)
+        episodes = try container.decodeIfPresent([Episode].self, forKey: .episodes) ?? []
+        members = try container.decodeIfPresent([ReleaseMember].self, forKey: .members) ?? []
+    }
+}
+
+// MARK: - Release members (AniLiberty team)
+
+struct ReleaseMemberUser: Codable, Hashable {
+    let id: Int
+    let avatar: ImageAsset?
+}
+
+struct ReleaseMember: Codable, Identifiable, Hashable {
+    let id: String
+    let role: LabeledValue?
+    let nickname: String
+    let user: ReleaseMemberUser?
+
+    var roleTitle: String {
+        role?.description ?? role?.value ?? "Участник"
+    }
+
+    var roleKey: String {
+        role?.value ?? "other"
+    }
+}
+
+enum ReleaseMemberRoleOrder {
+    /// Preferred section order on the team screen.
+    static let preferredKeys = [
+        "voicing",
+        "translating",
+        "timing",
+        "editing",
+        "decorating",
+        "poster",
+        "hevc"
+    ]
+
+    static func sections(from members: [ReleaseMember]) -> [(title: String, members: [ReleaseMember])] {
+        let grouped = Dictionary(grouping: members, by: \.roleKey)
+        var result: [(title: String, members: [ReleaseMember])] = []
+        var seen = Set<String>()
+
+        for key in preferredKeys {
+            guard let group = grouped[key], !group.isEmpty else { continue }
+            seen.insert(key)
+            result.append((group.first?.roleTitle ?? key, group))
+        }
+
+        for key in grouped.keys.sorted() where !seen.contains(key) {
+            guard let group = grouped[key], !group.isEmpty else { continue }
+            result.append((group.first?.roleTitle ?? key, group))
+        }
+        return result
     }
 }
 
@@ -299,13 +364,6 @@ struct Episode: Codable, Identifiable, Hashable {
     let hls1080: String?
     let duration: Int?
     let releaseId: Int?
-
-    var bestStreamURL: URL? {
-        [hls1080, hls720, hls480]
-            .compactMap { $0 }
-            .compactMap(URL.init(string:))
-            .first
-    }
 
     var displayTitle: String {
         if let name, !name.isEmpty {
@@ -493,10 +551,7 @@ struct CatalogResponse: Decodable {
     let meta: PaginatedMeta
 }
 
-struct CollectionResponse: Decodable {
-    let data: [ReleaseSummary]
-    let meta: PaginatedMeta
-}
+typealias CollectionResponse = CatalogResponse
 
 struct CollectionAddRequest: Encodable {
     let releaseId: Int
