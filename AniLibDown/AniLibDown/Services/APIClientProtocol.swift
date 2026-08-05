@@ -15,6 +15,7 @@ protocol APIClientProtocol: Actor {
     ) async throws -> CatalogResponse
     func getCatalogGenres() async throws -> [AnimeGenre]
     func getRelease(idOrAlias: String) async throws -> ReleaseDetail
+    func getReleaseMembers(idOrAlias: String) async throws -> [ReleaseMember]
     func getRandomReleases(limit: Int) async throws -> [ReleaseSummary]
     func getFranchises(forReleaseId releaseId: Int) async throws -> [Franchise]
     func getScheduleNow() async throws -> ScheduleNowResponse
