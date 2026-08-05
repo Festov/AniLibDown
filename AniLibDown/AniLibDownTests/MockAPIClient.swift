@@ -49,6 +49,10 @@ actor MockAPIClient: APIClientProtocol {
         throw APIError.httpError(status: 404, message: nil)
     }
 
+    func getReleaseMembers(idOrAlias: String) async throws -> [ReleaseMember] {
+        []
+    }
+
     func getRandomReleases(limit: Int) async throws -> [ReleaseSummary] {
         []
     }

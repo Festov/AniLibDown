@@ -183,6 +183,10 @@ actor APIClient {
         try await request(path: "anime/releases/\(idOrAlias)")
     }
 
+    func getReleaseMembers(idOrAlias: String) async throws -> [ReleaseMember] {
+        try await request(path: "anime/releases/\(idOrAlias)/members")
+    }
+
     func getRandomReleases(limit: Int = 1) async throws -> [ReleaseSummary] {
         try await request(path: "anime/releases/random", query: ["limit": String(limit)])
     }

@@ -71,6 +71,9 @@
 		V2B022 /* PlaybackProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F022 /* PlaybackProgress.swift */; };
 		V2B023 /* PlayerSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F023 /* PlayerSettingsSheet.swift */; };
 		T1B010 /* MockAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F010 /* MockAPIClient.swift */; };
+		V2B024 /* ReleaseEpisodesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F024 /* ReleaseEpisodesView.swift */; };
+		V2B025 /* ReleaseTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F025 /* ReleaseTeamView.swift */; };
+		T1B011 /* ReleaseMemberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F011 /* ReleaseMemberTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -141,6 +144,9 @@
 		V2F022 /* PlaybackProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlaybackProgress.swift"; sourceTree = "<group>"; };
 		V2F023 /* PlayerSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerSettingsSheet.swift"; sourceTree = "<group>"; };
 		T1F010 /* MockAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAPIClient.swift; sourceTree = "<group>"; };
+		V2F024 /* ReleaseEpisodesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseEpisodesView.swift"; sourceTree = "<group>"; };
+		V2F025 /* ReleaseTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseTeamView.swift"; sourceTree = "<group>"; };
+		T1F011 /* ReleaseMemberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseMemberTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -218,6 +224,8 @@
 			V2F021 /* PlayerChromeViews.swift */,
 			V2F022 /* PlaybackProgress.swift */,
 			V2F023 /* PlayerSettingsSheet.swift */,
+			V2F024 /* ReleaseEpisodesView.swift */,
+			V2F025 /* ReleaseTeamView.swift */,
 			D4E50EBC37FA17E4DE51630C /* Assets.xcassets */,
 			);
 			path = AniLibDown;
@@ -244,6 +252,7 @@
 				T1F008 /* ShikimoriLinkStoreTests.swift */,
 				T1F009 /* ScheduleDecodingTests.swift */,
 				T1F010 /* MockAPIClient.swift */,
+				T1F011 /* ReleaseMemberTests.swift */,
 				T1F004 /* DownloadReleaseGroupTests.swift */,
 			);
 			path = AniLibDownTests;
@@ -428,6 +437,8 @@
 				V2B021 /* PlayerChromeViews.swift in Sources */,
 				V2B022 /* PlaybackProgress.swift in Sources */,
 				V2B023 /* PlayerSettingsSheet.swift in Sources */,
+				V2B024 /* ReleaseEpisodesView.swift in Sources */,
+				V2B025 /* ReleaseTeamView.swift in Sources */,
 				0CC3481B9534AD62C2AA379D /* APIModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -446,6 +457,7 @@
 				T1B008 /* ShikimoriLinkStoreTests.swift in Sources */,
 				T1B009 /* ScheduleDecodingTests.swift in Sources */,
 				T1B010 /* MockAPIClient.swift in Sources */,
+				T1B011 /* ReleaseMemberTests.swift in Sources */,
 				T1B004 /* DownloadReleaseGroupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
