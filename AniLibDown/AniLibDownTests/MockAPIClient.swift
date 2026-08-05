@@ -1,4 +1,5 @@
 import Foundation
+@testable import AniLibDown
 
 actor MockAPIClient: APIClientProtocol {
     var catalogPages: [Int: CatalogResponse] = [:]
