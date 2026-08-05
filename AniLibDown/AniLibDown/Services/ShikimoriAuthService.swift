@@ -21,6 +21,9 @@ final class ShikimoriAuthService: ObservableObject {
     @Published var errorMessage: String?
 
     private let presentationAnchorProvider = ShikimoriPresentationAnchorProvider()
+    private let expiresAtKey = "shikimoriAccessExpiresAt"
+    /// Refresh a bit before the server-side expiry.
+    private let expirySkew: TimeInterval = 60
 
     private init() {}
 
@@ -33,25 +36,11 @@ final class ShikimoriAuthService: ObservableObject {
         }
 
         do {
-            let user = try await validAccessTokenProfile()
+            let user = try await fetchProfile()
             profile = user
             isAuthenticated = true
         } catch {
-            if isNotAuthenticated(error) {
-                if let refresh = KeychainHelper.loadShikimoriRefreshToken() {
-                    do {
-                        try await refreshTokens(using: refresh)
-                        let user = try await validAccessTokenProfile()
-                        profile = user
-                        isAuthenticated = true
-                        return
-                    } catch {
-                        disconnect()
-                    }
-                } else {
-                    disconnect()
-                }
-            }
+            disconnect()
         }
     }
 
@@ -86,7 +75,7 @@ final class ShikimoriAuthService: ObservableObject {
             }
 
             let tokens = try await ShikimoriAPIClient.shared.exchangeAuthorizationCode(code)
-            KeychainHelper.saveShikimoriTokens(access: tokens.accessToken, refresh: tokens.refreshToken)
+            persistTokens(tokens)
             let user = try await ShikimoriAPIClient.shared.whoami(accessToken: tokens.accessToken)
             profile = user
             isAuthenticated = true
@@ -101,33 +90,61 @@ final class ShikimoriAuthService: ObservableObject {
 
     func disconnect() {
         KeychainHelper.deleteShikimoriTokens()
+        UserDefaults.standard.removeObject(forKey: expiresAtKey)
         isAuthenticated = false
         profile = nil
         errorMessage = nil
     }
 
+    /// Returns a usable access token, refreshing when `expiresIn` says it is stale.
+    /// Does not call `whoami` on every use — only when validating a legacy session without expiry.
     func accessToken() async throws -> String {
         guard ShikimoriConfig.isConfigured else {
             throw ShikimoriError.notConfigured
         }
-        guard let token = KeychainHelper.loadShikimoriAccessToken() else {
+        guard KeychainHelper.loadShikimoriAccessToken() != nil else {
             throw ShikimoriError.notAuthenticated
         }
 
-        do {
-            _ = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
-            return token
-        } catch {
-            if isNotAuthenticated(error) {
-                guard let refresh = KeychainHelper.loadShikimoriRefreshToken() else {
-                    disconnect()
-                    throw ShikimoriError.notAuthenticated
-                }
+        if isAccessTokenFresh {
+            return KeychainHelper.loadShikimoriAccessToken()!
+        }
+
+        if let refresh = KeychainHelper.loadShikimoriRefreshToken() {
+            do {
                 try await refreshTokens(using: refresh)
                 guard let refreshed = KeychainHelper.loadShikimoriAccessToken() else {
                     throw ShikimoriError.notAuthenticated
                 }
                 return refreshed
+            } catch {
+                if hasStoredExpiry || isNotAuthenticated(error) {
+                    if isNotAuthenticated(error) {
+                        disconnect()
+                        throw ShikimoriError.notAuthenticated
+                    }
+                    throw error
+                }
+                // Legacy session without expiry: keep going and validate below.
+            }
+        } else if hasStoredExpiry {
+            disconnect()
+            throw ShikimoriError.notAuthenticated
+        }
+
+        guard let token = KeychainHelper.loadShikimoriAccessToken() else {
+            throw ShikimoriError.notAuthenticated
+        }
+
+        // One-time validation for sessions that predate expiry tracking.
+        do {
+            _ = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
+            cacheExpiry(secondsFromNow: 6 * 60 * 60)
+            return token
+        } catch {
+            if isNotAuthenticated(error) {
+                disconnect()
+                throw ShikimoriError.notAuthenticated
             }
             throw error
         }
@@ -135,24 +152,13 @@ final class ShikimoriAuthService: ObservableObject {
 
     func userRate(for animeId: Int) async throws -> ShikimoriUserRate? {
         let token = try await accessToken()
-        guard let userId = profile?.id else {
-            let user = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
-            profile = user
-            return try await ShikimoriAPIClient.shared.userRate(userId: user.id, animeId: animeId, accessToken: token)
-        }
+        let userId = try await ensureUserId(accessToken: token)
         return try await ShikimoriAPIClient.shared.userRate(userId: userId, animeId: animeId, accessToken: token)
     }
 
     func setStatus(_ status: ShikimoriListStatus, animeId: Int) async throws -> ShikimoriUserRate {
         let token = try await accessToken()
-        let userId: Int
-        if let profile {
-            userId = profile.id
-        } else {
-            let user = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
-            profile = user
-            userId = user.id
-        }
+        let userId = try await ensureUserId(accessToken: token)
 
         if let existing = try await ShikimoriAPIClient.shared.userRate(
             userId: userId,
@@ -178,14 +184,7 @@ final class ShikimoriAuthService: ObservableObject {
         guard episodeOrdinal > 0 else { return }
         do {
             let token = try await accessToken()
-            let userId: Int
-            if let profile {
-                userId = profile.id
-            } else {
-                let user = try await ShikimoriAPIClient.shared.whoami(accessToken: token)
-                profile = user
-                userId = user.id
-            }
+            let userId = try await ensureUserId(accessToken: token)
             guard let existing = try await ShikimoriAPIClient.shared.userRate(
                 userId: userId,
                 animeId: animeId,
@@ -205,16 +204,47 @@ final class ShikimoriAuthService: ObservableObject {
         }
     }
 
-    private func validAccessTokenProfile() async throws -> ShikimoriUserProfile {
-        guard let token = KeychainHelper.loadShikimoriAccessToken() else {
-            throw ShikimoriError.notAuthenticated
+    private var isAccessTokenFresh: Bool {
+        guard let expiresAt = UserDefaults.standard.object(forKey: expiresAtKey) as? Date else {
+            return false
         }
-        return try await ShikimoriAPIClient.shared.whoami(accessToken: token)
+        return expiresAt.timeIntervalSinceNow > expirySkew
+    }
+
+    private var hasStoredExpiry: Bool {
+        UserDefaults.standard.object(forKey: expiresAtKey) != nil
+    }
+
+    private func persistTokens(_ tokens: ShikimoriTokenResponse) {
+        KeychainHelper.saveShikimoriTokens(access: tokens.accessToken, refresh: tokens.refreshToken)
+        cacheExpiry(secondsFromNow: TimeInterval(max(tokens.expiresIn, 0)))
+    }
+
+    private func cacheExpiry(secondsFromNow: TimeInterval) {
+        UserDefaults.standard.set(Date().addingTimeInterval(secondsFromNow), forKey: expiresAtKey)
+    }
+
+    private func fetchProfile() async throws -> ShikimoriUserProfile {
+        let token = try await accessToken()
+        return try await ensureProfile(accessToken: token)
+    }
+
+    private func ensureUserId(accessToken: String) async throws -> Int {
+        try await ensureProfile(accessToken: accessToken).id
+    }
+
+    private func ensureProfile(accessToken: String) async throws -> ShikimoriUserProfile {
+        if let profile {
+            return profile
+        }
+        let user = try await ShikimoriAPIClient.shared.whoami(accessToken: accessToken)
+        profile = user
+        return user
     }
 
     private func refreshTokens(using refreshToken: String) async throws {
         let tokens = try await ShikimoriAPIClient.shared.refreshTokens(refreshToken: refreshToken)
-        KeychainHelper.saveShikimoriTokens(access: tokens.accessToken, refresh: tokens.refreshToken)
+        persistTokens(tokens)
     }
 
     private func startAuthSession(url: URL) async throws -> URL {

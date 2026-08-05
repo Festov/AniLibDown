@@ -449,6 +449,11 @@ struct ReleaseDetailView: View {
                     EpisodeRow(
                         episode: episode,
                         quality: selectedQuality,
+                        downloadItem: downloadManager.downloadItem(for: episode.id, quality: selectedQuality),
+                        watchProgress: WatchProgressStore.shared.progressFraction(
+                            for: episode.id,
+                            duration: episode.duration
+                        ),
                         onPlay: { play(episode: episode, release: release) },
                         onDownload: {
                             downloadManager.enqueue(
@@ -475,6 +480,7 @@ struct ReleaseDetailView: View {
                             }
                         }
                     )
+                    .equatable()
                 }
             }
         }
