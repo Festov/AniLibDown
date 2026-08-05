@@ -12,7 +12,6 @@ struct ProfileView: View {
     @State private var showLogin = false
     @State private var showCacheConfirmation = false
     @State private var showShikimoriImporter = false
-    @State private var shikimoriExportURL: URL?
     @State private var shikimoriImportResult: String?
 
     var body: some View {

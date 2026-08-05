@@ -79,10 +79,6 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    static var appVersion: String { AppVersion.short }
-
-    static var buildNumber: String { AppVersion.build }
-
     static var versionDisplay: String { AppVersion.display }
 
     private init() {

@@ -444,38 +444,38 @@ struct ReleaseDetailView: View {
                 }
             }
 
-            ForEach(visibleEpisodes) { episode in
-                EpisodeRow(
-                    episode: episode,
-                    quality: selectedQuality,
-                    releaseId: release.id,
-                    releaseTitle: release.name.main,
-                    onPlay: { play(episode: episode, release: release) },
-                    onDownload: {
-                        downloadManager.enqueue(
-                            episode: episode,
-                            releaseId: release.id,
-                            releaseTitle: release.name.main,
-                            quality: selectedQuality,
-                            posterPath: release.poster?.displayURL
-                        )
-                    },
-                    onCancelDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.cancel(item: item)
+            LazyVStack(spacing: 8) {
+                ForEach(visibleEpisodes) { episode in
+                    EpisodeRow(
+                        episode: episode,
+                        quality: selectedQuality,
+                        onPlay: { play(episode: episode, release: release) },
+                        onDownload: {
+                            downloadManager.enqueue(
+                                episode: episode,
+                                releaseId: release.id,
+                                releaseTitle: release.name.main,
+                                quality: selectedQuality,
+                                posterPath: release.poster?.displayURL
+                            )
+                        },
+                        onCancelDownload: {
+                            if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
+                                downloadManager.cancel(item: item)
+                            }
+                        },
+                        onDeleteDownload: {
+                            if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
+                                downloadManager.delete(item: item)
+                            }
+                        },
+                        onRetryDownload: {
+                            if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
+                                downloadManager.retry(item: item)
+                            }
                         }
-                    },
-                    onDeleteDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.delete(item: item)
-                        }
-                    },
-                    onRetryDownload: {
-                        if let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) {
-                            downloadManager.retry(item: item)
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     }

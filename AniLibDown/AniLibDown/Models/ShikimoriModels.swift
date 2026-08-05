@@ -38,7 +38,6 @@ struct ShikimoriAnime: Codable, Identifiable {
     let russian: String?
     let image: ShikimoriImage?
     let kind: String?
-    let year: Int?
 
     var displayTitle: String {
         if let russian, !russian.isEmpty {
@@ -53,20 +52,6 @@ struct ShikimoriAnime: Codable, Identifiable {
             return URL(string: path)
         }
         return URL(string: path, relativeTo: ShikimoriConfig.baseURL)?.absoluteURL
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id, name, russian, image, kind
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(Int.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        russian = try container.decodeIfPresent(String.self, forKey: .russian)
-        image = try container.decodeIfPresent(ShikimoriImage.self, forKey: .image)
-        kind = try container.decodeIfPresent(String.self, forKey: .kind)
-        year = nil
     }
 }
 
@@ -137,7 +122,6 @@ struct ShikimoriUserRateUpdateBody: Encodable {
 enum ShikimoriError: LocalizedError, Equatable {
     case notConfigured
     case notAuthenticated
-    case authorizationCancelled
     case invalidCallback
     case apiError(String)
 
@@ -147,8 +131,6 @@ enum ShikimoriError: LocalizedError, Equatable {
             return ShikimoriConfig.configurationHint
         case .notAuthenticated:
             return "Подключите аккаунт Shikimori в профиле"
-        case .authorizationCancelled:
-            return "Авторизация отменена"
         case .invalidCallback:
             return "Не удалось получить код авторизации"
         case .apiError(let message):

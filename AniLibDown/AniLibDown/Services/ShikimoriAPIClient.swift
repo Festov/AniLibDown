@@ -211,10 +211,6 @@ actor ShikimoriAPIClient {
             throw ShikimoriError.apiError(message)
         }
 
-        if T.self == EmptyResponse.self, data.isEmpty {
-            return EmptyResponse() as! T
-        }
-
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
@@ -238,10 +234,6 @@ actor ShikimoriAPIClient {
 
         return trimmed
     }
-}
-
-private struct EmptyResponse: Decodable {
-    init() {}
 }
 
 private struct EmptyRequestBody: Encodable {}
