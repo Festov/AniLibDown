@@ -1213,10 +1213,6 @@ struct VideoPlayerView: View {
         }
         return downloadManager.anyLocalPlaybackURL(for: episode.id, preferred: currentQuality)
     }
-
-    private func playbackURL(for episode: Episode) -> URL? {
-        resolvePlayback(for: episode)?.url
-    }
 }
 
 // MARK: - Player settings sheet

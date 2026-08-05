@@ -3,8 +3,6 @@ import SwiftUI
 struct EpisodeRow: View {
     let episode: Episode
     let quality: VideoQuality
-    let releaseId: Int
-    let releaseTitle: String
     let onPlay: () -> Void
     let onDownload: () -> Void
     let onCancelDownload: () -> Void
