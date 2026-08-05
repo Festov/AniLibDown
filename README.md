@@ -69,26 +69,6 @@
 
 Синхронизируются статус списка и номер серии при досмотре. Привязки хранятся локально; в профиле есть экспорт и импорт JSON.
 
-## Разработка
-
-- **Xcode** 16.x, iOS 17+
-- Проект: `AniLibDown/AniLibDown.xcodeproj`, схема `AniLibDown`
-- Unit-тесты: `AniLibDownTests`
-- CI **Build IPA**: тесты и неподписанный IPA; релиз по тегу
-
-```bash
-cd AniLibDown
-xcodebuild -project AniLibDown.xcodeproj -scheme AniLibDown \
-  -destination 'platform=iOS Simulator,name=iPhone 16' test
-```
-
-| Папка | Назначение |
-|-------|------------|
-| `AniLibDown/Models/` | Модели API и домена |
-| `AniLibDown/Services/` | Сеть, загрузки, хранилища, настройки |
-| `AniLibDown/Views/` | Экраны SwiftUI |
-| `AniLibDownTests/` | Unit-тесты |
-
 ## Лицензия
 
 Проект создан в образовательных целях. Контент принадлежит правообладателям и предоставляется через AniLiberty.
