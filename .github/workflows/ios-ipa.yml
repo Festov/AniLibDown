@@ -111,6 +111,6 @@ jobs:
             Неподписанный IPA для установки через Sideloadly.
             Требуется Apple ID (на бесплатном ID срок ~7 дней).
 
-            См. [TESTING_CHECKLIST.md](https://github.com/${{ github.repository }}/blob/main/TESTING_CHECKLIST.md) для проверки.
+            Инструкция по установке — в README репозитория.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
