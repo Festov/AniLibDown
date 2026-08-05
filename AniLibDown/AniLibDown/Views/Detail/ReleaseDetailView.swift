@@ -185,7 +185,8 @@ struct ReleaseDetailView: View {
                 Text("\(aired) / \(total) \(ReleaseFormatting.episodesWord(for: total))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                if let day = release.publishDay {
+                // Only for titles AniLiberty is still releasing (including late dubs).
+                if release.isOngoing, let day = release.publishDay {
                     Text("Выходит: \(day.description)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -258,8 +259,16 @@ struct ReleaseDetailView: View {
                 .tint(Color.accentColor)
             }
 
-            episodeAlertButton(for: release)
+            if shouldShowEpisodeAlertButton(for: release) {
+                episodeAlertButton(for: release)
+            }
         }
+    }
+
+    /// Reminders make sense while AniLiberty still releases episodes (including late dubs).
+    /// Keep the control if the user is already subscribed, so they can turn it off.
+    private func shouldShowEpisodeAlertButton(for release: ReleaseDetail) -> Bool {
+        release.isOngoing || episodeAlerts.isSubscribed(releaseId: release.id)
     }
 
     @ViewBuilder
