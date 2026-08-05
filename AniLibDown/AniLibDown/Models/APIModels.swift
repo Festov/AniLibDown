@@ -152,6 +152,10 @@ struct PublishDay: Codable, Hashable {
 
     /// Calendar weekday (Gregorian): 1 = воскресенье … 7 = суббота.
     var calendarWeekday: Int {
+        Self.calendarWeekday(fromAniLibertyDay: value)
+    }
+
+    static func calendarWeekday(fromAniLibertyDay value: Int) -> Int {
         value == 7 ? 1 : value + 1
     }
 }
@@ -299,13 +303,6 @@ struct Episode: Codable, Identifiable, Hashable {
     let hls1080: String?
     let duration: Int?
     let releaseId: Int?
-
-    var bestStreamURL: URL? {
-        [hls1080, hls720, hls480]
-            .compactMap { $0 }
-            .compactMap(URL.init(string:))
-            .first
-    }
 
     var displayTitle: String {
         if let name, !name.isEmpty {
@@ -493,10 +490,7 @@ struct CatalogResponse: Decodable {
     let meta: PaginatedMeta
 }
 
-struct CollectionResponse: Decodable {
-    let data: [ReleaseSummary]
-    let meta: PaginatedMeta
-}
+typealias CollectionResponse = CatalogResponse
 
 struct CollectionAddRequest: Encodable {
     let releaseId: Int

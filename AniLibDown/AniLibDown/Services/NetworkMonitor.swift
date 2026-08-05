@@ -14,8 +14,15 @@ final class NetworkMonitor: ObservableObject {
     private init() {
         monitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
-                self?.isConnected = path.status == .satisfied
-                self?.isOnWiFi = path.usesInterfaceType(.wifi) || path.usesInterfaceType(.wiredEthernet)
+                guard let self else { return }
+                let connected = path.status == .satisfied
+                let onWiFi = path.usesInterfaceType(.wifi) || path.usesInterfaceType(.wiredEthernet)
+                if self.isConnected != connected {
+                    self.isConnected = connected
+                }
+                if self.isOnWiFi != onWiFi {
+                    self.isOnWiFi = onWiFi
+                }
             }
         }
         monitor.start(queue: queue)

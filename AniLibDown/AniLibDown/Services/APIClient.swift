@@ -335,8 +335,6 @@ actor APIClient {
     }
 }
 
-private struct EmptyResponse: Decodable {}
-
 private struct AnyEncodable: Encodable {
     private let encode: (Encoder) throws -> Void
 

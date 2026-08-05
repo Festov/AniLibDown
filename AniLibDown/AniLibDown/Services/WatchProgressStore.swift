@@ -14,6 +14,9 @@ final class WatchProgressStore {
     private let progressKey = "watchProgressByEpisode"
     private let lastEpisodeKey = "lastWatchedEpisodeByRelease"
 
+    private var progressCache: [String: WatchProgress]?
+    private var lastEpisodesCache: [String: String]?
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
     }
@@ -47,7 +50,7 @@ final class WatchProgressStore {
 
         var lastEpisodes = loadLastEpisodes()
         lastEpisodes[String(releaseId)] = episodeId
-        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+        storeLastEpisodes(lastEpisodes)
 
         if let releaseTitle, let episodeTitle {
             ContinueWatchingStore.shared.updateMetadata(
@@ -77,7 +80,7 @@ final class WatchProgressStore {
                 ContinueWatchingStore.shared.remove(releaseId: releaseId)
             }
         }
-        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+        storeLastEpisodes(lastEpisodes)
         ContinueWatchingStore.shared.reload()
     }
 
@@ -93,6 +96,8 @@ final class WatchProgressStore {
     func clearAll() {
         defaults.removeObject(forKey: progressKey)
         defaults.removeObject(forKey: lastEpisodeKey)
+        progressCache = [:]
+        lastEpisodesCache = [:]
         ContinueWatchingStore.shared.reload()
     }
 
@@ -101,19 +106,35 @@ final class WatchProgressStore {
     }
 
     private func loadProgress() -> [String: WatchProgress] {
+        if let progressCache {
+            return progressCache
+        }
         guard let data = defaults.data(forKey: progressKey),
               let decoded = try? JSONDecoder().decode([String: WatchProgress].self, from: data) else {
+            progressCache = [:]
             return [:]
         }
+        progressCache = decoded
         return decoded
     }
 
     private func storeProgress(_ progress: [String: WatchProgress]) {
+        progressCache = progress
         guard let data = try? JSONEncoder().encode(progress) else { return }
         defaults.set(data, forKey: progressKey)
     }
 
     private func loadLastEpisodes() -> [String: String] {
-        defaults.dictionary(forKey: lastEpisodeKey) as? [String: String] ?? [:]
+        if let lastEpisodesCache {
+            return lastEpisodesCache
+        }
+        let value = defaults.dictionary(forKey: lastEpisodeKey) as? [String: String] ?? [:]
+        lastEpisodesCache = value
+        return value
+    }
+
+    private func storeLastEpisodes(_ lastEpisodes: [String: String]) {
+        lastEpisodesCache = lastEpisodes
+        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
     }
 }

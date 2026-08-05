@@ -5,10 +5,8 @@ enum AppLog {
     private static let subsystem = "top.aniliberty.AniLibDown"
 
     static let api = AppLogger(subsystem: subsystem, category: "api")
-    static let downloads = AppLogger(subsystem: subsystem, category: "downloads")
     static let player = AppLogger(subsystem: subsystem, category: "player")
     static let shikimori = AppLogger(subsystem: subsystem, category: "shikimori")
-    static let ui = AppLogger(subsystem: subsystem, category: "ui")
 }
 
 struct AppLogger {
