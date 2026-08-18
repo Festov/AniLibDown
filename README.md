@@ -7,6 +7,22 @@
 > **Важно:** приложение полностью написано нейросетью. Возможны баги и нестабильная работа.  
 > Если что-то сломалось — создайте запись в [Проблемах](https://github.com/Festov/AniLibDown/issues) (желательно со скриншотом).
 
+## Скриншоты
+
+<p align="center">
+  <img src="docs/screenshots/catalog.jpg" width="240" alt="Каталог" />
+  <img src="docs/screenshots/release-detail.jpg" width="240" alt="Карточка тайтла" />
+  <img src="docs/screenshots/episodes.jpg" width="240" alt="Список серий" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/schedule.jpg" width="240" alt="Расписание" />
+  <img src="docs/screenshots/downloads.jpg" width="240" alt="Загрузки" />
+  <img src="docs/screenshots/collection.jpg" width="240" alt="Коллекция" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/player.jpg" width="720" alt="Плеер" />
+</p>
+
 ## Возможности
 
 - **Каталог** — лента аниме, поиск с историей запросов, фильтры по жанрам, сортировке и году, блок «Продолжить просмотр»
