@@ -20,6 +20,22 @@
 - **Shikimori** (опционально) — привязка тайтлов, статусы списка, синхронизация серии при досмотре, экспорт/импорт привязок
 - **Настройки** — тема, заставка, качество по умолчанию, параметры плеера и загрузок (в т.ч. только Wi‑Fi), очистка кэша и другое
 
+## Скриншоты
+
+<p align="center">
+  <img src="docs/screenshots/catalog.jpg" width="240" alt="Каталог" />
+  <img src="docs/screenshots/release-detail.jpg" width="240" alt="Карточка тайтла" />
+  <img src="docs/screenshots/episodes.jpg" width="240" alt="Список серий" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/schedule.jpg" width="240" alt="Расписание" />
+  <img src="docs/screenshots/downloads.jpg" width="240" alt="Загрузки" />
+  <img src="docs/screenshots/collection.jpg" width="240" alt="Коллекция" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/player.jpg" width="720" alt="Плеер" />
+</p>
+
 ## Установка на iPhone
 
 ### 1. Скачайте IPA
