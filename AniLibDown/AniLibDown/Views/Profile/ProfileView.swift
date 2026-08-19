@@ -35,11 +35,6 @@ struct ProfileView: View {
                     } label: {
                         Label("Коллекция", systemImage: "heart.text.square")
                     }
-                } header: {
-                    Text("Настройки")
-                }
-
-                Section {
                     NavigationLink {
                         ShikimoriSettingsView()
                     } label: {
@@ -50,8 +45,6 @@ struct ProfileView: View {
                     } label: {
                         Label("Память и кеш", systemImage: "internaldrive")
                     }
-                } header: {
-                    Text("Данные")
                 }
 
                 aboutSection
@@ -69,67 +62,42 @@ struct ProfileView: View {
     private var accountSection: some View {
         if authService.isAuthenticated, let profile = authService.profile {
             Section {
-                HStack(spacing: 14) {
+                HStack(spacing: 12) {
                     profileAvatar(for: profile)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(profile.nickname)
-                            .font(.headline)
+                            .font(.body.weight(.medium))
                             .lineLimit(1)
                         if let login = profile.login, login != profile.nickname {
                             Text("@\(login)")
-                                .font(.subheadline)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
-                        Text("AniLiberty")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
                     }
 
-                    Spacer(minLength: 8)
+                    Spacer(minLength: 0)
                 }
-                .padding(.vertical, 4)
 
-                Button("Выйти из аккаунта", role: .destructive) {
+                Button("Выйти", role: .destructive) {
                     Task { await authService.logout() }
                 }
-            } header: {
-                Text("Аккаунт AniLiberty")
-            } footer: {
-                Text("Нужен для коллекций и синхронизации списков с сайтом.")
             }
         } else {
             Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Вы не вошли в аккаунт", systemImage: "person.crop.circle.badge.questionmark")
-                        .font(.headline)
-
-                    Text("Войдите, чтобы пользоваться коллекциями AniLiberty на этом устройстве.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Button("Войти") {
-                        showLogin = true
-                    }
-                    .buttonStyle(.borderedProminent)
+                Button("Войти") {
+                    showLogin = true
                 }
-                .padding(.vertical, 4)
-            } header: {
-                Text("Аккаунт AniLiberty")
             }
         }
     }
-
-
 
     // MARK: - About
 
     private var aboutSection: some View {
         Section {
             LabeledContent("Версия", value: AppVersion.display)
-        } header: {
-            Text("О приложении")
         }
     }
 
@@ -153,7 +121,7 @@ struct ProfileView: View {
                     avatarFallback
                 }
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 44, height: 44)
             .clipShape(Circle())
         } else {
             avatarFallback
@@ -163,7 +131,7 @@ struct ProfileView: View {
     private var avatarFallback: some View {
         Image(systemName: "person.circle.fill")
             .resizable()
-            .frame(width: 56, height: 56)
+            .frame(width: 44, height: 44)
             .foregroundStyle(.secondary)
     }
 }
