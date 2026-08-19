@@ -5,10 +5,7 @@ import UniformTypeIdentifiers
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
-    @ObservedObject private var playerSettings = PlayerSettings.shared
-    @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
-    @ObservedObject private var downloadSettings = DownloadSettings.shared
     @State private var showLogin = false
     @State private var showCacheConfirmation = false
     @State private var showShikimoriImporter = false
@@ -18,10 +15,37 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 accountSection
-                appearanceSection
-                notificationsSection
-                playbackSection
-                downloadsSection
+
+                Section {
+                    NavigationLink {
+                        NotificationsSettingsView()
+                    } label: {
+                        Label("Уведомления", systemImage: "bell")
+                    }
+                    NavigationLink {
+                        PlaybackSettingsView()
+                    } label: {
+                        Label("Просмотр", systemImage: "play.rectangle")
+                    }
+                    NavigationLink {
+                        AppearanceSettingsView()
+                    } label: {
+                        Label("Оформление", systemImage: "paintbrush")
+                    }
+                    NavigationLink {
+                        DownloadsSettingsView()
+                    } label: {
+                        Label("Загрузки", systemImage: "arrow.down.circle")
+                    }
+                    NavigationLink {
+                        CollectionSettingsView()
+                    } label: {
+                        Label("Коллекция", systemImage: "heart.text.square")
+                    }
+                } header: {
+                    Text("Настройки")
+                }
+
                 shikimoriSection
                 storageSection
                 aboutSection
@@ -111,113 +135,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Appearance
-
-    private var appearanceSection: some View {
-        Section {
-            Picker("Тема", selection: $appSettings.colorSchemePreference) {
-                ForEach(AppColorScheme.allCases) { scheme in
-                    Text(scheme.title).tag(scheme)
-                }
-            }
-
-            Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
-        } header: {
-            Text("Оформление")
-        } footer: {
-            Text("Тема меняет светлый/тёмный вид приложения. Заставка показывается при каждом запуске.")
-        }
-    }
-
-    // MARK: - Notifications
-
-    private var notificationsSection: some View {
-        Section {
-            Toggle("Уведомления о сериях", isOn: $appSettings.episodeNotificationsEnabled)
-                .onChange(of: appSettings.episodeNotificationsEnabled) { _, enabled in
-                    if enabled {
-                        Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
-                    }
-                }
-
-            Toggle("Напоминание в день выхода", isOn: $appSettings.publishDayRemindersEnabled)
-                .disabled(!appSettings.episodeNotificationsEnabled)
-
-            Toggle("Учитывать «Смотрю»", isOn: $appSettings.notifyWatchingCollection)
-                .disabled(!appSettings.episodeNotificationsEnabled)
-
-            Picker("Время напоминания", selection: $appSettings.publishDayReminderHour) {
-                ForEach(Array(8...23), id: \.self) { hour in
-                    Text(String(format: "%02d:00", hour)).tag(hour)
-                }
-            }
-            .disabled(!appSettings.episodeNotificationsEnabled || !appSettings.publishDayRemindersEnabled)
-
-            if !episodeAlerts.subscriptions.isEmpty {
-                ForEach(episodeAlerts.subscriptions) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.title)
-                                .font(.subheadline)
-                                .lineLimit(1)
-                            if let day = entry.publishDayTitle {
-                                Text(day)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Button("Убрать") {
-                            episodeAlerts.unsubscribe(releaseId: entry.releaseId)
-                        }
-                        .font(.caption)
-                    }
-                }
-            }
-        } header: {
-            Text("Уведомления")
-        }
-    }
-
-    // MARK: - Playback
-
-    private var playbackSection: some View {
-        Section {
-            Picker("Качество по умолчанию", selection: $appSettings.defaultVideoQuality) {
-                ForEach(VideoQuality.allCases) { quality in
-                    Text(quality.rawValue).tag(quality)
-                }
-            }
-
-            Picker("Ускорение при удержании", selection: $playerSettings.holdSpeedRate) {
-                ForEach(HoldSpeedRate.allCases) { rate in
-                    Text(rate.title).tag(rate)
-                }
-            }
-        } header: {
-            Text("Просмотр")
-        } footer: {
-            Text("Качество по умолчанию используется при старте серии. В плеере качество можно сменить отдельно. Ускорение срабатывает при удержании правой половины экрана.")
-        }
-    }
-
-    // MARK: - Downloads
-
-    private var downloadsSection: some View {
-        Section {
-            Toggle("Загрузки только по Wi‑Fi", isOn: $downloadSettings.wifiOnlyDownloads)
-
-            Picker("Параллельные загрузки", selection: $downloadSettings.maxConcurrentDownloads) {
-                ForEach(DownloadSettings.concurrentOptions, id: \.self) { count in
-                    Text("\(count)").tag(count)
-                }
-            }
-        } header: {
-            Text("Загрузки")
-        } footer: {
-            Text("При подключении к Wi‑Fi очередь загрузок продолжится автоматически.")
-        }
-    }
 
     // MARK: - Shikimori
 
@@ -355,7 +272,7 @@ struct ProfileView: View {
 
     private var aboutSection: some View {
         Section {
-            LabeledContent("Версия", value: AppSettings.versionDisplay)
+            LabeledContent("Версия", value: AppVersion.display)
         } header: {
             Text("О приложении")
         }

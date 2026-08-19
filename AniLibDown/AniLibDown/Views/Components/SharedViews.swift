@@ -213,6 +213,58 @@ struct PosterFullscreenView: View {
     }
 }
 
+struct PosterZoomOverlay: View {
+    let path: String?
+    let onDismiss: () -> Void
+
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(appeared ? 0.85 : 0)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            Group {
+                if let path, path.hasPrefix("file:"),
+                   let url = URL(string: path),
+                   let image = UIImage(contentsOfFile: url.path) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                } else if let url = APIConfig.mediaURL(for: path) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFit()
+                        case .failure:
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .foregroundStyle(.white.opacity(0.5))
+                        case .empty:
+                            ProgressView().tint(.white)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                } else {
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            .scaleEffect(appeared ? 1 : 0.4)
+            .opacity(appeared ? 1 : 0)
+            .padding(24)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                appeared = true
+            }
+        }
+    }
+}
+
 struct OngoingBadge: View {
     var body: some View {
         Text(BroadcastStatus.ongoing.title)

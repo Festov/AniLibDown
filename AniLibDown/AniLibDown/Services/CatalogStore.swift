@@ -103,9 +103,6 @@ final class CatalogStore: ObservableObject {
             )
             applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
-            if !normalizedSearch.isEmpty {
-                SearchHistoryStore.shared.record(normalizedSearch)
-            }
         } catch {
             if !isIgnorable(error) {
                 errorMessage = error.localizedDescription
@@ -154,9 +151,6 @@ final class CatalogStore: ObservableObject {
             )
             applyFirstPage(response.data, totalPages: response.meta.pagination.totalPages)
             storeCache(page: 1, releases: response.data, totalPages: totalPages)
-            if !normalizedSearch.isEmpty {
-                SearchHistoryStore.shared.record(normalizedSearch)
-            }
             lastRequestedQueryKey = queryKey
         } catch {
             if !isIgnorable(error) {

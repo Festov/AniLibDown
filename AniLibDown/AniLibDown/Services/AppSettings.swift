@@ -79,6 +79,13 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var hiddenCollectionTypes: Set<CollectionType> {
+        didSet {
+            let raw = hiddenCollectionTypes.map(\.rawValue)
+            UserDefaults.standard.set(raw, forKey: "hiddenCollectionTypes")
+        }
+    }
+
     static var versionDisplay: String { AppVersion.display }
 
     private init() {
@@ -114,5 +121,8 @@ final class AppSettings: ObservableObject {
         }
         let hour = UserDefaults.standard.object(forKey: "publishDayReminderHour") as? Int
         publishDayReminderHour = min(max(hour ?? 20, 0), 23)
+
+        let hiddenRaw = UserDefaults.standard.stringArray(forKey: "hiddenCollectionTypes") ?? []
+        hiddenCollectionTypes = Set(hiddenRaw.compactMap { CollectionType(rawValue: $0) })
     }
 }
