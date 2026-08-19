@@ -116,8 +116,11 @@ struct ShikimoriReleaseSection: View {
                 Button {
                     onLinkTapped()
                 } label: {
-                    Label("Сменить", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.caption.weight(.medium))
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Сменить")
+                    }
+                    .font(.caption.weight(.medium))
                 }
                 .buttonStyle(.bordered)
                 .tint(accent)
@@ -125,8 +128,11 @@ struct ShikimoriReleaseSection: View {
                 Button(role: .destructive) {
                     viewModel.unlinkShikimori(releaseId: release.id)
                 } label: {
-                    Label("Отвязать", systemImage: "link.badge.minus")
-                        .font(.caption.weight(.medium))
+                    HStack(spacing: 4) {
+                        Image(systemName: "link.badge.minus")
+                        Text("Отвязать")
+                    }
+                    .font(.caption.weight(.medium))
                 }
                 .buttonStyle(.bordered)
             }
