@@ -539,7 +539,7 @@ enum CollectionType: String, CaseIterable, Identifiable, Hashable {
         case .planned: return "План"
         case .watched: return "Готово"
         case .postponed: return "Позже"
-        case .abandoned: return "Бросил"
+        case .abandoned: return "Брошено"
         }
     }
 }

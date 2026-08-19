@@ -10,7 +10,7 @@ enum AppVersion {
     }
 
     static var display: String {
-        "\(short) (\(build))"
+        short
     }
 
     static var userAgent: String {

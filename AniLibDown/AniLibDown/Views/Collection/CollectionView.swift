@@ -118,7 +118,12 @@ final class CollectionStore: ObservableObject {
 struct CollectionView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var store = CollectionStore.shared
+    @ObservedObject private var appSettings = AppSettings.shared
     @State private var showLogin = false
+
+    private var visibleTypes: [CollectionType] {
+        CollectionType.allCases.filter { !appSettings.hiddenCollectionTypes.contains($0) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -167,7 +172,7 @@ struct CollectionView: View {
                     Task { await store.selectType(newType) }
                 }
             )) {
-                ForEach(CollectionType.allCases) { type in
+                ForEach(visibleTypes) { type in
                     Text(type.shortTitle).tag(type)
                 }
             }
