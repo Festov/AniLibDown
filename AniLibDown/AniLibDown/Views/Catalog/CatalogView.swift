@@ -87,7 +87,7 @@ struct CatalogView: View {
             .navigationTitle(L10n.catalog)
             .searchable(text: $store.searchText, prompt: "Поиск аниме")
             .searchSuggestions {
-                if !searchHistory.queries.isEmpty {
+                if store.searchText.isEmpty, !searchHistory.queries.isEmpty {
                     Section(L10n.searchHistory) {
                         ForEach(searchHistory.queries, id: \.self) { query in
                             Text(query)
