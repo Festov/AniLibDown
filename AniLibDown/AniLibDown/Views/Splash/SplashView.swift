@@ -338,5 +338,10 @@ struct RootView: View {
                 showSplash = false
             }
         }
+        .task {
+            // Восстанавливаем сессию по сохранённому токену (Keychain).
+            // Если токена нет — останемся в LoginView, пока пользователь не введёт логин/пароль.
+            await authService.restoreSession()
+        }
     }
 }
