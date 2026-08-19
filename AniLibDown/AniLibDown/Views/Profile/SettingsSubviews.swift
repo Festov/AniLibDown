@@ -16,10 +16,12 @@ struct NotificationsSettingsView: View {
                             Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
                         }
                     }
+            } footer: {
+                Text("Уведомления приходят при выходе новых серий для подписанных релизов.")
             }
 
             if !episodeAlerts.subscriptions.isEmpty {
-                Section {
+                Section("Подписки") {
                     ForEach(episodeAlerts.subscriptions) { entry in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
@@ -77,6 +79,8 @@ struct PlaybackSettingsView: View {
                 Toggle("Пропускать OP/ED", isOn: $playerSettings.skipOPED)
 
                 Toggle("Автовоспроизведение следующей серии", isOn: $playerSettings.autoPlayNext)
+            } footer: {
+                Text("Качество используется при старте серии. В плеере можно сменить отдельно. Ускорение срабатывает при удержании правой половины экрана.")
             }
         }
         .navigationTitle("Просмотр")
@@ -99,6 +103,8 @@ struct AppearanceSettingsView: View {
                 }
 
                 Toggle("Заставка при запуске", isOn: $appSettings.isSplashEnabled)
+            } footer: {
+                Text("Тема меняет светлый/тёмный вид приложения. Заставка показывается при каждом запуске.")
             }
         }
         .navigationTitle("Оформление")
@@ -121,6 +127,8 @@ struct DownloadsSettingsView: View {
                         Text("\(count)").tag(count)
                     }
                 }
+            } footer: {
+                Text("При подключении к Wi‑Fi очередь загрузок продолжится автоматически.")
             }
         }
         .navigationTitle("Загрузки")
@@ -148,6 +156,10 @@ struct CollectionSettingsView: View {
                         }
                     ))
                 }
+            } header: {
+                Text("Видимые категории")
+            } footer: {
+                Text("Скрытые категории не будут отображаться в коллекции.")
             }
         }
         .navigationTitle("Коллекция")
@@ -221,6 +233,8 @@ struct ShikimoriSettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+            } footer: {
+                Text("Позволяет ставить статус списка и синхронизировать серии из карточки аниме. Экспорт сохраняет привязки в JSON.")
             }
         }
         .navigationTitle("Shikimori")
@@ -282,12 +296,20 @@ struct StorageSettingsView: View {
         List {
             Section {
                 ForEach(AppCacheKind.allCases) { kind in
-                    Text(kind.title)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(kind.title)
+                        Text(kind.detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
                 }
 
                 Button("Очистить кеш…", role: .destructive) {
                     showConfirmation = true
                 }
+            } footer: {
+                Text("Скачанные серии очищаются во вкладке «Загрузки», не здесь.")
             }
         }
         .navigationTitle("Память и кеш")
@@ -306,6 +328,8 @@ struct StorageSettingsView: View {
                 AppCacheManager.clearAll()
             }
             Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Скачанные серии не удаляются. Можно очистить только выбранный тип кеша.")
         }
     }
 }

@@ -47,9 +47,15 @@ struct ProfileView: View {
                     }
                 }
 
-                aboutSection
             }
             .navigationTitle(L10n.profile)
+            .safeAreaInset(edge: .bottom) {
+                Text(AppVersion.profileLabel)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -78,10 +84,11 @@ struct ProfileView: View {
                     }
 
                     Spacer(minLength: 0)
-                }
 
-                Button("Выйти", role: .destructive) {
-                    Task { await authService.logout() }
+                    Button("Выйти", role: .destructive) {
+                        Task { await authService.logout() }
+                    }
+                    .font(.subheadline)
                 }
             }
         } else {
@@ -90,14 +97,6 @@ struct ProfileView: View {
                     showLogin = true
                 }
             }
-        }
-    }
-
-    // MARK: - About
-
-    private var aboutSection: some View {
-        Section {
-            LabeledContent("Версия", value: AppVersion.display)
         }
     }
 

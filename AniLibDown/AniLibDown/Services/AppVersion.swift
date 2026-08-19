@@ -13,6 +13,10 @@ enum AppVersion {
         short
     }
 
+    static var profileLabel: String {
+        "\(short) • AniLibDown"
+    }
+
     static var userAgent: String {
         "AniLibDown/\(short) (iOS)"
     }
