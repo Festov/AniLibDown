@@ -304,6 +304,7 @@ private struct WaveGlow: View {
 
 struct RootView: View {
     @ObservedObject private var appSettings = AppSettings.shared
+    @EnvironmentObject private var authService: AuthService
     @State private var showSplash = true
 
     init() {
@@ -313,8 +314,13 @@ struct RootView: View {
     var body: some View {
         ZStack {
             if !showSplash {
-                ContentView()
-                    .transition(.opacity)
+                if authService.isAuthenticated {
+                    ContentView()
+                        .transition(.opacity)
+                } else {
+                    LoginView()
+                        .transition(.opacity)
+                }
             }
 
             if showSplash {
