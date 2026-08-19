@@ -256,6 +256,7 @@ struct PosterZoomOverlay: View {
             .scaleEffect(appeared ? 1 : 0.4)
             .opacity(appeared ? 1 : 0)
             .padding(24)
+            .onTapGesture { onDismiss() }
         }
         .onAppear {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Notifications
 
@@ -169,5 +170,180 @@ struct CollectionSettingsView: View {
         }
         .navigationTitle("Коллекция")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Shikimori
+
+struct ShikimoriSettingsView: View {
+    @ObservedObject private var appSettings = AppSettings.shared
+    @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
+    @State private var showImporter = false
+    @State private var importResult: String?
+
+    var body: some View {
+        List {
+            Section {
+                Toggle("Блок Shikimori в карточке аниме", isOn: $appSettings.showShikimoriOnReleaseCard)
+            }
+
+            Section {
+                if !ShikimoriConfig.isConfigured {
+                    Text(ShikimoriConfig.configurationHint)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else if shikimoriAuth.isAuthenticated, let profile = shikimoriAuth.profile {
+                    HStack {
+                        Label(profile.nickname, systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Spacer()
+                        Button {
+                            shikimoriAuth.disconnect()
+                        } label: {
+                            Label("Отключить", systemImage: "xmark.circle")
+                                .font(.subheadline)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                } else {
+                    Button {
+                        Task { await shikimoriAuth.connect() }
+                    } label: {
+                        if shikimoriAuth.isLoading {
+                            HStack {
+                                ProgressView()
+                                Text("Подключение…")
+                            }
+                        } else {
+                            Text("Подключить Shikimori")
+                        }
+                    }
+                    .disabled(shikimoriAuth.isLoading)
+                }
+
+                if let error = shikimoriAuth.errorMessage {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            } header: {
+                Text("Аккаунт")
+            }
+
+            Section {
+                ShareLink(item: shikimoriExportDocument, preview: SharePreview("Shikimori Links")) {
+                    Label("Экспорт привязок", systemImage: "square.and.arrow.up")
+                }
+                .disabled(!canExport)
+
+                Button {
+                    showImporter = true
+                } label: {
+                    Label("Импорт привязок", systemImage: "square.and.arrow.down")
+                }
+
+                if let importResult {
+                    Text(importResult)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Данные")
+            }
+        }
+        .navigationTitle("Shikimori")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await shikimoriAuth.restoreSession()
+        }
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                importLinks(from: url)
+            case .failure(let error):
+                importResult = error.localizedDescription
+            }
+        }
+    }
+
+    private var canExport: Bool {
+        !ShikimoriLinkStore.shared.links.isEmpty
+    }
+
+    private var shikimoriExportDocument: URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("shikimori-links.json")
+        do {
+            let data = try ShikimoriLinkStore.shared.exportJSON()
+            try data.write(to: url, options: .atomic)
+        } catch {
+            ToastCenter.shared.show("Не удалось подготовить экспорт", isError: true)
+        }
+        return url
+    }
+
+    private func importLinks(from url: URL) {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            let count = try ShikimoriLinkStore.shared.importJSON(data, merge: true)
+            importResult = "Импортировано привязок: \(count)"
+            ToastCenter.shared.show("Импортировано: \(count)")
+        } catch {
+            importResult = error.localizedDescription
+            ToastCenter.shared.show(error.localizedDescription, isError: true)
+        }
+    }
+}
+
+// MARK: - Storage
+
+struct StorageSettingsView: View {
+    @State private var showConfirmation = false
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(AppCacheKind.allCases) { kind in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(kind.title)
+                        Text(kind.detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Button("Очистить кеш…", role: .destructive) {
+                    showConfirmation = true
+                }
+            } footer: {
+                Text("Скачанные серии очищаются во вкладке «Загрузки», не здесь.")
+            }
+        }
+        .navigationTitle("Память и кеш")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Что очистить?",
+            isPresented: $showConfirmation,
+            titleVisibility: .visible
+        ) {
+            ForEach(AppCacheKind.allCases) { kind in
+                Button(kind.title, role: .destructive) {
+                    AppCacheManager.clear([kind])
+                }
+            }
+            Button("Очистить всё", role: .destructive) {
+                AppCacheManager.clearAll()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Скачанные серии не удаляются. Можно очистить только выбранный тип кеша.")
+        }
     }
 }
