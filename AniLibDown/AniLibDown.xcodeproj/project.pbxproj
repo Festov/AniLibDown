@@ -10,6 +10,7 @@
 		051219820FAA4931908C9A56 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17964C666B4C13156A7F6D8 /* ContentView.swift */; };
 		C05909D40811CB52C1282126 /* SharedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B32BDFB7EFBC805C5CAAEC /* SharedViews.swift */; };
 		9ADB2B09516814BCC5B70A14 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BEC7490BB236F88A384D67 /* ProfileView.swift */; };
+		D1A2C3B4E5F60719B9CA0D21 /* SettingsSubviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2C3B4E5F60718B9CA0D21 /* SettingsSubviews.swift */; };
 		1897B79A8AE1A6B2DF8F8630 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */; };
 		1836311D6991F858AD83D6D9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */; };
 		6837C48C4EBC81ACE1D27874 /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */; };
@@ -82,6 +83,7 @@
 		E17964C666B4C13156A7F6D8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
 		A8B32BDFB7EFBC805C5CAAEC /* SharedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Components/SharedViews.swift"; sourceTree = "<group>"; };
 		C0BEC7490BB236F88A384D67 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Profile/ProfileView.swift"; sourceTree = "<group>"; };
+		D1A2C3B4E5F60718B9CA0D21 /* SettingsSubviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Profile/SettingsSubviews.swift"; sourceTree = "<group>"; };
 		E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/VideoPlayerView.swift"; sourceTree = "<group>"; };
 		68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Auth/LoginView.swift"; sourceTree = "<group>"; };
 		41FE975ABB431EB6DFFD86A4 /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Catalog/CatalogView.swift"; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 				E17964C666B4C13156A7F6D8 /* ContentView.swift */,
 				A8B32BDFB7EFBC805C5CAAEC /* SharedViews.swift */,
 				C0BEC7490BB236F88A384D67 /* ProfileView.swift */,
+				D1A2C3B4E5F60718B9CA0D21 /* SettingsSubviews.swift */,
 				E1F7C1F449B79241ADA89649 /* VideoPlayerView.swift */,
 				68C8F50FEE5B5AEF8C68BCAD /* LoginView.swift */,
 				A4B5C6D7E8F9012345678A13 /* CollectionView.swift */,
@@ -390,6 +393,7 @@
 				051219820FAA4931908C9A56 /* ContentView.swift in Sources */,
 				C05909D40811CB52C1282126 /* SharedViews.swift in Sources */,
 				9ADB2B09516814BCC5B70A14 /* ProfileView.swift in Sources */,
+				D1A2C3B4E5F60719B9CA0D21 /* SettingsSubviews.swift in Sources */,
 				1897B79A8AE1A6B2DF8F8630 /* VideoPlayerView.swift in Sources */,
 				1836311D6991F858AD83D6D9 /* LoginView.swift in Sources */,
 				A4B5C6D7E8F9012345678A03 /* CollectionView.swift in Sources */,
