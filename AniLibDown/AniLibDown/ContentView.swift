@@ -65,7 +65,7 @@ struct ContentView: View {
             downloadManager.processDownloadQueue()
         }
         .task {
-            await authService.restoreSession()
+            guard authService.isAuthenticated else { return }
             await CollectionStatusStore.shared.refresh()
             ContinueWatchingStore.shared.reload()
             await EpisodeAlertStore.shared.checkForNewEpisodes()

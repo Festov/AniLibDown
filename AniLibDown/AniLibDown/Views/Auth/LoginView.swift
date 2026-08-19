@@ -2,8 +2,6 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var authService: AuthService
-    @Environment(\.dismiss) private var dismiss
-
     @State private var login = ""
     @State private var password = ""
 
@@ -32,9 +30,6 @@ struct LoginView: View {
                     Button {
                         Task {
                             await authService.login(login: login, password: password)
-                            if authService.isAuthenticated {
-                                dismiss()
-                            }
                         }
                     } label: {
                         HStack {
@@ -53,11 +48,6 @@ struct LoginView: View {
             }
             .navigationTitle("Вход")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
-                }
-            }
         }
     }
 }
