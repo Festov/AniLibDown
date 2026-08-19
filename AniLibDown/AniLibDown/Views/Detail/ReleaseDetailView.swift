@@ -88,8 +88,15 @@ struct ReleaseDetailView: View {
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
         }
-        .fullScreenCover(isPresented: $showPosterFullscreen) {
-            PosterFullscreenView(path: viewModel.release?.poster?.displayURL)
+        .overlay {
+            if showPosterFullscreen {
+                PosterZoomOverlay(path: viewModel.release?.poster?.displayURL) {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        showPosterFullscreen = false
+                    }
+                }
+                .transition(.opacity)
+            }
         }
     }
 
@@ -148,7 +155,9 @@ struct ReleaseDetailView: View {
     private func header(for release: ReleaseDetail) -> some View {
         HStack(alignment: .top, spacing: 16) {
             Button {
-                showPosterFullscreen = true
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    showPosterFullscreen = true
+                }
             } label: {
                 PosterImage(path: release.poster?.displayURL, cornerRadius: 12)
                     .frame(width: 120, height: 170)

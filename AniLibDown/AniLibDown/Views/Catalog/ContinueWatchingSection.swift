@@ -43,7 +43,7 @@ private struct ContinueWatchingCard: View {
                 .font(.caption.weight(.semibold))
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: 120, height: 32, alignment: .topLeading)
 
             Text(entry.episodeTitle)
                 .font(.caption2)

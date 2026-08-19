@@ -97,6 +97,12 @@ struct CatalogView: View {
                     }
                 }
             }
+            .onSubmit(of: .search) {
+                let trimmed = store.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    searchHistory.record(trimmed)
+                }
+            }
             .onChange(of: store.searchText) { _, _ in
                 store.scheduleSearch()
             }
