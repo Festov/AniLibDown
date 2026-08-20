@@ -52,7 +52,8 @@ struct PlayerSettingsSheet: View {
                         }
                     }
 
-                    Toggle("Пропуск опенинга и эндинга", isOn: $settings.skipOPED)
+                    Toggle("Пропускать опенинг", isOn: $settings.skipOpening)
+                    Toggle("Пропускать эндинг", isOn: $settings.skipEnding)
                     Toggle("Автозапуск следующей серии", isOn: $settings.autoPlayNext)
 
                     Picker("Ускорение при удержании", selection: $settings.holdSpeedRate) {

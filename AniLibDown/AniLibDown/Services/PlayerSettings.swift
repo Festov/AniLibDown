@@ -41,8 +41,12 @@ final class PlayerSettings: ObservableObject {
         didSet { UserDefaults.standard.set(seekInterval.rawValue, forKey: Keys.seekInterval) }
     }
 
-    @Published var skipOPED: Bool {
-        didSet { UserDefaults.standard.set(skipOPED, forKey: Keys.skipOPED) }
+    @Published var skipOpening: Bool {
+        didSet { UserDefaults.standard.set(skipOpening, forKey: Keys.skipOpening) }
+    }
+
+    @Published var skipEnding: Bool {
+        didSet { UserDefaults.standard.set(skipEnding, forKey: Keys.skipEnding) }
     }
 
     @Published var autoPlayNext: Bool {
@@ -56,6 +60,8 @@ final class PlayerSettings: ObservableObject {
     private enum Keys {
         static let seekInterval = "playerSeekInterval"
         static let skipOPED = "playerSkipOPED"
+        static let skipOpening = "playerSkipOpening"
+        static let skipEnding = "playerSkipEnding"
         static let autoPlayNext = "playerAutoPlayNext"
         static let holdSpeedRate = "playerHoldSpeedRate"
     }
@@ -64,10 +70,24 @@ final class PlayerSettings: ObservableObject {
         let storedInterval = UserDefaults.standard.integer(forKey: Keys.seekInterval)
         seekInterval = SeekInterval(rawValue: storedInterval) ?? .five
 
-        if UserDefaults.standard.object(forKey: Keys.skipOPED) == nil {
-            skipOPED = true
+        if UserDefaults.standard.object(forKey: Keys.skipOpening) == nil,
+           UserDefaults.standard.object(forKey: Keys.skipEnding) == nil,
+           UserDefaults.standard.object(forKey: Keys.skipOPED) != nil {
+            let legacy = UserDefaults.standard.bool(forKey: Keys.skipOPED)
+            skipOpening = legacy
+            skipEnding = legacy
         } else {
-            skipOPED = UserDefaults.standard.bool(forKey: Keys.skipOPED)
+            if UserDefaults.standard.object(forKey: Keys.skipOpening) == nil {
+                skipOpening = true
+            } else {
+                skipOpening = UserDefaults.standard.bool(forKey: Keys.skipOpening)
+            }
+
+            if UserDefaults.standard.object(forKey: Keys.skipEnding) == nil {
+                skipEnding = true
+            } else {
+                skipEnding = UserDefaults.standard.bool(forKey: Keys.skipEnding)
+            }
         }
 
         if UserDefaults.standard.object(forKey: Keys.autoPlayNext) == nil {

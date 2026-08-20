@@ -47,15 +47,15 @@ struct ProfileView: View {
                     }
                 }
 
+                Section {
+                    Text(AppVersion.profileLabel)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .listRowBackground(Color.clear)
+                }
             }
             .navigationTitle(L10n.profile)
-            .safeAreaInset(edge: .bottom) {
-                Text(AppVersion.profileLabel)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -82,13 +82,15 @@ struct ProfileView: View {
                                 .lineLimit(1)
                         }
                     }
-
-                    Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .allowsHitTesting(false)
 
                     Button("Выйти", role: .destructive) {
                         Task { await authService.logout() }
                     }
                     .font(.subheadline)
+                    .buttonStyle(.borderless)
                 }
             }
         } else {
@@ -122,6 +124,7 @@ struct ProfileView: View {
             }
             .frame(width: 44, height: 44)
             .clipShape(Circle())
+            .allowsHitTesting(false)
         } else {
             avatarFallback
         }
@@ -132,5 +135,6 @@ struct ProfileView: View {
             .resizable()
             .frame(width: 44, height: 44)
             .foregroundStyle(.secondary)
+            .allowsHitTesting(false)
     }
 }

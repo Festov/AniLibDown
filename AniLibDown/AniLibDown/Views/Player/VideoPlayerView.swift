@@ -801,7 +801,7 @@ struct VideoPlayerView: View {
 
     private func configureSkipObserver(for player: AVPlayer, episode: Episode) {
         progress.onTimeUpdate = { [self] time in
-            if playerSettings.skipOPED {
+            if playerSettings.skipOpening || playerSettings.skipEnding {
                 handleSkipSegments(at: time, episode: episode)
             } else {
                 cancelSkipPrompt()
@@ -869,6 +869,9 @@ struct VideoPlayerView: View {
         ]
 
         for (key, title, skip) in segments {
+            if key == "opening", !playerSettings.skipOpening { continue }
+            if key == "ending", !playerSettings.skipEnding { continue }
+
             guard let bounds = segmentBounds(for: key, skip: skip, duration: progress.duration) else { continue }
 
             let segmentKey = "\(episode.id)-\(key)"
