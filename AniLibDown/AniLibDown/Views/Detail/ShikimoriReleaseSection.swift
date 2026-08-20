@@ -132,14 +132,16 @@ struct ShikimoriReleaseSection: View {
                     viewModel.unlinkShikimori(releaseId: release.id)
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "link.slash")
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
                         Text("Отвязать")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
                     }
-                    .font(.caption.weight(.semibold))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(Color.red.opacity(0.14), in: Capsule())
-                    .foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
             }

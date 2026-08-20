@@ -76,7 +76,9 @@ struct PlaybackSettingsView: View {
                     }
                 }
 
-                Toggle("Пропускать OP/ED", isOn: $playerSettings.skipOPED)
+                Toggle("Пропускать опенинг", isOn: $playerSettings.skipOpening)
+
+                Toggle("Пропускать эндинг", isOn: $playerSettings.skipEnding)
 
                 Toggle("Автовоспроизведение следующей серии", isOn: $playerSettings.autoPlayNext)
             } footer: {
