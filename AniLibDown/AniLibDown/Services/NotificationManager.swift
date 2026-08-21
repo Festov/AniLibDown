@@ -52,50 +52,14 @@ final class NotificationManager {
             .removePendingNotificationRequests(withIdentifiers: [publishDayIdentifier(releaseId)])
     }
 
-    func reschedulePublishDayReminders(
-        subscriptions: [EpisodeAlertSubscription],
-        hour: Int,
-        enabled: Bool
-    ) async {
+    /// Clears legacy calendar "publish day" reminders (feature removed in 1.1.3).
+    func clearPublishDayReminders() async {
         let center = UNUserNotificationCenter.current()
         let existing = await center.pendingNotificationRequests()
         let oldIds = existing
             .map(\.identifier)
             .filter { $0.hasPrefix("publish-day-") }
         center.removePendingNotificationRequests(withIdentifiers: oldIds)
-
-        guard enabled else { return }
-        await requestAuthorizationIfNeeded()
-
-        let clampedHour = min(max(hour, 0), 23)
-
-        for subscription in subscriptions {
-            guard let dayValue = subscription.publishDayValue,
-                  (1...7).contains(dayValue) else { continue }
-
-            let content = UNMutableNotificationContent()
-            content.title = "Сегодня новая серия!"
-            if let number = subscription.nextEpisodeNumber {
-                content.body = episodeNotificationBody(title: subscription.title, episodeNumber: String(number))
-            } else {
-                content.body = "\(subscription.title). Бегом смотреть!"
-            }
-            content.sound = .default
-            content.userInfo = ["releaseId": subscription.releaseId]
-
-            var components = DateComponents()
-            components.weekday = PublishDay.calendarWeekday(fromAniLibertyDay: dayValue)
-            components.hour = clampedHour
-            components.minute = 0
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            let request = UNNotificationRequest(
-                identifier: publishDayIdentifier(subscription.releaseId),
-                content: content,
-                trigger: trigger
-            )
-            try? await center.add(request)
-        }
     }
 
     private func episodeNotificationBody(title: String, episodeNumber: String) -> String {

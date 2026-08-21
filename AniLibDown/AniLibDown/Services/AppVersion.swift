@@ -5,14 +5,6 @@ enum AppVersion {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.3"
     }
 
-    static var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    }
-
-    static var display: String {
-        short
-    }
-
     static var profileLabel: String {
         "\(short) • AniLibDown"
     }
