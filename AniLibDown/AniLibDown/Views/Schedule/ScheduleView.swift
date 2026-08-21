@@ -124,7 +124,6 @@ struct ScheduleView: View {
                 appSettings.episodeNotificationsEnabled = true
                 Task {
                     await NotificationManager.shared.requestAuthorizationIfNeeded()
-                    await alerts.rescheduleReminders()
                 }
             }
         } label: {

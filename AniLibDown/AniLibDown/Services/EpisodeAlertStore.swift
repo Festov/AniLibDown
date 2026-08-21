@@ -99,12 +99,6 @@ final class EpisodeAlertStore: ObservableObject {
         persist()
         Task {
             await NotificationManager.shared.requestAuthorizationIfNeeded()
-            await NotificationManager.shared.reschedulePublishDayReminders(
-                subscriptions: subscriptions,
-                hour: AppSettings.shared.publishDayReminderHour,
-                enabled: AppSettings.shared.episodeNotificationsEnabled
-                    && AppSettings.shared.publishDayRemindersEnabled
-            )
         }
     }
 
@@ -115,16 +109,7 @@ final class EpisodeAlertStore: ObservableObject {
         NotificationManager.shared.cancelPublishDayReminder(releaseId: releaseId)
     }
 
-    func rescheduleReminders() async {
-        await NotificationManager.shared.reschedulePublishDayReminders(
-            subscriptions: subscriptions,
-            hour: AppSettings.shared.publishDayReminderHour,
-            enabled: AppSettings.shared.episodeNotificationsEnabled
-                && AppSettings.shared.publishDayRemindersEnabled
-        )
-    }
-
-    /// Checks schedule for newly published episodes among subscriptions / «Смотрю».
+    /// Checks schedule for newly published episodes among subscriptions.
     func checkForNewEpisodes() async {
         guard AppSettings.shared.episodeNotificationsEnabled else { return }
         guard !isChecking else { return }
@@ -144,9 +129,6 @@ final class EpisodeAlertStore: ObservableObject {
                 }
                 UserDefaults.standard.set(true, forKey: Keys.seeded)
                 persist()
-                if didUpdateNumbers {
-                    await rescheduleReminders()
-                }
                 return
             }
 
@@ -173,9 +155,6 @@ final class EpisodeAlertStore: ObservableObject {
 
             if didNotify || didUpdateNumbers {
                 persist()
-            }
-            if didUpdateNumbers {
-                await rescheduleReminders()
             }
         } catch {
             AppLog.api.error("Episode alert check failed: \(error.localizedDescription)")
@@ -206,18 +185,10 @@ final class EpisodeAlertStore: ObservableObject {
 
     private func relevantItems(from schedule: ScheduleNowResponse) -> [ScheduleItem] {
         let subscribed = Set(subscriptions.map(\.releaseId))
-        var ids = subscribed
-
-        if AppSettings.shared.notifyWatchingCollection {
-            for (releaseId, type) in CollectionStatusStore.shared.memberships where type == .watching {
-                ids.insert(releaseId)
-            }
-        }
-
-        guard !ids.isEmpty else { return [] }
+        guard !subscribed.isEmpty else { return [] }
         // Prefer today/yesterday (fresh publishes); tomorrow rarely has published episode.
         return (schedule.today + schedule.yesterday + schedule.tomorrow)
-            .filter { ids.contains($0.release.id) }
+            .filter { subscribed.contains($0.release.id) }
     }
 
     private func load() {
