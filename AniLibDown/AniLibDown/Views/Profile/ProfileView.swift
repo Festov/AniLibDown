@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
-    @State private var showLogin = false
 
     var body: some View {
         NavigationStack {
@@ -56,9 +55,6 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle(L10n.profile)
-            .sheet(isPresented: $showLogin) {
-                LoginView()
-            }
         }
     }
 
@@ -66,7 +62,7 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var accountSection: some View {
-        if authService.isAuthenticated, let profile = authService.profile {
+        if let profile = authService.profile {
             Section {
                 HStack(spacing: 12) {
                     profileAvatar(for: profile)
@@ -91,12 +87,6 @@ struct ProfileView: View {
                     }
                     .font(.subheadline)
                     .buttonStyle(.borderless)
-                }
-            }
-        } else {
-            Section {
-                Button("Войти") {
-                    showLogin = true
                 }
             }
         }

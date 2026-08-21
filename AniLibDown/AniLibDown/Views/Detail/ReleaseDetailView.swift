@@ -4,14 +4,12 @@ struct ReleaseDetailView: View {
     let releaseId: Int
 
     @StateObject private var viewModel = ReleaseDetailViewModel()
-    @EnvironmentObject private var authService: AuthService
     @ObservedObject private var appSettings = AppSettings.shared
     @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @State private var playerSession: PlayerSession?
     @State private var showShikimoriSearch = false
     @State private var showPosterFullscreen = false
-    @State private var showLogin = false
 
     private var selectedQuality: VideoQuality {
         appSettings.defaultVideoQuality
@@ -81,9 +79,6 @@ struct ReleaseDetailView: View {
                     Task { await viewModel.linkShikimori(anime: anime, releaseId: releaseId) }
                 }
             }
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView()
         }
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
@@ -227,20 +222,7 @@ struct ReleaseDetailView: View {
                 .tint(Color.accentColor)
                 .disabled(release.episodes.isEmpty)
 
-                if authService.isAuthenticated {
-                    collectionMenuButton(for: release)
-                } else {
-                    Button {
-                        showLogin = true
-                    } label: {
-                        Label("Коллекции", systemImage: "heart")
-                            .font(.body.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accentColor)
-                }
+                collectionMenuButton(for: release)
             }
 
             HStack(spacing: 10) {
@@ -302,7 +284,6 @@ struct ReleaseDetailView: View {
                 appSettings.episodeNotificationsEnabled = true
                 Task {
                     await NotificationManager.shared.requestAuthorizationIfNeeded()
-                    await episodeAlerts.rescheduleReminders()
                 }
             }
         } label: {

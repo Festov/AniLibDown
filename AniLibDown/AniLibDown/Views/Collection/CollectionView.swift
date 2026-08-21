@@ -119,7 +119,6 @@ struct CollectionView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var store = CollectionStore.shared
     @ObservedObject private var appSettings = AppSettings.shared
-    @State private var showLogin = false
 
     private var visibleTypes: [CollectionType] {
         CollectionType.allCases.filter { !appSettings.hiddenCollectionTypes.contains($0) }
@@ -127,19 +126,10 @@ struct CollectionView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if authService.isAuthenticated {
-                    collectionContent
-                } else {
-                    guestContent
-                }
-            }
+            collectionContent
             .navigationTitle(L10n.collection)
             .navigationDestination(for: Int.self) { releaseId in
                 ReleaseDetailView(releaseId: releaseId)
-            }
-            .sheet(isPresented: $showLogin) {
-                LoginView()
             }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
                 if isAuthenticated {
@@ -148,18 +138,6 @@ struct CollectionView: View {
                     store.invalidate()
                 }
             }
-        }
-    }
-
-    private var guestContent: some View {
-        ContentUnavailableView {
-            Label("Войдите в аккаунт", systemImage: "heart.text.square")
-        } description: {
-            Text("Коллекция AniLiberty доступна после авторизации")
-        } actions: {
-            Button("Войти") { showLogin = true }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Войти в аккаунт AniLiberty")
         }
     }
 

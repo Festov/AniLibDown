@@ -1,5 +1,4 @@
 import AVKit
-import UIKit
 
 @MainActor
 final class PlayerPiPController: NSObject, ObservableObject {
