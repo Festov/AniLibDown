@@ -119,6 +119,7 @@ struct CollectionView: View {
     @EnvironmentObject private var authService: AuthService
     @ObservedObject private var store = CollectionStore.shared
     @ObservedObject private var appSettings = AppSettings.shared
+    @State private var showLogin = false
 
     private var visibleTypes: [CollectionType] {
         CollectionType.allCases.filter { !appSettings.hiddenCollectionTypes.contains($0) }
@@ -126,13 +127,38 @@ struct CollectionView: View {
 
     var body: some View {
         NavigationStack {
-            collectionContent
+            Group {
+                if authService.isAuthenticated {
+                    collectionContent
+                } else {
+                    ContentUnavailableView {
+                        Label("Нужен вход", systemImage: "person.crop.circle.badge.questionmark")
+                    } description: {
+                        Text("Коллекция AniLiberty доступна после входа в аккаунт. Остальное приложение можно использовать без авторизации.")
+                    } actions: {
+                        Button("Войти") { showLogin = true }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
             .navigationTitle(L10n.collection)
             .navigationDestination(for: Int.self) { releaseId in
                 ReleaseDetailView(releaseId: releaseId)
             }
+            .sheet(isPresented: $showLogin) {
+                NavigationStack {
+                    LoginView()
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Закрыть") { showLogin = false }
+                            }
+                        }
+                }
+                .environmentObject(authService)
+            }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
                 if isAuthenticated {
+                    showLogin = false
                     Task { await store.loadIfNeeded(type: store.selectedType) }
                 } else {
                     store.invalidate()

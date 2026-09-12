@@ -55,9 +55,20 @@ final class AppSettings: ObservableObject {
     @Published var episodeNotificationsEnabled: Bool {
         didSet {
             UserDefaults.standard.set(episodeNotificationsEnabled, forKey: "episodeNotificationsEnabled")
-            Task {
-                await NotificationManager.shared.clearPublishDayReminders()
+            Task { await EpisodeAlertStore.shared.rescheduleReminders() }
+        }
+    }
+
+    /// Час (0…23) локального напоминания в день выхода. По умолчанию 18:00.
+    @Published var episodeNotificationHour: Int {
+        didSet {
+            let clamped = min(max(episodeNotificationHour, 0), 23)
+            if clamped != episodeNotificationHour {
+                episodeNotificationHour = clamped
+                return
             }
+            UserDefaults.standard.set(episodeNotificationHour, forKey: "episodeNotificationHour")
+            Task { await EpisodeAlertStore.shared.rescheduleReminders() }
         }
     }
 
@@ -93,12 +104,24 @@ final class AppSettings: ObservableObject {
         let hiddenRaw = UserDefaults.standard.stringArray(forKey: "hiddenCollectionTypes") ?? []
         hiddenCollectionTypes = Set(hiddenRaw.compactMap { CollectionType(rawValue: $0) })
 
-        // Legacy keys from removed settings — drop leftover calendar reminders.
+        if UserDefaults.standard.object(forKey: "episodeNotificationHour") == nil {
+            if UserDefaults.standard.object(forKey: "publishDayReminderHour") != nil {
+                episodeNotificationHour = UserDefaults.standard.integer(forKey: "publishDayReminderHour")
+            } else {
+                episodeNotificationHour = 18
+            }
+        } else {
+            episodeNotificationHour = UserDefaults.standard.integer(forKey: "episodeNotificationHour")
+        }
+        episodeNotificationHour = min(max(episodeNotificationHour, 0), 23)
+
+        // Obsolete keys from older notification modes.
         UserDefaults.standard.removeObject(forKey: "publishDayRemindersEnabled")
         UserDefaults.standard.removeObject(forKey: "notifyWatchingCollection")
         UserDefaults.standard.removeObject(forKey: "publishDayReminderHour")
-        Task {
-            await NotificationManager.shared.clearPublishDayReminders()
-        }
+        UserDefaults.standard.removeObject(forKey: "episodeAlertLastNotified")
+        UserDefaults.standard.removeObject(forKey: "episodeAlertSeeded")
+
+        Task { await EpisodeAlertStore.shared.rescheduleReminders() }
     }
 }

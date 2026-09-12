@@ -3,6 +3,7 @@ import SwiftUI
 struct ContinueWatchingSection: View {
     @ObservedObject private var store = ContinueWatchingStore.shared
     let onSelect: (ContinueWatchingEntry) -> Void
+    @State private var entryPendingRemoval: ContinueWatchingEntry?
 
     var body: some View {
         if !store.entries.isEmpty {
@@ -21,12 +22,44 @@ struct ContinueWatchingSection: View {
                                 ContinueWatchingCard(entry: entry)
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Убрать из «Продолжить просмотр»", role: .destructive) {
+                                    entryPendingRemoval = entry
+                                }
+                            }
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 0.55).onEnded { _ in
+                                    entryPendingRemoval = entry
+                                }
+                            )
                         }
                     }
                     .padding(.horizontal, 4)
                 }
             }
             .padding(.vertical, 4)
+            .confirmationDialog(
+                "Убрать из «Продолжить просмотр»?",
+                isPresented: Binding(
+                    get: { entryPendingRemoval != nil },
+                    set: { if !$0 { entryPendingRemoval = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Убрать", role: .destructive) {
+                    if let entry = entryPendingRemoval {
+                        WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
+                    }
+                    entryPendingRemoval = nil
+                }
+                Button("Отмена", role: .cancel) {
+                    entryPendingRemoval = nil
+                }
+            } message: {
+                if let entry = entryPendingRemoval {
+                    Text(entry.releaseTitle)
+                }
+            }
         }
     }
 }

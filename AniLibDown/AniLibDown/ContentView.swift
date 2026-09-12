@@ -65,10 +65,10 @@ struct ContentView: View {
             downloadManager.processDownloadQueue()
         }
         .task {
+            ContinueWatchingStore.shared.reload()
+            await EpisodeAlertStore.shared.rescheduleReminders()
             guard authService.isAuthenticated else { return }
             await CollectionStatusStore.shared.refresh()
-            ContinueWatchingStore.shared.reload()
-            await EpisodeAlertStore.shared.checkForNewEpisodes()
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             Task { await CollectionStatusStore.shared.refresh() }
@@ -80,7 +80,6 @@ struct ContentView: View {
             if newPhase == .active {
                 Task { await authService.refreshSessionIfNeeded() }
                 downloadManager.processDownloadQueue()
-                Task { await EpisodeAlertStore.shared.checkForNewEpisodes() }
             }
         }
     }

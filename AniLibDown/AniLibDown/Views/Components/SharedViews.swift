@@ -11,22 +11,25 @@ private struct SkeletonShimmer: ViewModifier {
                     LinearGradient(
                         colors: [
                             .clear,
-                            .white.opacity(0.2),
+                            .white.opacity(0.06),
+                            .white.opacity(0.14),
+                            .white.opacity(0.06),
                             .clear
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
-                    .frame(width: geometry.size.width * 0.9)
+                    .frame(width: geometry.size.width * 1.35)
                     .rotationEffect(.degrees(18))
                     .offset(x: geometry.size.width * phase)
+                    .blur(radius: 8)
                     .blendMode(.plusLighter)
                 }
                 .clipped()
                 .allowsHitTesting(false)
             }
             .onAppear {
-                withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: 1.45).repeatForever(autoreverses: false)) {
                     phase = 1.3
                 }
             }
@@ -186,13 +189,15 @@ struct PosterZoomOverlay: View {
 }
 
 struct OngoingBadge: View {
+    private let badgeRed = Color(red: 0.78, green: 0.24, blue: 0.24)
+
     var body: some View {
         Text(BroadcastStatus.ongoing.title)
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.orange)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Color.orange.opacity(0.18), in: Capsule())
+            .foregroundStyle(badgeRed)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(badgeRed.opacity(0.16), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .accessibilityHidden(true)
     }
 }
@@ -272,7 +277,6 @@ struct ReleaseRowSkeletonView: View {
                     .skeletonShimmer()
             }
         }
-        .redacted(reason: .placeholder)
         .padding(.vertical, 4)
     }
 }
