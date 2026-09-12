@@ -16,8 +16,16 @@ struct NotificationsSettingsView: View {
                             Task { await NotificationManager.shared.requestAuthorizationIfNeeded() }
                         }
                     }
+
+                if appSettings.episodeNotificationsEnabled {
+                    Picker("Время напоминания", selection: $appSettings.episodeNotificationHour) {
+                        ForEach(0..<24, id: \.self) { hour in
+                            Text(String(format: "%02d:00", hour)).tag(hour)
+                        }
+                    }
+                }
             } footer: {
-                Text("Уведомления приходят при выходе новых серий для подписанных релизов.")
+                Text("В день выхода подписанного тайтла придёт локальное напоминание в выбранное время — даже если приложение закрыто. Факт выхода серии не проверяется.")
             }
 
             if !episodeAlerts.subscriptions.isEmpty {

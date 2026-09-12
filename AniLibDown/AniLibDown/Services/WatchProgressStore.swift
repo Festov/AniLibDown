@@ -66,6 +66,20 @@ final class WatchProgressStore {
         }
     }
 
+    func clearRelease(releaseId: Int) {
+        var lastEpisodes = loadLastEpisodes()
+        let key = String(releaseId)
+        if let episodeId = lastEpisodes[key] {
+            var progress = loadProgress()
+            progress.removeValue(forKey: episodeId)
+            storeProgress(progress)
+        }
+        lastEpisodes.removeValue(forKey: key)
+        storeLastEpisodes(lastEpisodes)
+        ContinueWatchingStore.shared.remove(releaseId: releaseId)
+        ContinueWatchingStore.shared.reload()
+    }
+
     func clearPosition(for episodeId: String) {
         var progress = loadProgress()
         progress.removeValue(forKey: episodeId)

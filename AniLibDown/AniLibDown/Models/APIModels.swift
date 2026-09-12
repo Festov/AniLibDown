@@ -133,8 +133,11 @@ enum ReleaseFormatting {
     }
 
     static func displayEpisodeOrdinal(_ ordinal: Double) -> String {
-        guard ordinal > 0 else { return "—" }
-        if ordinal < 1 { return "1" }
+        // Keep specials / recaps with ordinal 0 visible as "0".
+        if abs(ordinal) < 0.05 {
+            return "0"
+        }
+        if ordinal > 0, ordinal < 1 { return "1" }
         let fraction = ordinal.truncatingRemainder(dividingBy: 1)
         if abs(fraction) < 0.05 || abs(fraction - 1) < 0.05 {
             return String(format: "%.0f", ordinal.rounded())
@@ -367,7 +370,7 @@ struct Episode: Codable, Identifiable, Hashable {
 
     var displayTitle: String {
         if let name, !name.isEmpty {
-            return "Серия \(ordinalFormatted): \(name)"
+            return name
         }
         return "Серия \(ordinalFormatted)"
     }

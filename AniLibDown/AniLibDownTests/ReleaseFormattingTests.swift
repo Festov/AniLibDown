@@ -19,7 +19,7 @@ final class ReleaseFormattingTests: XCTestCase {
     }
 
     func testDisplayEpisodeOrdinal() {
-        XCTAssertEqual(ReleaseFormatting.displayEpisodeOrdinal(0), "—")
+        XCTAssertEqual(ReleaseFormatting.displayEpisodeOrdinal(0), "0")
         XCTAssertEqual(ReleaseFormatting.displayEpisodeOrdinal(1), "1")
         XCTAssertEqual(ReleaseFormatting.displayEpisodeOrdinal(12), "12")
         XCTAssertEqual(ReleaseFormatting.displayEpisodeOrdinal(0.5), "1")

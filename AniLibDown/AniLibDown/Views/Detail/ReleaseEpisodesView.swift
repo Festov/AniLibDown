@@ -179,6 +179,10 @@ struct ReleaseEpisodesView: View {
         let range = ranges[rangeIndex]
         return allEpisodes.filter { episode in
             let number = Int(episode.ordinal.rounded(.towardZero))
+            // Recap / special with ordinal 0 belongs to the first range.
+            if number == 0 {
+                return range.start <= 1
+            }
             return number >= range.start && number <= range.end
         }
     }

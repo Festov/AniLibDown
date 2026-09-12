@@ -313,13 +313,8 @@ struct RootView: View {
     var body: some View {
         ZStack {
             if !showSplash {
-                if authService.isAuthenticated {
-                    ContentView()
-                        .transition(.opacity)
-                } else {
-                    LoginView()
-                        .transition(.opacity)
-                }
+                ContentView()
+                    .transition(.opacity)
             }
 
             if showSplash {
@@ -338,8 +333,7 @@ struct RootView: View {
             }
         }
         .task {
-            // Восстанавливаем сессию по сохранённому токену (Keychain).
-            // Если токена нет — останемся в LoginView, пока пользователь не введёт логин/пароль.
+            // Восстанавливаем сессию по сохранённому токену (Keychain), если есть.
             await authService.restoreSession()
         }
     }
