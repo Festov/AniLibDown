@@ -3,7 +3,6 @@ import SwiftUI
 struct ContinueWatchingSection: View {
     @ObservedObject private var store = ContinueWatchingStore.shared
     let onSelect: (ContinueWatchingEntry) -> Void
-    @State private var entryPendingRemoval: ContinueWatchingEntry?
 
     var body: some View {
         if !store.entries.isEmpty {
@@ -16,50 +15,26 @@ struct ContinueWatchingSection: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(store.entries.prefix(12)) { entry in
-                            Button {
-                                onSelect(entry)
-                            } label: {
-                                ContinueWatchingCard(entry: entry)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Убрать из «Продолжить просмотр»", role: .destructive) {
-                                    entryPendingRemoval = entry
+                            ContinueWatchingCard(entry: entry)
+                                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .onTapGesture {
+                                    onSelect(entry)
                                 }
-                            }
-                            .simultaneousGesture(
-                                LongPressGesture(minimumDuration: 0.55).onEnded { _ in
-                                    entryPendingRemoval = entry
+                                .contextMenu {
+                                    Button("Убрать из «Продолжить просмотр»", role: .destructive) {
+                                        WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
+                                    }
+                                } preview: {
+                                    ContinueWatchingCard(entry: entry)
+                                        .padding(8)
+                                        .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
-                            )
                         }
                     }
                     .padding(.horizontal, 4)
                 }
             }
             .padding(.vertical, 4)
-            .confirmationDialog(
-                "Убрать из «Продолжить просмотр»?",
-                isPresented: Binding(
-                    get: { entryPendingRemoval != nil },
-                    set: { if !$0 { entryPendingRemoval = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Убрать", role: .destructive) {
-                    if let entry = entryPendingRemoval {
-                        WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
-                    }
-                    entryPendingRemoval = nil
-                }
-                Button("Отмена", role: .cancel) {
-                    entryPendingRemoval = nil
-                }
-            } message: {
-                if let entry = entryPendingRemoval {
-                    Text(entry.releaseTitle)
-                }
-            }
         }
     }
 }
@@ -88,7 +63,11 @@ private struct ContinueWatchingCard: View {
                 .tint(.accentColor)
                 .frame(width: 120)
         }
+        .frame(width: 120, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(entry.releaseTitle), \(entry.episodeTitle), прогресс \(Int(entry.progressFraction * 100)) процентов")
+        .accessibilityLabel(
+            "\(entry.releaseTitle), \(entry.episodeTitle), прогресс \(Int(entry.progressFraction * 100)) процентов"
+        )
+        .accessibilityHint("Удерживайте, чтобы убрать из продолжить просмотр")
     }
 }

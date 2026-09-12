@@ -221,19 +221,19 @@ struct ReleaseRowView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(alignment: .center, spacing: 6) {
-                    if isOngoing {
-                        OngoingBadge()
-                    }
-                    if !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                    }
+                // Ongoing на своей строке; год / жанр / тип — ниже.
+                if isOngoing {
+                    OngoingBadge()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
