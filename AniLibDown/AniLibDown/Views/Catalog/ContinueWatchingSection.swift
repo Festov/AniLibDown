@@ -31,10 +31,12 @@ struct ContinueWatchingSection: View {
 /// Isolated item view so contextMenu/preview close over this entry, not a loop variable.
 private struct ContinueWatchingItem: View {
     let entry: ContinueWatchingEntry
-    let onSelect: () -> Void
+    let onSelect: (ContinueWatchingEntry) -> Void
 
     var body: some View {
-        Button(action: onSelect) {
+        Button {
+            onSelect(entry)
+        } label: {
             ContinueWatchingCard(entry: entry)
         }
         .buttonStyle(.plain)
