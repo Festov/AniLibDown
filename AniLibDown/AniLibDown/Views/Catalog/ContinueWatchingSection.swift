@@ -4,6 +4,10 @@ struct ContinueWatchingSection: View {
     @ObservedObject private var store = ContinueWatchingStore.shared
     let onSelect: (ContinueWatchingEntry) -> Void
 
+    /// Explicit selection for removal — avoids List + horizontal ScrollView
+    /// `contextMenu` hit-testing that always resolves to the first card.
+    @State private var entryPendingRemoval: ContinueWatchingEntry?
+
     var body: some View {
         if !store.entries.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
@@ -14,41 +18,57 @@ struct ContinueWatchingSection: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        // Materialize Array so ForEach identity is stable (ArraySlice + contextMenu
-                        // often captures the wrong element / first item).
                         ForEach(Array(store.entries.prefix(12))) { entry in
-                            ContinueWatchingItem(entry: entry, onSelect: onSelect)
+                            ContinueWatchingItem(
+                                entry: entry,
+                                onSelect: { onSelect(entry) },
+                                onRequestRemove: { entryPendingRemoval = entry }
+                            )
+                            .id(entry.releaseId)
                         }
                     }
                     .padding(.horizontal, 4)
                 }
             }
             .padding(.vertical, 4)
+            .confirmationDialog(
+                "Убрать из «Продолжить просмотр»?",
+                isPresented: Binding(
+                    get: { entryPendingRemoval != nil },
+                    set: { if !$0 { entryPendingRemoval = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: entryPendingRemoval
+            ) { entry in
+                Button("Убрать", role: .destructive) {
+                    WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
+                    entryPendingRemoval = nil
+                }
+                Button("Отмена", role: .cancel) {
+                    entryPendingRemoval = nil
+                }
+            } message: { entry in
+                Text(entry.releaseTitle)
+            }
         }
     }
 }
 
-/// Isolated item view so contextMenu/preview close over this entry, not a loop variable.
 private struct ContinueWatchingItem: View {
     let entry: ContinueWatchingEntry
-    let onSelect: (ContinueWatchingEntry) -> Void
+    let onSelect: () -> Void
+    let onRequestRemove: () -> Void
 
     var body: some View {
-        Button {
-            onSelect(entry)
-        } label: {
-            ContinueWatchingCard(entry: entry)
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button("Убрать из «Продолжить просмотр»", role: .destructive) {
-                WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
+        ContinueWatchingCard(entry: entry)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onSelect)
+            .onLongPressGesture(minimumDuration: 0.45) {
+                onRequestRemove()
             }
-        } preview: {
-            ContinueWatchingCard(entry: entry)
-                .padding(8)
-                .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
+            .accessibilityAction(named: "Убрать из «Продолжить просмотр»") {
+                onRequestRemove()
+            }
     }
 }
 
