@@ -36,43 +36,45 @@ struct CatalogView: View {
                         .frame(maxWidth: .infinity, minHeight: 420)
                     }
                 } else {
-                    List {
-                        if store.searchText.isEmpty {
-                            Section {
-                                ContinueWatchingSection { entry in
-                                    navigationPath.append(entry.releaseId)
-                                }
+                    // Outside List: horizontal cards + List long-press/contextMenu
+                    // consistently resolve to the first item on device.
+                    VStack(spacing: 0) {
+                        if store.searchText.isEmpty, !continueWatching.entries.isEmpty {
+                            ContinueWatchingSection { entry in
+                                navigationPath.append(entry.releaseId)
                             }
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 4)
+                            .padding(.bottom, 8)
                         }
 
-                        ForEach(store.releases) { release in
-                            NavigationLink(value: release.id) {
-                                ReleaseRowView(
-                                    title: release.name.main,
-                                    subtitle: subtitle(for: release),
-                                    posterPath: release.poster?.displayURL,
-                                    isOngoing: release.isOngoing
-                                )
+                        List {
+                            ForEach(store.releases) { release in
+                                NavigationLink(value: release.id) {
+                                    ReleaseRowView(
+                                        title: release.name.main,
+                                        subtitle: subtitle(for: release),
+                                        posterPath: release.poster?.displayURL,
+                                        isOngoing: release.isOngoing
+                                    )
+                                }
+                                .onAppear {
+                                    if release.id == store.releases.last?.id {
+                                        Task { await store.loadMore() }
+                                    }
+                                }
                             }
-                            .onAppear {
-                                if release.id == store.releases.last?.id {
-                                    Task { await store.loadMore() }
+
+                            if store.isLoadingMore {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                    Spacer()
                                 }
                             }
                         }
-
-                        if store.isLoadingMore {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                Spacer()
-                            }
-                        }
+                        .listStyle(.plain)
                     }
-                    .listStyle(.plain)
                     .overlay {
                         if store.isRefreshing {
                             ProgressView()

@@ -74,6 +74,7 @@ struct ContentView: View {
                 showVersionOverlay = true
             }
             .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
         )
         .onChange(of: networkMonitor.isOnWiFi) { _, _ in
             downloadManager.processDownloadQueue()
@@ -174,7 +175,8 @@ struct ContentView: View {
 
 // MARK: - Profile tab triple-tap
 
-/// Listens for three quick taps on the Profile UITabBar item.
+/// Attaches a 3-tap gesture to `UITabBar` and fires only when the tap is in the Profile item zone.
+/// Works on iOS 17/18 where tab items may not be plain `UIControl`s.
 private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
     var onTripleTap: () -> Void
 
@@ -190,42 +192,105 @@ private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.onTripleTap = onTripleTap
-        DispatchQueue.main.async {
-            context.coordinator.attachIfNeeded(from: uiView)
-        }
+        context.coordinator.scheduleAttach(from: uiView)
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onTripleTap: () -> Void
-        private weak var observedButton: UIControl?
-        private var tapTimes: [CFAbsoluteTime] = []
+        private weak var attachedTabBar: UITabBar?
+        private var gesture: UITapGestureRecognizer?
+        private var attachAttempts = 0
+        private var profileTapTimes: [CFAbsoluteTime] = []
 
         init(onTripleTap: @escaping () -> Void) {
             self.onTripleTap = onTripleTap
         }
 
-        func attachIfNeeded(from view: UIView) {
-            guard let tabBar = findTabBar(startingFrom: view) else { return }
-            let buttons = tabBar.subviews
-                .compactMap { $0 as? UIControl }
-                .sorted { $0.frame.minX < $1.frame.minX }
-            guard let profileButton = buttons.last else { return }
-            if observedButton === profileButton { return }
-
-            observedButton?.removeTarget(self, action: #selector(profileTapped), for: .touchUpInside)
-            profileButton.addTarget(self, action: #selector(profileTapped), for: .touchUpInside)
-            observedButton = profileButton
+        func scheduleAttach(from view: UIView) {
+            DispatchQueue.main.async { [weak self] in
+                self?.attachIfNeeded(from: view)
+            }
+            // Tab bar may appear after first layout; retry a few times.
+            if attachedTabBar == nil, attachAttempts < 12 {
+                attachAttempts += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                    self?.attachIfNeeded(from: view)
+                }
+            }
         }
 
-        @objc private func profileTapped() {
+        func attachIfNeeded(from view: UIView) {
+            guard let tabBar = findTabBar(startingFrom: view) else { return }
+            if attachedTabBar === tabBar, gesture != nil { return }
+
+            if let old = gesture, let oldBar = attachedTabBar {
+                oldBar.removeGestureRecognizer(old)
+            }
+
+            // Count single taps ourselves — `numberOfTapsRequired = 3` often fails
+            // because UITabBar buttons consume the first taps.
+            let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+            tap.numberOfTapsRequired = 1
+            tap.cancelsTouchesInView = false
+            tap.delaysTouchesBegan = false
+            tap.delaysTouchesEnded = false
+            tap.delegate = self
+            tabBar.addGestureRecognizer(tap)
+            tabBar.isUserInteractionEnabled = true
+
+            gesture = tap
+            attachedTabBar = tabBar
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let tabBar = attachedTabBar else { return }
+            let location = gesture.location(in: tabBar)
+            guard isInProfileItem(location: location, tabBar: tabBar) else {
+                profileTapTimes.removeAll()
+                return
+            }
+
             let now = CFAbsoluteTimeGetCurrent()
-            tapTimes.append(now)
-            tapTimes = tapTimes.filter { now - $0 < 1.0 }
-            guard tapTimes.count >= 3 else { return }
-            tapTimes.removeAll()
+            profileTapTimes.append(now)
+            profileTapTimes = profileTapTimes.filter { now - $0 < 1.0 }
+            guard profileTapTimes.count >= 3 else { return }
+            profileTapTimes.removeAll()
             DispatchQueue.main.async {
                 self.onTripleTap()
             }
+        }
+
+        private func isInProfileItem(location: CGPoint, tabBar: UITabBar) -> Bool {
+            let itemCount = tabBar.items?.count ?? AppTab.allCases.count
+            guard itemCount > 0 else { return false }
+
+            // Prefer real tab-button frames when available (varies by iOS version).
+            let candidates = tabBar.subviews
+                .filter { subview in
+                    !subview.isHidden
+                        && subview.alpha > 0.01
+                        && subview.frame.width > 24
+                        && subview.frame.height > 24
+                        && !(subview is UIImageView)
+                        && !(subview is UILabel)
+                        && !(subview is UIVisualEffectView)
+                }
+                .sorted { $0.frame.minX < $1.frame.minX }
+
+            if candidates.count >= itemCount {
+                return candidates[itemCount - 1].frame.contains(location)
+            }
+
+            let width = max(tabBar.bounds.width, 1) / CGFloat(itemCount)
+            let index = min(itemCount - 1, max(0, Int(location.x / width)))
+            return index == itemCount - 1
         }
 
         private func findTabBar(startingFrom view: UIView) -> UITabBar? {
@@ -238,13 +303,9 @@ private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
                 responder = current.next
             }
 
-            if let tabBar = findTabBar(inHierarchyOf: view) {
-                return tabBar
-            }
-
             for scene in UIApplication.shared.connectedScenes {
                 guard let windowScene = scene as? UIWindowScene else { continue }
-                for window in windowScene.windows {
+                for window in windowScene.windows where !window.isHidden {
                     if let tabBar = findTabBar(inHierarchyOf: window) {
                         return tabBar
                     }
