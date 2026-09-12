@@ -27,10 +27,13 @@ struct ContinueWatchingSection: View {
                             .id(entry.releaseId)
                         }
                     }
+                    // Room for scale-up + shadow so top/bottom aren't clipped.
                     .padding(.horizontal, 4)
+                    .padding(.vertical, 14)
                 }
+                .scrollClipDisabled()
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 2)
             .confirmationDialog(
                 "Убрать из «Продолжить просмотр»?",
                 isPresented: Binding(
@@ -65,6 +68,7 @@ private struct ContinueWatchingItem: View {
         ContinueWatchingCard(entry: entry)
             .scaleEffect(isPressing ? 1.07 : 1.0)
             .shadow(color: .black.opacity(isPressing ? 0.18 : 0), radius: isPressing ? 10 : 0, y: isPressing ? 4 : 0)
+            .zIndex(isPressing ? 1 : 0)
             .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isPressing)
             .contentShape(Rectangle())
             .onTapGesture(perform: onSelect)
