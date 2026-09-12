@@ -14,27 +14,38 @@ struct ContinueWatchingSection: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        ForEach(store.entries.prefix(12)) { entry in
-                            ContinueWatchingCard(entry: entry)
-                                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .onTapGesture {
-                                    onSelect(entry)
-                                }
-                                .contextMenu {
-                                    Button("Убрать из «Продолжить просмотр»", role: .destructive) {
-                                        WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
-                                    }
-                                } preview: {
-                                    ContinueWatchingCard(entry: entry)
-                                        .padding(8)
-                                        .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                }
+                        // Materialize Array so ForEach identity is stable (ArraySlice + contextMenu
+                        // often captures the wrong element / first item).
+                        ForEach(Array(store.entries.prefix(12))) { entry in
+                            ContinueWatchingItem(entry: entry, onSelect: onSelect)
                         }
                     }
                     .padding(.horizontal, 4)
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+}
+
+/// Isolated item view so contextMenu/preview close over this entry, not a loop variable.
+private struct ContinueWatchingItem: View {
+    let entry: ContinueWatchingEntry
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            ContinueWatchingCard(entry: entry)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Убрать из «Продолжить просмотр»", role: .destructive) {
+                WatchProgressStore.shared.clearRelease(releaseId: entry.releaseId)
+            }
+        } preview: {
+            ContinueWatchingCard(entry: entry)
+                .padding(8)
+                .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
 }
@@ -64,6 +75,7 @@ private struct ContinueWatchingCard: View {
                 .frame(width: 120)
         }
         .frame(width: 120, alignment: .leading)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(entry.releaseTitle), \(entry.episodeTitle), прогресс \(Int(entry.progressFraction * 100)) процентов"

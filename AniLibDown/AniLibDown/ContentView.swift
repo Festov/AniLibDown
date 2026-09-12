@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum AppTab: String, CaseIterable, Identifiable, Hashable {
     case catalog
@@ -38,6 +39,8 @@ struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .catalog
+    @State private var showVersionOverlay = false
+    @State private var profileTapTimestamps: [Date] = []
 
     var body: some View {
         Group {
@@ -61,6 +64,17 @@ struct ContentView: View {
                     .padding(.top, 6)
             }
         }
+        .overlay {
+            if showVersionOverlay {
+                versionOverlay
+            }
+        }
+        .background(
+            ProfileTabTripleTapInstaller {
+                showVersionOverlay = true
+            }
+            .frame(width: 0, height: 0)
+        )
         .onChange(of: networkMonitor.isOnWiFi) { _, _ in
             downloadManager.processDownloadQueue()
         }
@@ -84,8 +98,26 @@ struct ContentView: View {
         }
     }
 
+    private var versionOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { showVersionOverlay = false }
+
+            Text(AppVersion.profileLabel)
+                .font(.body.weight(.semibold))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .onTapGesture { showVersionOverlay = false }
+        }
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: showVersionOverlay)
+        .accessibilityAddTraits(.isModal)
+    }
+
     private var phoneLayout: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             tabRoot(.catalog) { CatalogView() }
             tabRoot(.schedule) { ScheduleView() }
             tabRoot(.collection) { CollectionView() }
@@ -99,6 +131,9 @@ struct ContentView: View {
             List {
                 ForEach(AppTab.allCases) { tab in
                     Button {
+                        if tab == .profile {
+                            registerProfileSidebarTap()
+                        }
                         selectedTab = tab
                     } label: {
                         Label(tab.title, systemImage: tab.icon)
@@ -123,5 +158,109 @@ struct ContentView: View {
             .tabItem {
                 Label(tab.title, systemImage: tab.icon)
             }
+            .tag(tab)
+    }
+
+    private func registerProfileSidebarTap() {
+        let now = Date()
+        profileTapTimestamps.append(now)
+        profileTapTimestamps = profileTapTimestamps.filter { now.timeIntervalSince($0) < 1.0 }
+        if profileTapTimestamps.count >= 3 {
+            profileTapTimestamps.removeAll()
+            showVersionOverlay = true
+        }
+    }
+}
+
+// MARK: - Profile tab triple-tap
+
+/// Listens for three quick taps on the Profile UITabBar item.
+private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
+    var onTripleTap: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onTripleTap: onTripleTap)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onTripleTap = onTripleTap
+        DispatchQueue.main.async {
+            context.coordinator.attachIfNeeded(from: uiView)
+        }
+    }
+
+    final class Coordinator {
+        var onTripleTap: () -> Void
+        private weak var observedButton: UIControl?
+        private var tapTimes: [CFAbsoluteTime] = []
+
+        init(onTripleTap: @escaping () -> Void) {
+            self.onTripleTap = onTripleTap
+        }
+
+        func attachIfNeeded(from view: UIView) {
+            guard let tabBar = findTabBar(startingFrom: view) else { return }
+            let buttons = tabBar.subviews
+                .compactMap { $0 as? UIControl }
+                .sorted { $0.frame.minX < $1.frame.minX }
+            guard let profileButton = buttons.last else { return }
+            if observedButton === profileButton { return }
+
+            observedButton?.removeTarget(self, action: #selector(profileTapped), for: .touchUpInside)
+            profileButton.addTarget(self, action: #selector(profileTapped), for: .touchUpInside)
+            observedButton = profileButton
+        }
+
+        @objc private func profileTapped() {
+            let now = CFAbsoluteTimeGetCurrent()
+            tapTimes.append(now)
+            tapTimes = tapTimes.filter { now - $0 < 1.0 }
+            guard tapTimes.count >= 3 else { return }
+            tapTimes.removeAll()
+            DispatchQueue.main.async {
+                self.onTripleTap()
+            }
+        }
+
+        private func findTabBar(startingFrom view: UIView) -> UITabBar? {
+            var responder: UIResponder? = view
+            while let current = responder {
+                if let vc = current as? UIViewController,
+                   let tabBar = vc.tabBarController?.tabBar {
+                    return tabBar
+                }
+                responder = current.next
+            }
+
+            if let tabBar = findTabBar(inHierarchyOf: view) {
+                return tabBar
+            }
+
+            for scene in UIApplication.shared.connectedScenes {
+                guard let windowScene = scene as? UIWindowScene else { continue }
+                for window in windowScene.windows {
+                    if let tabBar = findTabBar(inHierarchyOf: window) {
+                        return tabBar
+                    }
+                }
+            }
+            return nil
+        }
+
+        private func findTabBar(inHierarchyOf view: UIView) -> UITabBar? {
+            if let tabBar = view as? UITabBar { return tabBar }
+            for child in view.subviews {
+                if let tabBar = findTabBar(inHierarchyOf: child) {
+                    return tabBar
+                }
+            }
+            return nil
+        }
     }
 }
