@@ -108,7 +108,7 @@ jobs:
           name: 1.1.4
           files: dist/AniLibDown.ipa
           generate_release_notes: false
-                    body: |
+          body: |
             ## Что нового
 
             - Уведомления снова по дню выхода в выбранное время (не по факту открытия приложения)
