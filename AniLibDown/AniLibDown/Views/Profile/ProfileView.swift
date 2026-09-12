@@ -47,12 +47,22 @@ struct ProfileView: View {
                     }
                 }
 
-                Section("Поддержать проект") {
+                Section("Поддержать проект AniLiberty") {
                     Link(destination: URL(string: "https://www.patreon.com/aniliberty")!) {
-                        Label("Patreon", systemImage: "heart.fill")
+                        Label {
+                            Text("Patreon")
+                        } icon: {
+                            PatreonGlyph()
+                                .frame(width: 18, height: 18)
+                        }
                     }
                     Link(destination: URL(string: "https://boosty.to/aniliberty")!) {
-                        Label("Boosty", systemImage: "bolt.fill")
+                        Label {
+                            Text("Boosty")
+                        } icon: {
+                            BoostyGlyph()
+                                .frame(width: 18, height: 18)
+                        }
                     }
                 }
 
@@ -119,9 +129,6 @@ struct ProfileView: View {
                     .buttonStyle(.borderless)
                 }
 
-                Text("Смена аватара, пароля и почты пока доступна на сайте AniLiberty — в API приложения этих методов нет.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Вход не обязателен. Без аккаунта доступны каталог, расписание, плеер и загрузки; коллекция AniLiberty — после входа.")
@@ -171,5 +178,43 @@ struct ProfileView: View {
             .frame(width: 44, height: 44)
             .foregroundStyle(.secondary)
             .allowsHitTesting(false)
+    }
+}
+
+
+/// Monochrome Patreon mark (circle + stem), inherits label tint.
+private struct PatreonGlyph: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width
+            let h = size.height
+            // Circle
+            let circleRect = CGRect(x: w * 0.08, y: h * 0.12, width: w * 0.58, height: h * 0.58)
+            context.fill(Path(ellipseIn: circleRect), with: .foreground)
+            // Stem
+            let stem = CGRect(x: w * 0.62, y: h * 0.18, width: w * 0.22, height: h * 0.70)
+            context.fill(Path(roundedRect: stem, cornerRadius: w * 0.08), with: .foreground)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Monochrome Boosty-style mark (rounded bolt), inherits label tint.
+private struct BoostyGlyph: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width
+            let h = size.height
+            var path = Path()
+            path.move(to: CGPoint(x: w * 0.58, y: h * 0.05))
+            path.addLine(to: CGPoint(x: w * 0.18, y: h * 0.52))
+            path.addLine(to: CGPoint(x: w * 0.46, y: h * 0.52))
+            path.addLine(to: CGPoint(x: w * 0.38, y: h * 0.95))
+            path.addLine(to: CGPoint(x: w * 0.82, y: h * 0.42))
+            path.addLine(to: CGPoint(x: w * 0.52, y: h * 0.42))
+            path.closeSubpath()
+            context.fill(path, with: .foreground)
+        }
+        .accessibilityHidden(true)
     }
 }

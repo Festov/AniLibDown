@@ -163,28 +163,19 @@ struct ReleaseDetailView: View {
             .disabled(release.poster?.displayURL == nil)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(release.name.main)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(isMainTitleExpanded ? nil : 2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isMainTitleExpanded.toggle()
-                        }
-                    }
-                    .accessibilityHint("Нажмите, чтобы раскрыть или свернуть название")
+                ExpandableTextLine(
+                    text: release.name.main,
+                    font: .title3.weight(.semibold),
+                    isExpanded: $isMainTitleExpanded
+                )
                 if let english = release.name.english, !english.isEmpty {
-                    Text(english)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(isEnglishTitleExpanded ? nil : 2)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isEnglishTitleExpanded.toggle()
-                            }
-                        }
+                    ExpandableTextLine(
+                        text: english,
+                        font: .subheadline,
+                        color: .secondary,
+                        isExpanded: $isEnglishTitleExpanded,
+                        collapsedLineLimit: 2
+                    )
                 }
                 Text("\(ReleaseFormatting.yearString(release.year)) • \(release.type?.description ?? "Аниме")")
                     .font(.subheadline)
@@ -437,5 +428,102 @@ struct ReleaseDetailView: View {
             episodesTotal: release.episodesTotal,
             posterPath: release.poster?.displayURL
         )
+    }
+}
+
+
+/// Title/subtitle that collapses to N lines with a trailing chevron when text overflows.
+private struct ExpandableTextLine: View {
+    let text: String
+    let font: Font
+    var color: Color = .primary
+    @Binding var isExpanded: Bool
+    var collapsedLineLimit: Int = 2
+
+    @State private var isTruncated = false
+
+    private var showChevron: Bool { isTruncated || isExpanded }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text(text)
+                .font(font)
+                .foregroundStyle(color)
+                .lineLimit(isExpanded ? nil : collapsedLineLimit)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    // Measure full text height vs collapsed height to decide if chevron is needed.
+                    Text(text)
+                        .font(font)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .background(
+                            GeometryReader { full in
+                                Color.clear.preference(
+                                    key: ExpandableTextHeightKey.self,
+                                    value: ExpandableTextHeights(full: full.size.height)
+                                )
+                            }
+                        )
+                        .overlay(
+                            Text(text)
+                                .font(font)
+                                .lineLimit(collapsedLineLimit)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .hidden()
+                                .background(
+                                    GeometryReader { collapsed in
+                                        Color.clear.preference(
+                                            key: ExpandableTextHeightKey.self,
+                                            value: ExpandableTextHeights(collapsed: collapsed.size.height)
+                                        )
+                                    }
+                                )
+                        )
+                }
+                .onPreferenceChange(ExpandableTextHeightKey.self) { heights in
+                    guard let full = heights.full, let collapsed = heights.collapsed else { return }
+                    isTruncated = full > collapsed + 1
+                }
+
+            if showChevron {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 5)
+                    .accessibilityHidden(true)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard showChevron else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded.toggle()
+            }
+        }
+        .accessibilityHint(showChevron ? "Нажмите, чтобы раскрыть или свернуть название" : "")
+    }
+}
+
+private struct ExpandableTextHeights: Equatable {
+    var full: CGFloat?
+    var collapsed: CGFloat?
+
+    init(full: CGFloat? = nil, collapsed: CGFloat? = nil) {
+        self.full = full
+        self.collapsed = collapsed
+    }
+}
+
+private struct ExpandableTextHeightKey: PreferenceKey {
+    static var defaultValue = ExpandableTextHeights()
+
+    static func reduce(value: inout ExpandableTextHeights, nextValue: () -> ExpandableTextHeights) {
+        let next = nextValue()
+        if let full = next.full { value.full = full }
+        if let collapsed = next.collapsed { value.collapsed = collapsed }
     }
 }
