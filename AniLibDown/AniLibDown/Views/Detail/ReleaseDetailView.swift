@@ -432,7 +432,7 @@ struct ReleaseDetailView: View {
 }
 
 
-/// Title/subtitle that collapses to N lines with a trailing chevron when text overflows.
+/// Title/subtitle that collapses to N lines; chevron appears when text is long enough to wrap.
 private struct ExpandableTextLine: View {
     let text: String
     let font: Font
@@ -440,9 +440,10 @@ private struct ExpandableTextLine: View {
     @Binding var isExpanded: Bool
     var collapsedLineLimit: Int = 2
 
-    @State private var isTruncated = false
+    /// Approx. threshold for 2 lines on a phone-width title column.
+    private var canExpand: Bool { text.count > 32 }
 
-    private var showChevron: Bool { isTruncated || isExpanded }
+    private var showChevron: Bool { canExpand || isExpanded }
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
@@ -453,41 +454,6 @@ private struct ExpandableTextLine: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    // Measure full text height vs collapsed height to decide if chevron is needed.
-                    Text(text)
-                        .font(font)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .hidden()
-                        .background(
-                            GeometryReader { full in
-                                Color.clear.preference(
-                                    key: ExpandableTextHeightKey.self,
-                                    value: ExpandableTextHeights(full: full.size.height)
-                                )
-                            }
-                        )
-                        .overlay(
-                            Text(text)
-                                .font(font)
-                                .lineLimit(collapsedLineLimit)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .hidden()
-                                .background(
-                                    GeometryReader { collapsed in
-                                        Color.clear.preference(
-                                            key: ExpandableTextHeightKey.self,
-                                            value: ExpandableTextHeights(collapsed: collapsed.size.height)
-                                        )
-                                    }
-                                )
-                        )
-                }
-                .onPreferenceChange(ExpandableTextHeightKey.self) { heights in
-                    guard let full = heights.full, let collapsed = heights.collapsed else { return }
-                    isTruncated = full > collapsed + 1
-                }
 
             if showChevron {
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
@@ -505,25 +471,5 @@ private struct ExpandableTextLine: View {
             }
         }
         .accessibilityHint(showChevron ? "Нажмите, чтобы раскрыть или свернуть название" : "")
-    }
-}
-
-private struct ExpandableTextHeights: Equatable {
-    var full: CGFloat?
-    var collapsed: CGFloat?
-
-    init(full: CGFloat? = nil, collapsed: CGFloat? = nil) {
-        self.full = full
-        self.collapsed = collapsed
-    }
-}
-
-private struct ExpandableTextHeightKey: PreferenceKey {
-    static var defaultValue = ExpandableTextHeights()
-
-    static func reduce(value: inout ExpandableTextHeights, nextValue: () -> ExpandableTextHeights) {
-        let next = nextValue()
-        if let full = next.full { value.full = full }
-        if let collapsed = next.collapsed { value.collapsed = collapsed }
     }
 }
