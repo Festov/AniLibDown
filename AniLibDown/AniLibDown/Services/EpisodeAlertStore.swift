@@ -50,7 +50,7 @@ final class EpisodeAlertStore: ObservableObject {
         posterPath: String?,
         publishDay: PublishDay?,
         nextEpisodeNumber: Int? = nil,
-        _ seedEpisodeId: String? = nil
+        seedEpisodeId: String? = nil
     ) {
         if isSubscribed(releaseId: releaseId) {
             unsubscribe(releaseId: releaseId)
@@ -72,7 +72,7 @@ final class EpisodeAlertStore: ObservableObject {
         posterPath: String?,
         publishDay: PublishDay?,
         nextEpisodeNumber: Int?,
-        _ seedEpisodeId: String?
+        seedEpisodeId: String?
     ) {
         guard !isSubscribed(releaseId: releaseId) else { return }
 
@@ -86,6 +86,8 @@ final class EpisodeAlertStore: ObservableObject {
         )
         subscriptions.append(entry)
         subscriptions.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+
+        _ = seedEpisodeId // reserved for future dedupe; calendar reminders do not need it
 
         persist()
         Task {
