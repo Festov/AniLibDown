@@ -63,7 +63,8 @@ struct ReleaseDetailView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.release?.name.main ?? "Аниме")
+        // Title stays in the card header; keep nav bar clean (back only).
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.load(id: releaseId)

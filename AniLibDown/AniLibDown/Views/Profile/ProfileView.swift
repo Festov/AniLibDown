@@ -65,14 +65,6 @@ struct ProfileView: View {
                         }
                     }
                 }
-
-                Section {
-                    Text(AppVersion.profileLabel)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .listRowBackground(Color.clear)
-                }
             }
             .navigationTitle(L10n.profile)
             .sheet(isPresented: $showLogin) {
