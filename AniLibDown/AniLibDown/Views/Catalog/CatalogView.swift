@@ -36,45 +36,43 @@ struct CatalogView: View {
                         .frame(maxWidth: .infinity, minHeight: 420)
                     }
                 } else {
-                    // Outside List: horizontal cards + List long-press/contextMenu
-                    // consistently resolve to the first item on device.
-                    VStack(spacing: 0) {
+                    List {
                         if store.searchText.isEmpty, !continueWatching.entries.isEmpty {
-                            ContinueWatchingSection { entry in
-                                navigationPath.append(entry.releaseId)
+                            Section {
+                                ContinueWatchingSection { entry in
+                                    navigationPath.append(entry.releaseId)
+                                }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 4)
-                            .padding(.bottom, 8)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                         }
 
-                        List {
-                            ForEach(store.releases) { release in
-                                NavigationLink(value: release.id) {
-                                    ReleaseRowView(
-                                        title: release.name.main,
-                                        subtitle: subtitle(for: release),
-                                        posterPath: release.poster?.displayURL,
-                                        isOngoing: release.isOngoing
-                                    )
-                                }
-                                .onAppear {
-                                    if release.id == store.releases.last?.id {
-                                        Task { await store.loadMore() }
-                                    }
-                                }
+                        ForEach(store.releases) { release in
+                            NavigationLink(value: release.id) {
+                                ReleaseRowView(
+                                    title: release.name.main,
+                                    subtitle: subtitle(for: release),
+                                    posterPath: release.poster?.displayURL,
+                                    isOngoing: release.isOngoing
+                                )
                             }
-
-                            if store.isLoadingMore {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                    Spacer()
+                            .onAppear {
+                                if release.id == store.releases.last?.id {
+                                    Task { await store.loadMore() }
                                 }
                             }
                         }
-                        .listStyle(.plain)
+
+                        if store.isLoadingMore {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        }
                     }
+                    .listStyle(.plain)
                     .overlay {
                         if store.isRefreshing {
                             ProgressView()
