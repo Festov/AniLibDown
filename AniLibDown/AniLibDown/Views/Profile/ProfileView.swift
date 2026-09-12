@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var authService: AuthService
+    @State private var showLogin = false
 
     var body: some View {
         NavigationStack {
@@ -46,6 +47,15 @@ struct ProfileView: View {
                     }
                 }
 
+                Section("Поддержать проект") {
+                    Link(destination: URL(string: "https://www.patreon.com/aniliberty")!) {
+                        Label("Patreon", systemImage: "heart.fill")
+                    }
+                    Link(destination: URL(string: "https://boosty.to/aniliberty")!) {
+                        Label("Boosty", systemImage: "bolt.fill")
+                    }
+                }
+
                 Section {
                     Text(AppVersion.profileLabel)
                         .font(.footnote)
@@ -55,6 +65,20 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle(L10n.profile)
+            .sheet(isPresented: $showLogin) {
+                NavigationStack {
+                    LoginView()
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Закрыть") { showLogin = false }
+                            }
+                        }
+                }
+                .environmentObject(authService)
+            }
+            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated { showLogin = false }
+            }
         }
     }
 
@@ -62,8 +86,8 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var accountSection: some View {
-        if let profile = authService.profile {
-            Section {
+        Section("Аккаунт AniLiberty") {
+            if let profile = authService.profile {
                 HStack(spacing: 12) {
                     profileAvatar(for: profile)
 
@@ -74,6 +98,12 @@ struct ProfileView: View {
                         if let login = profile.login, login != profile.nickname {
                             Text("@\(login)")
                                 .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if let email = profile.email, !email.isEmpty {
+                            Text(email)
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -88,6 +118,21 @@ struct ProfileView: View {
                     .font(.subheadline)
                     .buttonStyle(.borderless)
                 }
+
+                Text("Смена аватара, пароля и почты пока доступна на сайте AniLiberty — в API приложения этих методов нет.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Вход не обязателен. Без аккаунта доступны каталог, расписание, плеер и загрузки; коллекция AniLiberty — после входа.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("Войти в AniLiberty") {
+                        showLogin = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(.vertical, 4)
             }
         }
     }

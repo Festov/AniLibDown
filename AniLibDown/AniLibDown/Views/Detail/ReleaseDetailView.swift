@@ -8,6 +8,8 @@ struct ReleaseDetailView: View {
     @ObservedObject private var episodeAlerts = EpisodeAlertStore.shared
     @ObservedObject private var shikimoriAuth = ShikimoriAuthService.shared
     @State private var playerSession: PlayerSession?
+    @State private var isMainTitleExpanded = false
+    @State private var isEnglishTitleExpanded = false
     @State private var showShikimoriSearch = false
     @State private var showPosterFullscreen = false
 
@@ -163,11 +165,26 @@ struct ReleaseDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(release.name.main)
                     .font(.title3.weight(.semibold))
+                    .lineLimit(isMainTitleExpanded ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isMainTitleExpanded.toggle()
+                        }
+                    }
+                    .accessibilityHint("Нажмите, чтобы раскрыть или свернуть название")
                 if let english = release.name.english, !english.isEmpty {
                     Text(english)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .lineLimit(isEnglishTitleExpanded ? nil : 2)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isEnglishTitleExpanded.toggle()
+                            }
+                        }
                 }
                 Text("\(ReleaseFormatting.yearString(release.year)) • \(release.type?.description ?? "Аниме")")
                     .font(.subheadline)
@@ -205,38 +222,40 @@ struct ReleaseDetailView: View {
 
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                Button {
-                    if let episode = resumeEpisode {
-                        play(episode: episode, release: release)
+                if !release.episodes.isEmpty {
+                    Button {
+                        if let episode = resumeEpisode {
+                            play(episode: episode, release: release)
+                        }
+                    } label: {
+                        Label(
+                            resumeEpisode != nil ? "Смотреть" : "Смотреть с начала",
+                            systemImage: "play.fill"
+                        )
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                     }
-                } label: {
-                    Label(
-                        resumeEpisode != nil ? "Смотреть" : "Смотреть с начала",
-                        systemImage: "play.fill"
-                    )
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
-                .disabled(release.episodes.isEmpty)
 
                 collectionMenuButton(for: release)
             }
 
             HStack(spacing: 10) {
-                NavigationLink {
-                    ReleaseEpisodesView(release: release)
-                } label: {
-                    Label("Все серии", systemImage: "list.bullet")
-                        .font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                if !release.episodes.isEmpty {
+                    NavigationLink {
+                        ReleaseEpisodesView(release: release)
+                    } label: {
+                        Label("Все серии", systemImage: "list.bullet")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accentColor)
-                .disabled(release.episodes.isEmpty)
 
                 NavigationLink {
                     ReleaseTeamView(releaseId: release.id, initialMembers: release.members)
