@@ -59,13 +59,23 @@ private struct ContinueWatchingItem: View {
     let onSelect: () -> Void
     let onRequestRemove: () -> Void
 
+    @State private var isPressing = false
+
     var body: some View {
         ContinueWatchingCard(entry: entry)
+            .scaleEffect(isPressing ? 1.07 : 1.0)
+            .shadow(color: .black.opacity(isPressing ? 0.18 : 0), radius: isPressing ? 10 : 0, y: isPressing ? 4 : 0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isPressing)
             .contentShape(Rectangle())
             .onTapGesture(perform: onSelect)
-            .onLongPressGesture(minimumDuration: 0.45) {
-                onRequestRemove()
-            }
+            .onLongPressGesture(
+                minimumDuration: 0.45,
+                maximumDistance: 12,
+                pressing: { pressing in
+                    isPressing = pressing
+                },
+                perform: onRequestRemove
+            )
             .accessibilityAction(named: "Убрать из «Продолжить просмотр»") {
                 onRequestRemove()
             }

@@ -165,7 +165,8 @@ struct ContentView: View {
     private func registerProfileSidebarTap() {
         let now = Date()
         profileTapTimestamps.append(now)
-        profileTapTimestamps = profileTapTimestamps.filter { now.timeIntervalSince($0) < 1.0 }
+        // Same tight window as phone tab bar — three quick taps.
+        profileTapTimestamps = profileTapTimestamps.filter { now.timeIntervalSince($0) < 0.55 }
         if profileTapTimestamps.count >= 3 {
             profileTapTimestamps.removeAll()
             showVersionOverlay = true
@@ -259,7 +260,8 @@ private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
 
             let now = CFAbsoluteTimeGetCurrent()
             profileTapTimes.append(now)
-            profileTapTimes = profileTapTimes.filter { now - $0 < 1.0 }
+            // Require three quick taps (~0.55s total window).
+            profileTapTimes = profileTapTimes.filter { now - $0 < 0.55 }
             guard profileTapTimes.count >= 3 else { return }
             profileTapTimes.removeAll()
             DispatchQueue.main.async {
@@ -270,14 +272,23 @@ private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
         private func isInProfileItem(location: CGPoint, tabBar: UITabBar) -> Bool {
             let itemCount = tabBar.items?.count ?? AppTab.allCases.count
             guard itemCount > 0 else { return false }
+            let profileTitle = AppTab.profile.title
 
-            // Prefer real tab-button frames when available (varies by iOS version).
+            // Prefer the view whose accessibility label matches «Профиль».
+            if let profileFrame = findProfileButtonFrame(in: tabBar, profileTitle: profileTitle) {
+                return profileFrame.contains(location)
+            }
+
+            let barWidth = max(tabBar.bounds.width, 1)
+            // Exclude full-bleed chrome (background/blur). Including it made
+            // candidates[itemCount-1] land on «Загрузки» instead of «Профиль».
             let candidates = tabBar.subviews
                 .filter { subview in
                     !subview.isHidden
                         && subview.alpha > 0.01
                         && subview.frame.width > 24
                         && subview.frame.height > 24
+                        && subview.frame.width < barWidth * 0.55
                         && !(subview is UIImageView)
                         && !(subview is UILabel)
                         && !(subview is UIVisualEffectView)
@@ -285,12 +296,40 @@ private struct ProfileTabTripleTapInstaller: UIViewRepresentable {
                 .sorted { $0.frame.minX < $1.frame.minX }
 
             if candidates.count >= itemCount {
-                return candidates[itemCount - 1].frame.contains(location)
+                let buttons = Array(candidates.suffix(itemCount))
+                return buttons[itemCount - 1].frame.contains(location)
             }
 
-            let width = max(tabBar.bounds.width, 1) / CGFloat(itemCount)
-            let index = min(itemCount - 1, max(0, Int(location.x / width)))
+            let insets = tabBar.safeAreaInsets
+            let usableMinX = insets.left
+            let usableWidth = max(barWidth - insets.left - insets.right, 1)
+            let width = usableWidth / CGFloat(itemCount)
+            let x = location.x - usableMinX
+            guard x >= 0, x <= usableWidth else { return false }
+            let index = min(itemCount - 1, max(0, Int(x / width)))
             return index == itemCount - 1
+        }
+
+        private func findProfileButtonFrame(in root: UIView, profileTitle: String) -> CGRect? {
+            let needle = profileTitle.lowercased()
+            var match: UIView?
+            func walk(_ view: UIView) {
+                let label = (view.accessibilityLabel ?? "").lowercased()
+                if !label.isEmpty, label == needle || label.contains(needle) {
+                    // Prefer the largest matching view (the tab button, not a tiny label).
+                    let area = view.bounds.width * view.bounds.height
+                    let matchArea = (match?.bounds.width ?? 0) * (match?.bounds.height ?? 0)
+                    if match == nil || area > matchArea {
+                        match = view
+                    }
+                }
+                for child in view.subviews {
+                    walk(child)
+                }
+            }
+            walk(root)
+            guard let match else { return nil }
+            return match.convert(match.bounds, to: root)
         }
 
         private func findTabBar(startingFrom view: UIView) -> UITabBar? {
