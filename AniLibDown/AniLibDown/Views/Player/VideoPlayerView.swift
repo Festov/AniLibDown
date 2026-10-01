@@ -159,8 +159,8 @@ struct VideoPlayerView: View {
         }
         .onAppear {
             AudioSessionConfigurator.activatePlayback()
-            skipController.onSkip = { [weak self] endTime in
-                self?.seek(to: endTime)
+            skipController.onSkip = { endTime in
+                seek(to: endTime)
             }
             isOrientationTransitioning = true
             playerOpacity = 0
@@ -179,6 +179,7 @@ struct VideoPlayerView: View {
             hideControlsTask?.cancel()
             seekAccumTask?.cancel()
             skipController.cancelPrompt()
+            skipController.onSkip = nil
             progressSaveTask?.cancel()
             endPlaybackObserver.map(NotificationCenter.default.removeObserver)
             endPlaybackObserver = nil
