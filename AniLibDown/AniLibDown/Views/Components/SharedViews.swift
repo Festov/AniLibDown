@@ -84,45 +84,43 @@ struct PosterImage: View {
     let path: String?
     var cornerRadius: CGFloat = 8
 
+    @State private var remoteImage: UIImage?
+    @State private var remoteFinished = false
+
     var body: some View {
         Group {
             if let localImage {
                 Image(uiImage: localImage)
                     .resizable()
                     .scaledToFill()
-            } else if let url = APIConfig.mediaURL(for: path), !isLocalFilePath {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        placeholder
-                    case .empty:
-                        SkeletonPoster(cornerRadius: cornerRadius)
-                    @unknown default:
-                        placeholder
-                    }
-                }
+            } else if let remoteImage {
+                Image(uiImage: remoteImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if PosterSource.remoteURL(path: path) != nil, !remoteFinished {
+                SkeletonPoster(cornerRadius: cornerRadius)
             } else {
                 placeholder
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-    }
-
-    private var isLocalFilePath: Bool {
-        path?.hasPrefix("file:") == true
+        .task(id: path) {
+            remoteImage = nil
+            guard let url = PosterSource.remoteURL(path: path) else {
+                remoteFinished = true
+                return
+            }
+            remoteFinished = false
+            let loaded = await PosterImageStore.shared.image(for: url)
+            guard !Task.isCancelled else { return }
+            remoteImage = loaded
+            remoteFinished = true
+        }
     }
 
     private var localImage: UIImage? {
-        guard let path, path.hasPrefix("file:"),
-              let url = URL(string: path) else {
-            return nil
-        }
-        return UIImage(contentsOfFile: url.path)
+        PosterSource.localImage(path: path)
     }
 
     private var placeholder: some View {
@@ -140,6 +138,8 @@ struct PosterZoomOverlay: View {
     let onDismiss: () -> Void
 
     @State private var appeared = false
+    @State private var remoteImage: UIImage?
+    @State private var remoteFinished = false
 
     var body: some View {
         ZStack {
@@ -148,27 +148,16 @@ struct PosterZoomOverlay: View {
                 .onTapGesture { onDismiss() }
 
             Group {
-                if let path, path.hasPrefix("file:"),
-                   let url = URL(string: path),
-                   let image = UIImage(contentsOfFile: url.path) {
-                    Image(uiImage: image)
+                if let localImage {
+                    Image(uiImage: localImage)
                         .resizable()
                         .scaledToFit()
-                } else if let url = APIConfig.mediaURL(for: path) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFit()
-                        case .failure:
-                            Image(systemName: "photo")
-                                .font(.largeTitle)
-                                .foregroundStyle(.white.opacity(0.5))
-                        case .empty:
-                            ProgressView().tint(.white)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
+                } else if let remoteImage {
+                    Image(uiImage: remoteImage)
+                        .resizable()
+                        .scaledToFit()
+                } else if PosterSource.remoteURL(path: path) != nil, !remoteFinished {
+                    ProgressView().tint(.white)
                 } else {
                     Image(systemName: "photo")
                         .font(.largeTitle)
@@ -185,6 +174,22 @@ struct PosterZoomOverlay: View {
                 appeared = true
             }
         }
+        .task(id: path) {
+            remoteImage = nil
+            guard let url = PosterSource.remoteURL(path: path) else {
+                remoteFinished = true
+                return
+            }
+            remoteFinished = false
+            let loaded = await PosterImageStore.shared.image(for: url)
+            guard !Task.isCancelled else { return }
+            remoteImage = loaded
+            remoteFinished = true
+        }
+    }
+
+    private var localImage: UIImage? {
+        PosterSource.localImage(path: path)
     }
 }
 
@@ -200,7 +205,7 @@ struct OngoingBadge: View {
             .background(badgeRed.opacity(0.16), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(.white, lineWidth: 1)
+                    .strokeBorder(.white, lineWidth: 0.5)
             }
             .accessibilityHidden(true)
     }

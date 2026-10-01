@@ -80,6 +80,7 @@
 		A1B2C3D4E5F60718293A4C06 /* DownloadItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */; };
 		A1B2C3D4E5F60718293A4C08 /* DownloadManager+Posters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */; };
 		A1B2C3D4E5F60718293A4C0A /* DownloadManager+AVAssetDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */; };
+		A1B2C3D4E5F60718293A4C0C /* PosterImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C0B /* PosterImageStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -159,6 +160,7 @@
 		A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadItem.swift"; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadManager+Posters.swift"; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadManager+AVAssetDownload.swift"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C0B /* PosterImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/PosterImageStore.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -244,6 +246,7 @@
 			A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */,
 			A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */,
 			A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */,
+			A1B2C3D4E5F60718293A4C0B /* PosterImageStore.swift */,
 			D4E50EBC37FA17E4DE51630C /* Assets.xcassets */,
 			);
 			path = AniLibDown;
@@ -464,6 +467,7 @@
 				A1B2C3D4E5F60718293A4C06 /* DownloadItem.swift in Sources */,
 				A1B2C3D4E5F60718293A4C08 /* DownloadManager+Posters.swift in Sources */,
 				A1B2C3D4E5F60718293A4C0A /* DownloadManager+AVAssetDownload.swift in Sources */,
+				A1B2C3D4E5F60718293A4C0C /* PosterImageStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
