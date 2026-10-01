@@ -40,10 +40,7 @@ final class CatalogStore: ObservableObject {
     /// Pages older than this are ignored and refetched.
     private let cacheTTL: TimeInterval = 60 * 60 * 24
     private let cacheVersion = 2
-    private let cacheFileURL: URL = {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("catalog-page-cache.json")
-    }()
+    private let cacheFileURL: URL
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -67,10 +64,16 @@ final class CatalogStore: ObservableObject {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    init(api: any APIClientProtocol = APIClient.shared) {
+    init(api: any APIClientProtocol = APIClient.shared, cacheFileURL: URL? = nil) {
         self.api = api
+        self.cacheFileURL = cacheFileURL ?? Self.defaultCacheFileURL()
         loadPersistedCache()
         restoreVisibleCatalogIfPossible()
+    }
+
+    private static func defaultCacheFileURL() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("catalog-page-cache.json")
     }
 
     func loadGenresIfNeeded() async {

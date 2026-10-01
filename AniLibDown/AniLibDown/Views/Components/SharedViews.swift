@@ -198,6 +198,10 @@ struct OngoingBadge: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
             .background(badgeRed.opacity(0.16), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(.white, lineWidth: 1)
+            }
             .accessibilityHidden(true)
     }
 }
@@ -221,11 +225,7 @@ struct ReleaseRowView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Ongoing на своей строке; год / жанр / тип — ниже.
-                if isOngoing {
-                    OngoingBadge()
-                }
-
+                // Тип / год / жанры — первой строкой, статус — под ними.
                 if !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.subheadline)
@@ -233,6 +233,10 @@ struct ReleaseRowView: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if isOngoing {
+                    OngoingBadge()
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -75,6 +75,11 @@
 		V2B024 /* ReleaseEpisodesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F024 /* ReleaseEpisodesView.swift */; };
 		V2B025 /* ReleaseTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F025 /* ReleaseTeamView.swift */; };
 		T1B011 /* ReleaseMemberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F011 /* ReleaseMemberTests.swift */; };
+		A1B2C3D4E5F60718293A4C02 /* PlayerControlsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C01 /* PlayerControlsViews.swift */; };
+		A1B2C3D4E5F60718293A4C04 /* PlayerSkipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C03 /* PlayerSkipController.swift */; };
+		A1B2C3D4E5F60718293A4C06 /* DownloadItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */; };
+		A1B2C3D4E5F60718293A4C08 /* DownloadManager+Posters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */; };
+		A1B2C3D4E5F60718293A4C0A /* DownloadManager+AVAssetDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -149,6 +154,11 @@
 		V2F024 /* ReleaseEpisodesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseEpisodesView.swift"; sourceTree = "<group>"; };
 		V2F025 /* ReleaseTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseTeamView.swift"; sourceTree = "<group>"; };
 		T1F011 /* ReleaseMemberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseMemberTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C01 /* PlayerControlsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerControlsViews.swift"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C03 /* PlayerSkipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerSkipController.swift"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadItem.swift"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadManager+Posters.swift"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadManager+AVAssetDownload.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -229,6 +239,11 @@
 			V2F023 /* PlayerSettingsSheet.swift */,
 			V2F024 /* ReleaseEpisodesView.swift */,
 			V2F025 /* ReleaseTeamView.swift */,
+			A1B2C3D4E5F60718293A4C01 /* PlayerControlsViews.swift */,
+			A1B2C3D4E5F60718293A4C03 /* PlayerSkipController.swift */,
+			A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */,
+			A1B2C3D4E5F60718293A4C07 /* DownloadManager+Posters.swift */,
+			A1B2C3D4E5F60718293A4C09 /* DownloadManager+AVAssetDownload.swift */,
 			D4E50EBC37FA17E4DE51630C /* Assets.xcassets */,
 			);
 			path = AniLibDown;
@@ -444,6 +459,11 @@
 				V2B024 /* ReleaseEpisodesView.swift in Sources */,
 				V2B025 /* ReleaseTeamView.swift in Sources */,
 				0CC3481B9534AD62C2AA379D /* APIModels.swift in Sources */,
+				A1B2C3D4E5F60718293A4C02 /* PlayerControlsViews.swift in Sources */,
+				A1B2C3D4E5F60718293A4C04 /* PlayerSkipController.swift in Sources */,
+				A1B2C3D4E5F60718293A4C06 /* DownloadItem.swift in Sources */,
+				A1B2C3D4E5F60718293A4C08 /* DownloadManager+Posters.swift in Sources */,
+				A1B2C3D4E5F60718293A4C0A /* DownloadManager+AVAssetDownload.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
