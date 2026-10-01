@@ -39,6 +39,7 @@ enum AppCacheManager {
         }
         if kinds.contains(.images) {
             URLCache.shared.removeAllCachedResponses()
+            Task { await PosterImageStore.shared.clear() }
         }
         if kinds.contains(.watchProgress) {
             WatchProgressStore.shared.clearAll()
