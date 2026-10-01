@@ -1,152 +1,20 @@
 import Foundation
 import AVFoundation
 
-struct DownloadItem: Identifiable, Codable, Hashable {
-    var id: String
-    let episodeId: String
-    let releaseId: Int?
-    let releaseTitle: String
-    let episodeTitle: String
-    let episodeName: String?
-    let episodeOrdinal: Double
-    let quality: String
-    let remoteURL: String
-    var posterPath: String?
-    var localBookmark: Data?
-    var progress: Double
-    var state: DownloadState
-    var lastError: String?
-    var createdAt: Date
-
-    enum DownloadState: String, Codable {
-        case queued
-        case downloading
-        case completed
-        case failed
-    }
-
-    var groupingKey: String {
-        if let releaseId {
-            return "release:\(releaseId)"
-        }
-        return "title:\(releaseTitle)"
-    }
-
-    var displayEpisodeTitle: String {
-        if let episodeName, !episodeName.isEmpty {
-            return formattedEpisodeTitle(name: episodeName)
-        }
-        return episodeTitle
-    }
-
-    var playbackEpisodeName: String? {
-        if let episodeName, !episodeName.isEmpty {
-            return episodeName
-        }
-        guard episodeTitle.hasPrefix("Серия ") else { return nil }
-        let parts = episodeTitle.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-        guard parts.count == 2 else { return nil }
-        let name = parts[1].trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? nil : name
-    }
-
-    private func formattedEpisodeTitle(name: String) -> String {
-        let ordinalText = ReleaseFormatting.displayEpisodeOrdinal(episodeOrdinal)
-        return "Серия \(ordinalText): \(name)"
-    }
-
-    init(
-        id: String,
-        episodeId: String,
-        releaseId: Int?,
-        releaseTitle: String,
-        episodeTitle: String,
-        episodeName: String?,
-        episodeOrdinal: Double,
-        quality: String,
-        remoteURL: String,
-        posterPath: String? = nil,
-        localBookmark: Data?,
-        progress: Double,
-        state: DownloadState,
-        lastError: String? = nil,
-        createdAt: Date
-    ) {
-        self.id = id
-        self.episodeId = episodeId
-        self.releaseId = releaseId
-        self.releaseTitle = releaseTitle
-        self.episodeTitle = episodeTitle
-        self.episodeName = episodeName
-        self.episodeOrdinal = episodeOrdinal
-        self.quality = quality
-        self.remoteURL = remoteURL
-        self.posterPath = posterPath
-        self.localBookmark = localBookmark
-        self.progress = progress
-        self.state = state
-        self.lastError = lastError
-        self.createdAt = createdAt
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        episodeId = try container.decode(String.self, forKey: .episodeId)
-        releaseId = try container.decodeIfPresent(Int.self, forKey: .releaseId)
-        releaseTitle = try container.decode(String.self, forKey: .releaseTitle)
-        episodeTitle = try container.decode(String.self, forKey: .episodeTitle)
-        episodeName = try container.decodeIfPresent(String.self, forKey: .episodeName)
-        episodeOrdinal = try container.decodeIfPresent(Double.self, forKey: .episodeOrdinal) ?? 0
-        quality = try container.decode(String.self, forKey: .quality)
-        remoteURL = try container.decode(String.self, forKey: .remoteURL)
-        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
-        localBookmark = try container.decodeIfPresent(Data.self, forKey: .localBookmark)
-        progress = try container.decode(Double.self, forKey: .progress)
-        state = try container.decode(DownloadState.self, forKey: .state)
-        lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(episodeId, forKey: .episodeId)
-        try container.encodeIfPresent(releaseId, forKey: .releaseId)
-        try container.encode(releaseTitle, forKey: .releaseTitle)
-        try container.encode(episodeTitle, forKey: .episodeTitle)
-        try container.encodeIfPresent(episodeName, forKey: .episodeName)
-        try container.encode(episodeOrdinal, forKey: .episodeOrdinal)
-        try container.encode(quality, forKey: .quality)
-        try container.encode(remoteURL, forKey: .remoteURL)
-        try container.encodeIfPresent(posterPath, forKey: .posterPath)
-        try container.encodeIfPresent(localBookmark, forKey: .localBookmark)
-        try container.encode(progress, forKey: .progress)
-        try container.encode(state, forKey: .state)
-        try container.encodeIfPresent(lastError, forKey: .lastError)
-        try container.encode(createdAt, forKey: .createdAt)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeName, episodeOrdinal
-        case quality, remoteURL, posterPath, localBookmark, progress, state, lastError, createdAt
-    }
-}
-
 @MainActor
 final class DownloadManager: NSObject, ObservableObject {
     static let shared = DownloadManager()
 
-    @Published private(set) var items: [DownloadItem] = []
+    @Published internal(set) var items: [DownloadItem] = []
 
     private var session: AVAssetDownloadURLSession!
-    private var activeTasks: [String: AVAssetDownloadTask] = [:]
-    private var pendingDownloadURLs: [String: URL] = [:]
-    private var canceledTaskIDs: Set<String> = []
+    var activeTasks: [String: AVAssetDownloadTask] = [:]
+    var pendingDownloadURLs: [String: URL] = [:]
+    var canceledTaskIDs: Set<String> = []
     private var hasRestoredPendingTasks = false
     private var lastProgressPersistAt: Date?
     private let progressPersistInterval: TimeInterval = 1.0
-    private let storageURL: URL
+    let storageURL: URL
     private let indexURL: URL
     private let pendingURLsIndexURL: URL
 
@@ -168,110 +36,6 @@ final class DownloadManager: NSObject, ObservableObject {
             )
         }
         .sorted { $0.releaseTitle.localizedCaseInsensitiveCompare($1.releaseTitle) == .orderedAscending }
-    }
-
-    private func applyPosterPath(_ posterPath: String, toReleaseId releaseId: Int, force: Bool = false) {
-        var updated = false
-        for index in items.indices where items[index].releaseId == releaseId {
-            let current = items[index].posterPath
-            let shouldReplace: Bool
-            if force {
-                shouldReplace = current != posterPath
-            } else if let current {
-                // Prefer local file over remote path.
-                shouldReplace = !current.hasPrefix("file:") && posterPath.hasPrefix("file:")
-            } else {
-                shouldReplace = true
-            }
-            if shouldReplace {
-                items[index].posterPath = posterPath
-                updated = true
-            }
-        }
-        if updated {
-            saveIndex()
-        }
-    }
-
-    private func posterFileURL(forReleaseId releaseId: Int) -> URL {
-        storageURL
-            .appendingPathComponent("posters", isDirectory: true)
-            .appendingPathComponent("\(releaseId).jpg")
-    }
-
-    private func ensurePostersDirectory() {
-        let postersDir = storageURL.appendingPathComponent("posters", isDirectory: true)
-        try? FileManager.default.createDirectory(at: postersDir, withIntermediateDirectories: true)
-    }
-
-    func cachePosterLocally(path: String?, releaseId: Int) {
-        Task {
-            await cachePosterLocallyAsync(path: path, releaseId: releaseId)
-        }
-    }
-
-    private func cachePosterLocallyAsync(path: String?, releaseId: Int) async {
-        ensurePostersDirectory()
-        let localURL = posterFileURL(forReleaseId: releaseId)
-
-        if FileManager.default.fileExists(atPath: localURL.path) {
-            applyPosterPath(localURL.absoluteString, toReleaseId: releaseId, force: true)
-            return
-        }
-
-        let remotePath: String?
-        if let path, path.hasPrefix("file:") {
-            applyPosterPath(path, toReleaseId: releaseId, force: true)
-            return
-        } else {
-            remotePath = path
-        }
-
-        guard let remoteURL = APIConfig.mediaURL(for: remotePath) else { return }
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: remoteURL)
-            try data.write(to: localURL, options: .atomic)
-            applyPosterPath(localURL.absoluteString, toReleaseId: releaseId, force: true)
-        } catch {
-            if let remotePath {
-                applyPosterPath(remotePath, toReleaseId: releaseId)
-            }
-        }
-    }
-
-    func backfillPostersIfNeeded() async {
-        ensurePostersDirectory()
-
-        let groupsNeedingPosters = groupedReleases.filter { group in
-            guard let releaseId = group.releaseId else { return false }
-            let localURL = posterFileURL(forReleaseId: releaseId)
-            if FileManager.default.fileExists(atPath: localURL.path) {
-                return group.posterPath?.hasPrefix("file:") != true
-            }
-            return true
-        }
-
-        for group in groupsNeedingPosters {
-            guard let releaseId = group.releaseId else { continue }
-            let localURL = posterFileURL(forReleaseId: releaseId)
-
-            if FileManager.default.fileExists(atPath: localURL.path) {
-                applyPosterPath(localURL.absoluteString, toReleaseId: releaseId, force: true)
-                continue
-            }
-
-            if let existing = group.posterPath, !existing.hasPrefix("file:") {
-                await cachePosterLocallyAsync(path: existing, releaseId: releaseId)
-                continue
-            }
-
-            guard let release = try? await APIClient.shared.getRelease(idOrAlias: String(releaseId)),
-                  let posterPath = release.poster?.displayURL else {
-                continue
-            }
-            await cachePosterLocallyAsync(path: posterPath, releaseId: releaseId)
-        }
     }
 
     private override init() {
@@ -631,7 +395,7 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    private func updateItem(id: String, persist: Bool = true, update: (inout DownloadItem) -> Void) {
+    func updateItem(id: String, persist: Bool = true, update: (inout DownloadItem) -> Void) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         update(&items[index])
         if persist {
@@ -639,7 +403,7 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    private func updateProgress(id: String, progress: Double) {
+    func updateProgress(id: String, progress: Double) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         let previous = items[index].progress
         // Avoid republishing for sub-percent noise while still updating UI about every 1%.
@@ -655,7 +419,7 @@ final class DownloadManager: NSObject, ObservableObject {
         saveIndex()
     }
 
-    private func loadIndex() {
+    func loadIndex() {
         guard let data = try? Data(contentsOf: indexURL),
               let decoded = try? JSONDecoder().decode([DownloadItem].self, from: data) else {
             return
@@ -663,7 +427,7 @@ final class DownloadManager: NSObject, ObservableObject {
         items = decoded
     }
 
-    private func saveIndex() {
+    func saveIndex() {
         guard let data = try? JSONEncoder().encode(items) else { return }
         try? data.write(to: indexURL, options: .atomic)
     }
@@ -676,7 +440,7 @@ final class DownloadManager: NSObject, ObservableObject {
         pendingDownloadURLs = decoded.compactMapValues { URL(string: $0) }
     }
 
-    private func savePendingURLs() {
+    func savePendingURLs() {
         let encoded = pendingDownloadURLs.mapValues(\.absoluteString)
         guard let data = try? JSONEncoder().encode(encoded) else { return }
         try? data.write(to: pendingURLsIndexURL, options: .atomic)
@@ -720,7 +484,7 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    private func removeItemIfExists(at url: URL) {
+    func removeItemIfExists(at url: URL) {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try? FileManager.default.removeItem(at: url)
     }
@@ -791,150 +555,5 @@ final class DownloadManager: NSObject, ObservableObject {
                 self.purgeOrphanedDownloadCache()
             }
         }
-    }
-}
-
-extension DownloadManager: AVAssetDownloadDelegate {
-    nonisolated func urlSession(
-        _ session: URLSession,
-        assetDownloadTask: AVAssetDownloadTask,
-        willDownloadTo location: URL
-    ) {
-        Task { @MainActor in
-            let id = assetDownloadTask.taskIdentifier.description
-            self.pendingDownloadURLs[id] = location
-            self.savePendingURLs()
-        }
-    }
-
-    nonisolated func urlSession(
-        _ session: URLSession,
-        assetDownloadTask: AVAssetDownloadTask,
-        didLoad timeRange: CMTimeRange,
-        totalTimeRangesLoaded loadedTimeRanges: [NSValue],
-        timeRangeExpectedToLoad: CMTimeRange
-    ) {
-        let expected = CMTimeGetSeconds(timeRangeExpectedToLoad.duration)
-        guard expected > 0 else { return }
-        var loaded: Double = 0
-        for value in loadedTimeRanges {
-            loaded += CMTimeGetSeconds(value.timeRangeValue.duration)
-        }
-        let progress = min(loaded / expected, 1)
-
-        Task { @MainActor in
-            let id = assetDownloadTask.taskIdentifier.description
-            self.updateProgress(id: id, progress: progress)
-        }
-    }
-
-    nonisolated func urlSession(
-        _ session: URLSession,
-        assetDownloadTask: AVAssetDownloadTask,
-        didFinishDownloadingTo location: URL
-    ) {
-        Task { @MainActor in
-            let id = assetDownloadTask.taskIdentifier.description
-            self.pendingDownloadURLs.removeValue(forKey: id)
-            self.savePendingURLs()
-
-            if self.canceledTaskIDs.contains(id) {
-                self.canceledTaskIDs.remove(id)
-                self.removeItemIfExists(at: location)
-                self.activeTasks.removeValue(forKey: id)
-                self.purgeOrphanedDownloadCache()
-                return
-            }
-
-            if let bookmark = try? location.bookmarkData() {
-                self.updateItem(id: id) {
-                    $0.localBookmark = bookmark
-                    $0.progress = 1
-                    $0.state = .completed
-                }
-                if let completedItem = self.items.first(where: { $0.id == id }) {
-                    NotificationManager.shared.notifyDownloadCompleted(
-                        releaseTitle: completedItem.releaseTitle,
-                        episodeTitle: completedItem.displayEpisodeTitle
-                    )
-                }
-            } else {
-                self.updateItem(id: id) {
-                    $0.state = .failed
-                    $0.lastError = "Не удалось сохранить файл"
-                }
-            }
-            self.activeTasks.removeValue(forKey: id)
-            self.processDownloadQueue()
-        }
-    }
-
-    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        Task { @MainActor in
-            let id = task.taskIdentifier.description
-            if let error {
-                // User cancel / system cancel: remove quietly, never show as a failed download.
-                if self.canceledTaskIDs.contains(id) || Self.isCancellationError(error) {
-                    self.canceledTaskIDs.remove(id)
-                    if let pendingURL = self.pendingDownloadURLs[id] {
-                        self.removeItemIfExists(at: pendingURL)
-                        self.pendingDownloadURLs.removeValue(forKey: id)
-                        self.savePendingURLs()
-                    }
-                    self.items.removeAll { $0.id == id }
-                    self.saveIndex()
-                    self.activeTasks.removeValue(forKey: id)
-                    self.purgeOrphanedDownloadCache()
-                    return
-                }
-
-                if let pendingURL = self.pendingDownloadURLs[id] {
-                    self.removeItemIfExists(at: pendingURL)
-                    self.pendingDownloadURLs.removeValue(forKey: id)
-                    self.savePendingURLs()
-                }
-
-                let message = Self.userFacingDownloadError(error)
-                if self.items.contains(where: { $0.id == id }) {
-                    self.updateItem(id: id) {
-                        $0.state = .failed
-                        $0.progress = 0
-                        $0.localBookmark = nil
-                        $0.lastError = message
-                    }
-                }
-                self.activeTasks.removeValue(forKey: id)
-                self.purgeOrphanedDownloadCache()
-            }
-            self.processDownloadQueue()
-        }
-    }
-
-    private nonisolated static func isCancellationError(_ error: Error) -> Bool {
-        if error is CancellationError { return true }
-        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
-        let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
-            return true
-        }
-        let message = error.localizedDescription.lowercased()
-        return message.contains("cancel") || message.contains("отмен")
-    }
-
-    private nonisolated static func userFacingDownloadError(_ error: Error) -> String {
-        if let urlError = error as? URLError {
-            switch urlError.code {
-            case .notConnectedToInternet, .networkConnectionLost:
-                return "Нет соединения с интернетом"
-            case .timedOut:
-                return "Время ожидания истекло"
-            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-                return "Не удалось подключиться к серверу"
-            default:
-                break
-            }
-        }
-        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        return message.isEmpty ? "Не удалось скачать серию" : message
     }
 }
