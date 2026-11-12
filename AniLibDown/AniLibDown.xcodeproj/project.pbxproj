@@ -76,6 +76,7 @@
 		V2B025 /* ReleaseTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V2F025 /* ReleaseTeamView.swift */; };
 		T1B011 /* ReleaseMemberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F011 /* ReleaseMemberTests.swift */; };
 		T1B012 /* DownloadFileDeletionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F012 /* DownloadFileDeletionTests.swift */; };
+		T1B013 /* DownloadStorageEstimateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1F013 /* DownloadStorageEstimateTests.swift */; };
 		A1B2C3D4E5F60718293A4C02 /* PlayerControlsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C01 /* PlayerControlsViews.swift */; };
 		A1B2C3D4E5F60718293A4C04 /* PlayerSkipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C03 /* PlayerSkipController.swift */; };
 		A1B2C3D4E5F60718293A4C06 /* DownloadItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */; };
@@ -157,6 +158,7 @@
 		V2F025 /* ReleaseTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Detail/ReleaseTeamView.swift"; sourceTree = "<group>"; };
 		T1F011 /* ReleaseMemberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseMemberTests.swift; sourceTree = "<group>"; };
 		T1F012 /* DownloadFileDeletionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadFileDeletionTests.swift; sourceTree = "<group>"; };
+		T1F013 /* DownloadStorageEstimateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadStorageEstimateTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C01 /* PlayerControlsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerControlsViews.swift"; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C03 /* PlayerSkipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Player/PlayerSkipController.swift"; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C05 /* DownloadItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Services/DownloadItem.swift"; sourceTree = "<group>"; };
@@ -278,6 +280,7 @@
 				T1F011 /* ReleaseMemberTests.swift */,
 				T1F004 /* DownloadReleaseGroupTests.swift */,
 				T1F012 /* DownloadFileDeletionTests.swift */,
+				T1F013 /* DownloadStorageEstimateTests.swift */,
 			);
 			path = AniLibDownTests;
 			sourceTree = "<group>";
@@ -491,6 +494,7 @@
 				T1B011 /* ReleaseMemberTests.swift in Sources */,
 				T1B004 /* DownloadReleaseGroupTests.swift in Sources */,
 				T1B012 /* DownloadFileDeletionTests.swift in Sources */,
+				T1B013 /* DownloadStorageEstimateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

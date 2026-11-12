@@ -182,7 +182,7 @@ final class DownloadManager: NSObject, ObservableObject {
             asset: asset,
             assetTitle: "\(item.releaseTitle) - \(item.displayEpisodeTitle)",
             assetArtworkData: nil,
-            options: [AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: preferredBitrate(for: quality)]
+            options: [AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: Self.preferredBitrate(for: quality)]
         ) else {
             updateItem(id: item.id) {
                 $0.state = .failed
@@ -409,12 +409,32 @@ final class DownloadManager: NSObject, ObservableObject {
         saveIndex()
     }
 
-    private func preferredBitrate(for quality: VideoQuality) -> Int {
+    private static func preferredBitrate(for quality: VideoQuality) -> Int {
         switch quality {
         case .p1080: return 5_000_000
         case .p720: return 2_500_000
         case .p480: return 1_000_000
         }
+    }
+
+    // MARK: - Оценка размера загрузок
+
+    /// Грубая оценка размера скачивания: целевой битрейт качества × суммарная
+    /// длительность серий. Серии без известной длительности не учитываются.
+    static func estimatedBytes(forEpisodes episodes: [Episode], quality: VideoQuality) -> Int64 {
+        let bitrate = preferredBitrate(for: quality)
+        let totalSeconds = episodes.compactMap(\.duration).reduce(0, +)
+        return Int64(Double(bitrate) / 8.0 * Double(totalSeconds))
+    }
+
+    /// Свободное место, реально доступное приложению (volumeAvailableCapacityForImportantUsage).
+    static func availableStorageBytes() -> Int64? {
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        guard let capacity = values?.volumeAvailableCapacityForImportantUsage, capacity >= 0 else {
+            return nil
+        }
+        return capacity
     }
 
     func updateItem(id: String, persist: Bool = true, update: (inout DownloadItem) -> Void) {

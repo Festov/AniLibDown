@@ -7,6 +7,8 @@ struct ReleaseEpisodesView: View {
     @ObservedObject private var appSettings = AppSettings.shared
     @State private var selectedEpisodeRangeIndex = 0
     @State private var playerSession: PlayerSession?
+    @State private var showStorageWarning = false
+    @State private var storageWarningMessage = ""
 
     private let episodeRangeSize = 50
 
@@ -27,23 +29,26 @@ struct ReleaseEpisodesView: View {
         .fullScreenCover(item: $playerSession) { session in
             VideoPlayerView(session: session)
         }
+        .alert("Может не хватить места", isPresented: $showStorageWarning) {
+            Button("Скачать всё равно") { downloadAll() }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text(storageWarningMessage)
+        }
+    }
+
+    private var downloadableEpisodes: [Episode] {
+        release.episodes.filter { selectedQuality.streamURL(for: $0) != nil }
     }
 
     @ViewBuilder
     private var downloadAllButton: some View {
-        let downloadable = release.episodes.filter { selectedQuality.streamURL(for: $0) != nil }
-        if !downloadable.isEmpty {
+        if !downloadableEpisodes.isEmpty {
             Button {
-                downloadManager.enqueueAll(
-                    episodes: downloadable,
-                    releaseId: release.id,
-                    releaseTitle: release.name.main,
-                    quality: selectedQuality,
-                    posterPath: release.poster?.displayURL
-                )
+                confirmAndDownloadAll()
             } label: {
                 Label(
-                    "Скачать все серии (\(downloadable.count))",
+                    "Скачать все серии (\(downloadableEpisodes.count))",
                     systemImage: "arrow.down.circle.fill"
                 )
                 .font(.body.weight(.semibold))
@@ -53,6 +58,41 @@ struct ReleaseEpisodesView: View {
             .buttonStyle(.borderedProminent)
             .tint(Color.accentColor)
         }
+    }
+
+    /// Проверяет, хватит ли свободного места на все серии, и при риске
+    /// нехватки показывает предупреждение вместо мгновенного старта.
+    private func confirmAndDownloadAll() {
+        // Уже скачанные/качающиеся серии место повторно не занимают.
+        let pending = downloadableEpisodes.filter { episode in
+            guard let item = downloadManager.downloadItem(for: episode.id, quality: selectedQuality) else {
+                return true
+            }
+            return item.state == .failed
+        }
+        let needed = DownloadManager.estimatedBytes(forEpisodes: pending, quality: selectedQuality)
+        if needed > 0,
+           let available = DownloadManager.availableStorageBytes(),
+           needed > available {
+            storageWarningMessage = "Для скачивания нужно примерно \(Self.formatBytes(needed)), свободно \(Self.formatBytes(available)). Загрузка может прерваться с ошибкой."
+            showStorageWarning = true
+        } else {
+            downloadAll()
+        }
+    }
+
+    private func downloadAll() {
+        downloadManager.enqueueAll(
+            episodes: downloadableEpisodes,
+            releaseId: release.id,
+            releaseTitle: release.name.main,
+            quality: selectedQuality,
+            posterPath: release.poster?.displayURL
+        )
+    }
+
+    private static func formatBytes(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
     @ViewBuilder
