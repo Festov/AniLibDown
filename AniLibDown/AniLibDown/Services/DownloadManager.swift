@@ -409,7 +409,7 @@ final class DownloadManager: NSObject, ObservableObject {
         saveIndex()
     }
 
-    private static func preferredBitrate(for quality: VideoQuality) -> Int {
+    private nonisolated static func preferredBitrate(for quality: VideoQuality) -> Int {
         switch quality {
         case .p1080: return 5_000_000
         case .p720: return 2_500_000
@@ -421,14 +421,14 @@ final class DownloadManager: NSObject, ObservableObject {
 
     /// Грубая оценка размера скачивания: целевой битрейт качества × суммарная
     /// длительность серий. Серии без известной длительности не учитываются.
-    static func estimatedBytes(forEpisodes episodes: [Episode], quality: VideoQuality) -> Int64 {
+    nonisolated static func estimatedBytes(forEpisodes episodes: [Episode], quality: VideoQuality) -> Int64 {
         let bitrate = preferredBitrate(for: quality)
         let totalSeconds = episodes.compactMap(\.duration).reduce(0, +)
         return Int64(Double(bitrate) / 8.0 * Double(totalSeconds))
     }
 
     /// Свободное место, реально доступное приложению (volumeAvailableCapacityForImportantUsage).
-    static func availableStorageBytes() -> Int64? {
+    nonisolated static func availableStorageBytes() -> Int64? {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
         guard let capacity = values?.volumeAvailableCapacityForImportantUsage, capacity >= 0 else {
