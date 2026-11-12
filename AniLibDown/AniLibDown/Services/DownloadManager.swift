@@ -62,12 +62,24 @@ final class DownloadManager: NSObject, ObservableObject {
 
     func localPlaybackURL(for episodeId: String, quality: VideoQuality) -> URL? {
         guard let item = downloadItem(for: episodeId, quality: quality),
-              item.state == .completed,
-              let bookmark = item.localBookmark else {
+              item.state == .completed else {
             return nil
         }
-        var isStale = false
-        return try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &isStale)
+        if let bookmark = item.localBookmark {
+            var isStale = false
+            if let url = try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &isStale),
+               FileManager.default.fileExists(atPath: url.path) {
+                return url
+            }
+        }
+        // Запасной путь: bookmark мог протухнуть после переноса контейнера.
+        if let filePath = item.localFilePath {
+            let url = URL(fileURLWithPath: filePath)
+            if FileManager.default.fileExists(atPath: url.path) {
+                return url
+            }
+        }
+        return nil
     }
 
     /// Any completed offline quality for the episode (preferred order: requested, then highest).
@@ -329,6 +341,7 @@ final class DownloadManager: NSObject, ObservableObject {
                 }
                 return url.standardizedFileURL.path
             }
+            + items.compactMap(\.localFilePath).map { URL(fileURLWithPath: $0).standardizedFileURL.path }
             + pendingDownloadURLs.values.map { $0.standardizedFileURL.path }
         )
 
@@ -352,9 +365,18 @@ final class DownloadManager: NSObject, ObservableObject {
         savePendingURLs()
 
         items.removeAll { item in
-            guard item.state == .completed, let bookmark = item.localBookmark else { return false }
-            guard let url = resolveBookmark(bookmark) else { return true }
-            return !FileManager.default.fileExists(atPath: url.path)
+            guard item.state == .completed else { return false }
+            if let bookmark = item.localBookmark,
+               let url = resolveBookmark(bookmark),
+               FileManager.default.fileExists(atPath: url.path) {
+                return false
+            }
+            if let filePath = item.localFilePath,
+               FileManager.default.fileExists(atPath: filePath) {
+                return false
+            }
+            // Completed-запись без живого файла и без ссылок на него считается мёртвой.
+            return item.localBookmark != nil || item.localFilePath != nil
         }
         saveIndex()
     }
@@ -456,31 +478,39 @@ final class DownloadManager: NSObject, ObservableObject {
         )
     }
 
-    private func removeFiles(for item: DownloadItem) {
-        if let bookmark = item.localBookmark, let url = resolveBookmark(bookmark) {
+    /// Удаляет файлы загрузки строго по сохранённым ссылкам (bookmark, точный путь,
+    /// pending-URL). Никакого сопоставления по подстроке имени: «мягкое» совпадение
+    /// могло удалить файлы других серий с похожими именами (например, одинаковые
+    /// playlist.m3u8 у разных релизов).
+    func removeFiles(for item: DownloadItem) {
+        var removedPaths = Set<String>()
+
+        if let bookmark = item.localBookmark,
+           let url = resolveBookmark(bookmark),
+           isDownloadStoragePath(url) {
             removeItemIfExists(at: url)
+            removedPaths.insert(url.standardizedFileURL.path)
         }
-        if let pendingURL = pendingDownloadURLs[item.id] {
-            removeItemIfExists(at: pendingURL)
-        }
-        removeItemsMatching(remoteURL: item.remoteURL)
-    }
 
-    private func removeItemsMatching(remoteURL: String) {
-        guard let remote = URL(string: remoteURL) else { return }
-        let marker = remote.lastPathComponent
-        guard !marker.isEmpty else { return }
-
-        for directory in downloadStorageDirectories() {
-            guard let contents = try? FileManager.default.contentsOfDirectory(
-                at: directory,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            ) else { continue }
-
-            for url in contents where url.lastPathComponent.contains(marker) || url.path.contains(marker) {
+        if let filePath = item.localFilePath {
+            let url = URL(fileURLWithPath: filePath)
+            if isDownloadStoragePath(url), !removedPaths.contains(url.standardizedFileURL.path) {
                 removeItemIfExists(at: url)
             }
+        }
+
+        if let pendingURL = pendingDownloadURLs[item.id], isDownloadStoragePath(pendingURL) {
+            removeItemIfExists(at: pendingURL)
+        }
+    }
+
+    /// Разрешает удаление только внутри каталогов хранения загрузок — защита
+    /// от повреждённого индекса, который мог бы указывать на чужой файл.
+    func isDownloadStoragePath(_ url: URL) -> Bool {
+        let path = url.standardizedFileURL.path
+        return downloadStorageDirectories().contains { directory in
+            let dirPath = directory.standardizedFileURL.path
+            return path == dirPath || path.hasPrefix(dirPath + "/")
         }
     }
 

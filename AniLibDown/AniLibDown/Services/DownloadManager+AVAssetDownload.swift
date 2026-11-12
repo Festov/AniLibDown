@@ -58,6 +58,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
             if let bookmark = try? location.bookmarkData() {
                 self.updateItem(id: id) {
                     $0.localBookmark = bookmark
+                    $0.localFilePath = location.path
                     $0.progress = 1
                     $0.state = .completed
                 }
@@ -109,6 +110,7 @@ extension DownloadManager: AVAssetDownloadDelegate {
                         $0.state = .failed
                         $0.progress = 0
                         $0.localBookmark = nil
+                        $0.localFilePath = nil
                         $0.lastError = message
                     }
                 }
