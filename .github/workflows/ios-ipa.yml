@@ -3,10 +3,10 @@ name: Build IPA
 on:
   workflow_dispatch:
   push:
+    branches:
+      - dev
     tags:
       - 'v*'
-      - 'release_*'
-      - 'update*'
 
 permissions:
   contents: write
@@ -105,17 +105,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: 1.1.5
+          name: ${{ github.ref_name }}
           files: dist/AniLibDown.ipa
-          generate_release_notes: false
-          body: |
-            ## Что нового
-
-            - Каталог теперь открывается без интернета: постеры сохраняются на устройство
-            - Кнопка «Кеш изображений» реально чистит картинки
-            - Плашка «Онгоинг» под строкой «тип • год • жанры», обводка тоньше
-            - Внутреннее: плеер и менеджер загрузок разбиты на несколько файлов, поведение не изменилось
-            - Версия `1.1.5 • AniLibDown`
+          generate_release_notes: true
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
