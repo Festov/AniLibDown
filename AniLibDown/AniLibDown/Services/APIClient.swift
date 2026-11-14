@@ -277,6 +277,9 @@ actor APIClient {
         var lastError: Error?
 
         for attempt in 0..<maxAttempts {
+            if attempt > 0 {
+                AppLog.api.debug("Retry \(attempt)/\(maxAttempts - 1) for \(request.url?.absoluteString ?? "")")
+            }
             do {
                 let (data, response) = try await session.data(for: request)
                 guard let httpResponse = response as? HTTPURLResponse else {
@@ -288,25 +291,55 @@ actor APIClient {
                     throw APIError.unauthorized
                 }
 
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    let message = (try? decode(APIErrorResponse.self, from: data)).flatMap {
-                        $0.message ?? $0.error
-                    }
-                    throw APIError.httpError(status: httpResponse.statusCode, message: message)
+                if (200...299).contains(httpResponse.statusCode) {
+                    return data
                 }
 
-                return data
-            } catch {
+                let message = (try? decode(APIErrorResponse.self, from: data)).flatMap {
+                    $0.message ?? $0.error
+                }
+                let error = APIError.httpError(status: httpResponse.statusCode, message: message)
                 lastError = error
-                let retriable = isRetriable(error)
-                guard retriable, attempt < maxAttempts - 1 else { throw error }
-                let delay = UInt64(pow(2.0, Double(attempt))) * 400_000_000
-                try? await Task.sleep(nanoseconds: delay)
-                AppLog.api.debug("Retry \(attempt + 1) for \(request.url?.absoluteString ?? "")")
+                guard isRetriable(error), attempt < maxAttempts - 1 else { throw error }
+                // Сервер явно попросил подождать (429/503) — слушаемся, иначе backoff.
+                let retryAfter = Self.retryAfterSeconds(from: httpResponse)
+                try await Task.sleep(nanoseconds: Self.retryDelayNanos(attempt: attempt, retryAfter: retryAfter))
+            } catch {
+                // APIError сюда попадает только осознанным throw выше — просто пробрасываем.
+                if error is APIError { throw error }
+                lastError = error
+                guard isRetriable(error), attempt < maxAttempts - 1 else { throw error }
+                try await Task.sleep(nanoseconds: Self.retryDelayNanos(attempt: attempt, retryAfter: nil))
             }
         }
 
         throw lastError ?? APIError.invalidResponse
+    }
+
+    /// Задержка перед повтором: exponential backoff 1с → 2с → 4с…,
+    /// либо значение Retry-After, если сервер его прислал (ограничено 30 секундами).
+    static func retryDelayNanos(attempt: Int, retryAfter: TimeInterval?) -> UInt64 {
+        let seconds = retryAfter ?? pow(2.0, Double(attempt))
+        return UInt64(min(seconds, 30) * 1_000_000_000)
+    }
+
+    /// Парсит заголовок Retry-After: поддерживаются delta-секунды и HTTP-date.
+    static func retryAfterSeconds(from response: HTTPURLResponse) -> TimeInterval? {
+        guard let raw = response.value(forHTTPHeaderField: "Retry-After")?
+            .trimmingCharacters(in: .whitespaces), !raw.isEmpty else {
+            return nil
+        }
+        if let seconds = TimeInterval(raw), seconds >= 0 {
+            return seconds
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        if let date = formatter.date(from: raw) {
+            return max(0, date.timeIntervalSinceNow)
+        }
+        return nil
     }
 
     private func isRetriable(_ error: Error) -> Bool {
