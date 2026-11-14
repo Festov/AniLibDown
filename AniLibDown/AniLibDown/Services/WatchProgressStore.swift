@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct WatchProgress: Codable {
     let episodeId: String
@@ -10,23 +13,83 @@ struct WatchProgress: Codable {
 final class WatchProgressStore {
     static let shared = WatchProgressStore()
 
-    private let defaults: UserDefaults
-    private let progressKey = "watchProgressByEpisode"
-    private let lastEpisodeKey = "lastWatchedEpisodeByRelease"
-
-    private var progressCache: [String: WatchProgress]?
-    private var lastEpisodesCache: [String: String]?
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    /// Состояние, целиком сохраняемое в один JSON-файл.
+    struct PersistedState: Codable {
+        var progress: [String: WatchProgress] = [:]
+        var lastEpisodes: [String: String] = [:]
     }
 
+    /// Ключи старого хранилища в UserDefaults — оставлены только для миграции.
+    private let legacyProgressKey = "watchProgressByEpisode"
+    private let legacyLastEpisodeKey = "lastWatchedEpisodeByRelease"
+
+    private let defaults: UserDefaults
+    private let fileURL: URL
+    private let persistDebounceNanos: UInt64
+
+    private var state: PersistedState
+    private var persistTask: Task<Void, Never>?
+    private var backgroundObserver: NSObjectProtocol?
+
+    /// - Parameters:
+    ///   - defaults: используется только для чтения/очистки устаревших ключей при миграции.
+    ///   - directory: каталог для файла состояния (по умолчанию Application Support/AniLibDown).
+    ///   - debounce: задержка отложенной записи на диск в секундах.
+    init(
+        defaults: UserDefaults = .standard,
+        directory: URL? = nil,
+        debounce: TimeInterval = 1.0
+    ) {
+        self.defaults = defaults
+        let dir = directory ?? FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("AniLibDown", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        self.fileURL = dir.appendingPathComponent("watch-progress.json")
+        self.persistDebounceNanos = UInt64(max(0, debounce) * 1_000_000_000)
+
+        if let persisted = Self.loadState(from: fileURL) {
+            self.state = persisted
+        } else if let migrated = Self.migrateLegacy(
+            defaults: defaults,
+            progressKey: legacyProgressKey,
+            lastEpisodeKey: legacyLastEpisodeKey
+        ) {
+            // Переносим данные из UserDefaults и сразу фиксируем на диске.
+            self.state = migrated
+            persistNow()
+        } else {
+            self.state = PersistedState()
+        }
+
+        #if canImport(UIKit)
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.flush()
+            }
+        }
+        #endif
+    }
+
+    deinit {
+        persistTask?.cancel()
+        if let backgroundObserver {
+            NotificationCenter.default.removeObserver(backgroundObserver)
+        }
+    }
+
+    // MARK: - Публичный API
+
     func position(for episodeId: String) -> Double? {
-        loadProgress()[episodeId]?.position
+        state.progress[episodeId]?.position
     }
 
     func lastEpisodeId(for releaseId: Int) -> String? {
-        loadLastEpisodes()[String(releaseId)]
+        state.lastEpisodes[String(releaseId)]
     }
 
     func save(
@@ -40,17 +103,13 @@ final class WatchProgressStore {
     ) {
         guard position > 5 else { return }
 
-        var progress = loadProgress()
-        progress[episodeId] = WatchProgress(
+        state.progress[episodeId] = WatchProgress(
             episodeId: episodeId,
             position: position,
             updatedAt: Date()
         )
-        storeProgress(progress)
-
-        var lastEpisodes = loadLastEpisodes()
-        lastEpisodes[String(releaseId)] = episodeId
-        storeLastEpisodes(lastEpisodes)
+        state.lastEpisodes[String(releaseId)] = episodeId
+        schedulePersist()
 
         if let releaseTitle, let episodeTitle {
             ContinueWatchingStore.shared.updateMetadata(
@@ -67,34 +126,28 @@ final class WatchProgressStore {
     }
 
     func clearRelease(releaseId: Int) {
-        var lastEpisodes = loadLastEpisodes()
         let key = String(releaseId)
-        if let episodeId = lastEpisodes[key] {
-            var progress = loadProgress()
-            progress.removeValue(forKey: episodeId)
-            storeProgress(progress)
+        if let episodeId = state.lastEpisodes[key] {
+            state.progress.removeValue(forKey: episodeId)
         }
-        lastEpisodes.removeValue(forKey: key)
-        storeLastEpisodes(lastEpisodes)
+        state.lastEpisodes.removeValue(forKey: key)
+        schedulePersist()
         ContinueWatchingStore.shared.remove(releaseId: releaseId)
         ContinueWatchingStore.shared.reload()
     }
 
     func clearPosition(for episodeId: String) {
-        var progress = loadProgress()
-        progress.removeValue(forKey: episodeId)
-        storeProgress(progress)
+        state.progress.removeValue(forKey: episodeId)
 
         // Drop continue-watching card if this was the last episode for a release.
-        var lastEpisodes = loadLastEpisodes()
-        let affected = lastEpisodes.filter { $0.value == episodeId }.map(\.key)
+        let affected = state.lastEpisodes.filter { $0.value == episodeId }.map(\.key)
         for key in affected {
-            lastEpisodes.removeValue(forKey: key)
+            state.lastEpisodes.removeValue(forKey: key)
             if let releaseId = Int(key) {
                 ContinueWatchingStore.shared.remove(releaseId: releaseId)
             }
         }
-        storeLastEpisodes(lastEpisodes)
+        schedulePersist()
         ContinueWatchingStore.shared.reload()
     }
 
@@ -108,47 +161,78 @@ final class WatchProgressStore {
     }
 
     func clearAll() {
-        defaults.removeObject(forKey: progressKey)
-        defaults.removeObject(forKey: lastEpisodeKey)
-        progressCache = [:]
-        lastEpisodesCache = [:]
+        state = PersistedState()
+        defaults.removeObject(forKey: legacyProgressKey)
+        defaults.removeObject(forKey: legacyLastEpisodeKey)
+        flush()
         ContinueWatchingStore.shared.reload()
     }
 
     func allLastEpisodes() -> [String: String] {
-        loadLastEpisodes()
+        state.lastEpisodes
     }
 
-    private func loadProgress() -> [String: WatchProgress] {
-        if let progressCache {
-            return progressCache
+    /// Немедленно записывает состояние на диск, отменяя отложенную запись.
+    /// Вызывается автоматически при уходе приложения в фон.
+    func flush() {
+        persistTask?.cancel()
+        persistTask = nil
+        persistNow()
+    }
+
+    // MARK: - Персистентность
+
+    private func schedulePersist() {
+        persistTask?.cancel()
+        persistTask = Task { [weak self, debounce = persistDebounceNanos] in
+            try? await Task.sleep(nanoseconds: debounce)
+            guard !Task.isCancelled else { return }
+            self?.persistNow()
         }
-        guard let data = defaults.data(forKey: progressKey),
-              let decoded = try? JSONDecoder().decode([String: WatchProgress].self, from: data) else {
-            progressCache = [:]
-            return [:]
+    }
+
+    private func persistNow() {
+        do {
+            let data = try JSONEncoder().encode(state)
+            // .atomic: запись идёт во временный файл с последующим rename,
+            // поэтому внезапное завершение приложения не портит файл.
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            assertionFailure("WatchProgressStore: не удалось сохранить состояние: \(error)")
         }
-        progressCache = decoded
-        return decoded
     }
 
-    private func storeProgress(_ progress: [String: WatchProgress]) {
-        progressCache = progress
-        guard let data = try? JSONEncoder().encode(progress) else { return }
-        defaults.set(data, forKey: progressKey)
-    }
-
-    private func loadLastEpisodes() -> [String: String] {
-        if let lastEpisodesCache {
-            return lastEpisodesCache
+    private static func loadState(from url: URL) -> PersistedState? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        do {
+            return try JSONDecoder().decode(PersistedState.self, from: data)
+        } catch {
+            // Файл повреждён: не затираем его молча, а откладываем рядом для диагностики.
+            let backup = url.deletingLastPathComponent()
+                .appendingPathComponent("watch-progress.corrupted-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: backup)
+            return nil
         }
-        let value = defaults.dictionary(forKey: lastEpisodeKey) as? [String: String] ?? [:]
-        lastEpisodesCache = value
-        return value
     }
 
-    private func storeLastEpisodes(_ lastEpisodes: [String: String]) {
-        lastEpisodesCache = lastEpisodes
-        defaults.set(lastEpisodes, forKey: lastEpisodeKey)
+    private static func migrateLegacy(
+        defaults: UserDefaults,
+        progressKey: String,
+        lastEpisodeKey: String
+    ) -> PersistedState? {
+        let progressData = defaults.data(forKey: progressKey)
+        let lastEpisodes = defaults.dictionary(forKey: lastEpisodeKey) as? [String: String]
+        guard progressData != nil || lastEpisodes != nil else { return nil }
+
+        var migrated = PersistedState()
+        if let progressData,
+           let decoded = try? JSONDecoder().decode([String: WatchProgress].self, from: progressData) {
+            migrated.progress = decoded
+        }
+        migrated.lastEpisodes = lastEpisodes ?? [:]
+
+        defaults.removeObject(forKey: progressKey)
+        defaults.removeObject(forKey: lastEpisodeKey)
+        return migrated
     }
 }

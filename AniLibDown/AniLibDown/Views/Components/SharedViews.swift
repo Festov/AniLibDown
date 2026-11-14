@@ -195,6 +195,7 @@ struct PosterZoomOverlay: View {
 
 struct OngoingBadge: View {
     private let badgeRed = Color(red: 0.78, green: 0.24, blue: 0.24)
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Text(BroadcastStatus.ongoing.title)
@@ -204,8 +205,11 @@ struct OngoingBadge: View {
             .padding(.vertical, 2)
             .background(badgeRed.opacity(0.16), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(.white, lineWidth: 0.5)
+                // В светлой теме — без обводки; в тёмной — в цвет текста.
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(badgeRed, lineWidth: 0.5)
+                }
             }
             .accessibilityHidden(true)
     }

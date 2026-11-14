@@ -12,6 +12,9 @@ struct DownloadItem: Identifiable, Codable, Hashable {
     let remoteURL: String
     var posterPath: String?
     var localBookmark: Data?
+    /// Точный путь скачанного файла. Запасной вариант на случай,
+    /// если bookmark протух (перенос контейнера, восстановление из бэкапа).
+    var localFilePath: String?
     var progress: Double
     var state: DownloadState
     var lastError: String?
@@ -66,6 +69,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         remoteURL: String,
         posterPath: String? = nil,
         localBookmark: Data?,
+        localFilePath: String? = nil,
         progress: Double,
         state: DownloadState,
         lastError: String? = nil,
@@ -82,6 +86,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         self.remoteURL = remoteURL
         self.posterPath = posterPath
         self.localBookmark = localBookmark
+        self.localFilePath = localFilePath
         self.progress = progress
         self.state = state
         self.lastError = lastError
@@ -101,6 +106,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         remoteURL = try container.decode(String.self, forKey: .remoteURL)
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         localBookmark = try container.decodeIfPresent(Data.self, forKey: .localBookmark)
+        localFilePath = try container.decodeIfPresent(String.self, forKey: .localFilePath)
         progress = try container.decode(Double.self, forKey: .progress)
         state = try container.decode(DownloadState.self, forKey: .state)
         lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
@@ -120,6 +126,7 @@ struct DownloadItem: Identifiable, Codable, Hashable {
         try container.encode(remoteURL, forKey: .remoteURL)
         try container.encodeIfPresent(posterPath, forKey: .posterPath)
         try container.encodeIfPresent(localBookmark, forKey: .localBookmark)
+        try container.encodeIfPresent(localFilePath, forKey: .localFilePath)
         try container.encode(progress, forKey: .progress)
         try container.encode(state, forKey: .state)
         try container.encodeIfPresent(lastError, forKey: .lastError)
@@ -128,6 +135,6 @@ struct DownloadItem: Identifiable, Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case id, episodeId, releaseId, releaseTitle, episodeTitle, episodeName, episodeOrdinal
-        case quality, remoteURL, posterPath, localBookmark, progress, state, lastError, createdAt
+        case quality, remoteURL, posterPath, localBookmark, localFilePath, progress, state, lastError, createdAt
     }
 }
